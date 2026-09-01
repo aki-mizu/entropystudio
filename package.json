@@ -1,0 +1,67 @@
+{
+  "name": "entropystudio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React Native UniFFI bindings for EntropyLab operations",
+  "license": "MIT",
+  "homepage": "https://github.com/aki-mizu/entropystudio",
+  "author": {
+    "name": "Darrell",
+    "email": "zh0521@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aki-mizu/entropystudio.git"
+  },
+  "main": "./js/index.ts",
+  "react-native": "./js/index.ts",
+  "types": "./js/index.ts",
+  "files": [
+    "android",
+    "cpp",
+    "ios",
+    "js",
+    "EntropyStudio.xcframework",
+    "Entropystudio.podspec",
+    "react-native.config.js",
+    "ubrn.config.yaml",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "generate": "node scripts/generate.mjs",
+    "build": "npm run clean && npm run generate",
+    "build:android": "ubrn build android --config ubrn.config.yaml --release --and-generate",
+    "build:ios": "ubrn build ios --config ubrn.config.yaml --release --and-generate",
+    "test:rust": "cargo test --manifest-path Cargo.toml --locked",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:rust && npm run typecheck"
+  },
+  "dependencies": {
+    "@ubjs/core": "0.31.0-5",
+    "uniffi-bindgen-react-native": "0.31.0-5"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-native": ">=0.76"
+  },
+  "devDependencies": {
+    "typescript": "5.7.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "codegenConfig": {
+    "name": "EntropyStudioSpec",
+    "type": "modules",
+    "jsSrcsDir": "js",
+    "android": {
+      "javaPackageName": "com.entropystudio"
+    },
+    "outputDir": {
+      "android": "android/generated",
+      "ios": "ios/generated"
+    }
+  }
+}

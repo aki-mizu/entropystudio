@@ -1,0 +1,31 @@
+rust:
+  directory: .
+  manifestPath: Cargo.toml
+
+bindings:
+  cpp: cpp/generated
+  ts: js/generated
+
+android:
+  directory: android
+  useSharedLibrary: false
+
+ios:
+  directory: ios
+  frameworkName: EntropyStudio
+  targets:
+    - aarch64-apple-ios
+    - aarch64-apple-ios-sim
+    - x86_64-apple-ios
+
+turboModule:
+  cpp: cpp
+  ts: js
+  spec: NativeEntropyStudio
+  name: EntropyStudio
+  entrypoint: js/index.ts
+
+noOverwrite:
+  - package.json
+  - README.md
+  - react-native.config.js

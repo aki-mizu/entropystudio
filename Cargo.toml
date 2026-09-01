@@ -1,0 +1,14 @@
+[package]
+name = "entropystudio-ffi"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "MIT"
+description = "UniFFI bindings for EntropyLab operations in EntropyStudio"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+entropylab-wasm = { path = "../entropylab/entropylab-wasm" }
+uniffi = "=0.31.2"
