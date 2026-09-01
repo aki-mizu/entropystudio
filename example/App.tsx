@@ -29,10 +29,12 @@ function arrayBufferToHex(buffer: ArrayBuffer): string {
 
 function deriveTestEntropy(): Bip39Result {
   try {
-    const normalizedMnemonic = BIP39_TEST_MNEMONIC.normalize('NFKD');
-    return { entropy: arrayBufferToHex(mnemonicToEntropy(normalizedMnemonic)) };
-  } catch {
-    return { error: 'Native BIP39 validation failed.' };
+    return {
+      entropy: arrayBufferToHex(mnemonicToEntropy(BIP39_TEST_MNEMONIC)),
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { error: `Rust bridge error: ${message}` };
   }
 }
 
