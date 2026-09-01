@@ -1,0 +1,117 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: SemVer version name for the APK (for example, 0.1.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    name: Build APK ${{ inputs.version }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      ANDROID_NDK_VERSION: 27.1.12297006
+      APP_VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Check out EntropyStudio
+        uses: actions/checkout@v4
+        with:
+          path: entropystudio
+
+      - name: Check out EntropyLab
+        uses: actions/checkout@v4
+        with:
+          repository: w-s-bitcoin/entropylab
+          path: entropylab
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: entropystudio/package-lock.json
+
+      - name: Enable EntropyLab Rust library artifact
+        working-directory: entropystudio
+        run: node scripts/enable-entropylab-rlib.mjs ../entropylab
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.95.0
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version 4.1.2 --locked
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build components
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-37.0" \
+            "build-tools;37.0.0" \
+            "cmake;3.22.1" \
+            "ndk;${ANDROID_NDK_VERSION}"
+          echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Validate version input
+        shell: bash
+        run: |
+          if [[ ! "$APP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "version must be SemVer, such as 0.1.0 or 0.1.0-rc.1" >&2
+            exit 1
+          fi
+
+      - name: Install library dependencies
+        working-directory: entropystudio
+        run: npm ci
+
+      - name: Test Rust and TypeScript bindings
+        working-directory: entropystudio
+        run: npm test
+
+      - name: Build Android UniFFI library
+        working-directory: entropystudio
+        run: npm run build:android
+
+      - name: Install example dependencies
+        working-directory: entropystudio/example
+        run: npm install --package-lock=false
+
+      - name: Assemble release APK
+        working-directory: entropystudio/example/android
+        shell: bash
+        run: |
+          version_code=$((GITHUB_RUN_NUMBER * 10 + GITHUB_RUN_ATTEMPT))
+          ./gradlew :app:assembleRelease --no-daemon \
+            "-PversionName=${APP_VERSION}" \
+            "-PversionCode=${version_code}"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: entropystudio-${{ inputs.version }}-android-apk
+          path: entropystudio/example/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30

@@ -61,3 +61,21 @@ The generated native bridge uses static linking (`staticlib`) for Android and
 iOS, following the UBRN configuration used by Nostr SDK's React Native package.
 The existing EntropyLab web build remains a separate `cdylib`/WASM consumer of
 the same underlying crate.
+
+## Android APK workflow
+
+Run **Build Android APK** from the repository's Actions tab and provide a
+SemVer version such as `0.1.0`. The workflow builds the Android UniFFI library,
+assembles the example app's release variant, and uploads the APK as a workflow
+artifact. The supplied version becomes Android's `versionName`; the GitHub run
+number plus retry attempt supplies a monotonically increasing `versionCode`.
+
+The workflow checks out EntropyLab as a sibling repository, then applies a
+guarded, one-line change to that runner-local checkout so `entropylab-wasm`
+exports both `cdylib` and `rlib`. The script accepts only the known
+`crate-type` declaration or an already-patched form, and never pushes a change
+to EntropyLab.
+
+The current Android project signs its release variant with the debug keystore.
+The uploaded artifact is suitable for development installation, not Play Store
+distribution.
