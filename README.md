@@ -81,6 +81,15 @@ exports both `cdylib` and `rlib`. The script accepts only the known
 `crate-type` declaration or an already-patched form, and never pushes a change
 to EntropyLab.
 
+Before testing, the workflow verifies that `Cargo.lock` resolves the checked-out
+EntropyLab dependency graph. If it does not, it regenerates and commits only
+`Cargo.lock` with `cargo update -p entropylab-wasm` to avoid unrelated version
+updates. It commits the result to the branch that dispatched the workflow, then
+builds and tags the prerelease at that commit. Run the workflow from a branch
+whose GitHub Actions token may write contents; a required refresh from a tag or
+a protected branch that rejects the push stops the build rather than publishing
+an APK from an uncommitted dependency graph.
+
 The current Android project signs its release variant with the debug keystore.
 The uploaded artifact is suitable for development installation, not Play Store
 distribution.

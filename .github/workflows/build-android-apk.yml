@@ -56,6 +56,35 @@ jobs:
           toolchain: 1.95.0
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
 
+      - name: Refresh Cargo lockfile for EntropyLab changes
+        working-directory: entropystudio
+        shell: bash
+        run: |
+          if cargo metadata --locked --format-version 1 >/dev/null 2>&1; then
+            echo "RELEASE_TARGET_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          if [[ "$GITHUB_REF_TYPE" != "branch" ]]; then
+            echo "Cargo.lock needs an update; rerun the workflow from a branch." >&2
+            exit 1
+          fi
+
+          cargo update -p entropylab-wasm
+          cargo metadata --locked --format-version 1 >/dev/null
+
+          if git diff --quiet -- Cargo.lock; then
+            echo "Cargo metadata required a lockfile update but no Cargo.lock change was generated." >&2
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.lock
+          git commit -m "chore: refresh Cargo.lock for EntropyLab"
+          git push origin "HEAD:${GITHUB_REF}"
+          echo "RELEASE_TARGET_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 4.1.2 --locked
 
@@ -126,6 +155,6 @@ jobs:
           gh release create "v${APP_VERSION}" \
             "example/android/app/build/outputs/apk/release/app-release.apk#entropystudio-${APP_VERSION}.apk" \
             --prerelease \
-            --target "$GITHUB_SHA" \
+            --target "$RELEASE_TARGET_SHA" \
             --title "EntropyStudio ${APP_VERSION}" \
             --generate-notes
