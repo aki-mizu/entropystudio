@@ -66,9 +66,14 @@ the same underlying crate.
 
 Run **Build Android APK** from the repository's Actions tab and provide a
 SemVer version such as `0.1.0`. The workflow builds the Android UniFFI library,
-assembles the example app's release variant, and uploads the APK as a workflow
-artifact. The supplied version becomes Android's `versionName`; the GitHub run
-number plus retry attempt supplies a monotonically increasing `versionCode`.
+assembles the example app's release variant, uploads the APK as a workflow
+artifact, and creates a GitHub prerelease with the APK attached. The
+supplied version becomes Android's `versionName`; the GitHub run number plus
+retry attempt supplies a monotonically increasing `versionCode`.
+
+The prerelease is tagged `v<version>` at the workflow's commit and is available
+for download from the GitHub Release page. It can be promoted to a formal
+release from that page when it is ready.
 
 The workflow checks out EntropyLab as a sibling repository, then applies a
 guarded, one-line change to that runner-local checkout so `entropylab-wasm`
