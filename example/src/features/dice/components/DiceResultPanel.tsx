@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { DiceResult } from '../dice';
 import type { DiceColors } from '../diceTheme';
+import { SeedWordGrid } from './SeedWordGrid';
 
 type Props = {
   readonly colors: DiceColors;
@@ -19,27 +20,42 @@ export function DiceResultPanel({
     return null;
   }
 
+  const mnemonic = result.mnemonic ?? '';
+  const mnemonicWords = mnemonic.split(/\s+/).filter(Boolean);
+
   return (
     <View style={styles.result}>
       {result.error ? (
-        <Text style={[styles.error, { color: colors.error }]} testID="dice-error">
+        <Text
+          style={[styles.error, { color: colors.error }]}
+          testID="dice-error"
+        >
           {result.error}
         </Text>
       ) : (
         <>
-          <Text style={[styles.label, { color: colors.muted }]} testID="result-phrase-label">
+          <Text
+            style={[styles.label, { color: colors.muted }]}
+            testID="result-phrase-label"
+          >
             {phraseLabel}
           </Text>
-          <Text selectable style={[styles.mnemonic, { color: colors.text }]} testID="mnemonic-output">
-            {result.mnemonic}
-          </Text>
+          <SeedWordGrid
+            colors={colors}
+            testID="mnemonic-output"
+            words={mnemonicWords}
+          />
           <Text
             style={[styles.label, styles.entropyLabel, { color: colors.muted }]}
             testID="result-entropy-label"
           >
             {entropyLabel}
           </Text>
-          <Text selectable style={[styles.entropy, { color: colors.text }]} testID="entropy-output">
+          <Text
+            selectable
+            style={[styles.entropy, { color: colors.text }]}
+            testID="entropy-output"
+          >
             {result.entropy}
           </Text>
         </>
@@ -65,10 +81,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     marginBottom: 10,
-  },
-  mnemonic: {
-    fontSize: 16,
-    lineHeight: 24,
   },
   result: {
     paddingBottom: 4,

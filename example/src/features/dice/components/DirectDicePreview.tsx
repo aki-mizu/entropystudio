@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { DirectDiceState } from '../../../native/entropyStudio';
 import type { DiceColors } from '../diceTheme';
+import { SeedWordGrid } from './SeedWordGrid';
 
 type DiceWordListProps = {
   readonly colors: DiceColors;
@@ -33,21 +34,12 @@ export function DiceWordList({
       accessibilityLabel={wordSlotsAria}
       style={[styles.container, { borderColor: colors.border }]}
     >
-      <Text
-        accessibilityLabel={words.join(' ')}
-        selectable
-        style={styles.wordText}
+      <SeedWordGrid
+        colors={colors}
+        finalWord={finalWord}
         testID={testID}
-      >
-        {words.map((word, index) => (
-          <Text
-            key={`${word}-${index}`}
-            style={{ color: index === words.length - 1 && finalWord ? colors.accent : colors.text }}
-          >
-            {`${index === 0 ? '' : ' '}${word}`}
-          </Text>
-        ))}
-      </Text>
+        words={words}
+      />
     </View>
   );
 }
@@ -80,10 +72,5 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 4,
     paddingTop: 8,
-  },
-  wordText: {
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
   },
 });

@@ -128,12 +128,22 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
 
   expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(false);
   expect(mockDiceRollsToEntropy).toHaveBeenCalledWith('1', 0, 24);
+  const liveMnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const liveDiceWords = app!.root.findByProps({
+    accessibilityLabel: liveMnemonic,
+    testID: 'live-dice-words',
+  });
+  expect(liveDiceWords.props.children).toHaveLength(3);
   expect(
-    app!.root.findByProps({
-      accessibilityLabel:
-        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
-    }).props.testID,
-  ).toBe('live-dice-words');
+    app!.root.findByProps({ testID: 'live-dice-words-column-1' }).props.children,
+  ).toHaveLength(4);
+  expect(
+    app!.root.findByProps({ testID: 'live-dice-words-column-2' }).props.children,
+  ).toHaveLength(4);
+  expect(
+    app!.root.findByProps({ testID: 'live-dice-words-column-3' }).props.children,
+  ).toHaveLength(4);
   expect(app!.root.findAllByProps({ testID: 'mnemonic-output' })).toHaveLength(0);
 
   await ReactTestRenderer.act(async () => {
@@ -141,9 +151,25 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
   });
 
   expect(app!.root.findByProps({ testID: 'dice-result-sheet' })).toBeDefined();
-  expect(app!.root.findByProps({ testID: 'mnemonic-output' }).props.children).toBe(
-    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+  const mnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const mnemonicOutput = app!.root.findByProps({
+    accessibilityLabel: mnemonic,
+    testID: 'mnemonic-output',
+  });
+  expect(mnemonicOutput.props.accessibilityLabel).toBe(
+    mnemonic,
   );
+  expect(mnemonicOutput.props.children).toHaveLength(3);
+  expect(
+    app!.root.findByProps({ testID: 'mnemonic-output-column-1' }).props.children,
+  ).toHaveLength(4);
+  expect(
+    app!.root.findByProps({ testID: 'mnemonic-output-column-2' }).props.children,
+  ).toHaveLength(4);
+  expect(
+    app!.root.findByProps({ testID: 'mnemonic-output-column-3' }).props.children,
+  ).toHaveLength(4);
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-result-sheet-close' }).props.onPress();
@@ -182,9 +208,10 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
     app!.root.findByProps({ testID: 'entropy-output' }).props.children,
   ).toBe('00000000000000000000000000000000');
   expect(
-    app!.root.findByProps({ testID: 'mnemonic-output' }).props.children,
+    app!.root.findByProps({ accessibilityLabel: mnemonic, testID: 'mnemonic-output' }).props
+      .accessibilityLabel,
   ).toBe(
-    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+    mnemonic,
   );
   expect(app!.root.findByProps({ testID: 'result-phrase-label' }).props.children).toBe(
     entropyLabEnglish['result.seedPhraseN'].replace('{n}', '24'),
@@ -366,9 +393,10 @@ test('derives a BitBox direct-dice phrase from a selected checksum word', async 
 
   const mnemonic = `${Array.from({ length: 11 }, () => 'abandon').join(' ')} about`;
   expect(mockMnemonicToEntropy).toHaveBeenCalledWith(mnemonic);
-  expect(app!.root.findByProps({ testID: 'mnemonic-output' }).props.children).toBe(
-    mnemonic,
-  );
+  expect(
+    app!.root.findByProps({ accessibilityLabel: mnemonic, testID: 'mnemonic-output' }).props
+      .accessibilityLabel,
+  ).toBe(mnemonic);
 });
 
 test('derives a D8/D16 direct-dice phrase from its final roll selection', async () => {
@@ -437,7 +465,8 @@ test('derives a D8/D16 direct-dice phrase from its final roll selection', async 
 
   const mnemonic = `${Array.from({ length: 11 }, () => 'abandon').join(' ')} about`;
   expect(mockMnemonicToEntropy).toHaveBeenCalledWith(mnemonic);
-  expect(app!.root.findByProps({ testID: 'mnemonic-output' }).props.children).toBe(
-    mnemonic,
-  );
+  expect(
+    app!.root.findByProps({ accessibilityLabel: mnemonic, testID: 'mnemonic-output' }).props
+      .accessibilityLabel,
+  ).toBe(mnemonic);
 });
