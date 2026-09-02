@@ -4,10 +4,17 @@ import type { DiceColors } from '../diceTheme';
 
 type Props = {
   readonly colors: DiceColors;
+  readonly entropyLabel: string;
+  readonly phraseLabel: string;
   readonly result: DiceResult | null;
 };
 
-export function DiceResultPanel({ colors, result }: Props) {
+export function DiceResultPanel({
+  colors,
+  entropyLabel,
+  phraseLabel,
+  result,
+}: Props) {
   if (!result) {
     return null;
   }
@@ -20,11 +27,18 @@ export function DiceResultPanel({ colors, result }: Props) {
         </Text>
       ) : (
         <>
-          <Text style={[styles.label, { color: colors.muted }]}>BIP39 PHRASE</Text>
+          <Text style={[styles.label, { color: colors.muted }]} testID="result-phrase-label">
+            {phraseLabel}
+          </Text>
           <Text selectable style={[styles.mnemonic, { color: colors.text }]} testID="mnemonic-output">
             {result.mnemonic}
           </Text>
-          <Text style={[styles.label, styles.entropyLabel, { color: colors.muted }]}>ENTROPY</Text>
+          <Text
+            style={[styles.label, styles.entropyLabel, { color: colors.muted }]}
+            testID="result-entropy-label"
+          >
+            {entropyLabel}
+          </Text>
           <Text selectable style={[styles.entropy, { color: colors.text }]} testID="entropy-output">
             {result.entropy}
           </Text>

@@ -23,11 +23,11 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
     clearRolls,
     coldcardCopy,
     colemanCopy,
+    copy,
     derivePhrase,
-    estimatedBits,
     method,
     progress,
-    requiredRolls,
+    progressText,
     result,
     rollCount,
     rolls,
@@ -50,10 +50,11 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
       ]}
     >
       <View style={styles.header}>
-        <Text style={[styles.eyebrow, { color: colors.accent }]}>ENTROPYSTUDIO</Text>
-        <Text style={[styles.title, { color: colors.text }]}>Dice rolls</Text>
-        <Text style={[styles.subtitle, { color: colors.muted }]}>
-          Build a BIP39 phrase from a physical dice transcript.
+        <Text style={[styles.title, { color: colors.text }]} testID="dice-screen-title">
+          {copy.mode}
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.muted }]} testID="dice-screen-how">
+          {copy.how}
         </Text>
       </View>
 
@@ -67,22 +68,24 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
 
       <WordCountSelector
         colors={colors}
+        label={copy.seedLengthLabel}
         onSelect={selectWordCount}
+        valueLabel={copy.seedLengthValue}
         wordCount={wordCount}
       />
 
       <DiceTranscriptInput
         colors={colors}
-        estimatedBits={estimatedBits}
+        inputLabel={copy.inputLabel}
+        inputPlaceholder={copy.inputPlaceholder}
         onChange={updateRolls}
         onClear={clearRolls}
         progress={progress}
-        requiredRolls={requiredRolls}
-        rollCount={rollCount}
+        progressText={progressText}
         rolls={rolls}
       />
 
-      <DiceGrid colors={colors} onSelect={appendFace} />
+      <DiceGrid colors={colors} inputLabel={copy.inputLabel} onSelect={appendFace} />
 
       <Pressable
         accessibilityRole="button"
@@ -97,10 +100,20 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
         ]}
         testID="derive-dice-phrase"
       >
-        <Text style={[styles.buttonText, { color: colors.onAccent }]}>Derive phrase</Text>
+        <Text
+          style={[styles.buttonText, { color: colors.onAccent }]}
+          testID="derive-dice-phrase-label"
+        >
+          {copy.deriveAction}
+        </Text>
       </Pressable>
 
-      <DiceResultPanel colors={colors} result={result} />
+      <DiceResultPanel
+        colors={colors}
+        entropyLabel={copy.resultEntropy}
+        phraseLabel={copy.resultPhrase}
+        result={result}
+      />
     </ScrollView>
   );
 }
@@ -120,43 +133,11 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
   },
-  eyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
   header: {
     marginBottom: 30,
   },
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
   screen: {
     flex: 1,
-  },
-  segment: {
-    borderColor: 'transparent',
-    borderRadius: 5,
-    borderWidth: 1,
-    minHeight: 66,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  segmentDetail: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 3,
-  },
-  segmentLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  segmentedControl: {
-    borderRadius: 7,
-    borderWidth: 1,
-    gap: 3,
-    padding: 3,
   },
   subtitle: {
     fontSize: 17,

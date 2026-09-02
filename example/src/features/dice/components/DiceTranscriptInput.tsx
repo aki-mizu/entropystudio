@@ -3,37 +3,39 @@ import type { DiceColors } from '../diceTheme';
 
 type Props = {
   readonly colors: DiceColors;
-  readonly estimatedBits: number;
+  readonly inputLabel: string;
+  readonly inputPlaceholder: string;
   readonly onChange: (rolls: string) => void;
   readonly onClear: () => void;
   readonly progress: number;
-  readonly requiredRolls: number;
-  readonly rollCount: number;
+  readonly progressText: string;
   readonly rolls: string;
 };
 
 export function DiceTranscriptInput({
   colors,
-  estimatedBits,
+  inputLabel,
+  inputPlaceholder,
   onChange,
   onClear,
   progress,
-  requiredRolls,
-  rollCount,
+  progressText,
   rolls,
 }: Props) {
   return (
     <>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.label, { color: colors.muted }]}>TRANSCRIPT</Text>
+        <Text style={[styles.label, { color: colors.muted }]} testID="dice-input-label">
+          {inputLabel}
+        </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Clear dice rolls"
+          accessibilityLabel={inputLabel}
           onPress={onClear}
           style={styles.clearButton}
           testID="clear-dice-rolls"
         >
-          <Text style={[styles.clearText, { color: colors.accent }]}>Clear</Text>
+          <Text style={[styles.clearIcon, { color: colors.accent }]}>X</Text>
         </Pressable>
       </View>
       <View
@@ -43,7 +45,7 @@ export function DiceTranscriptInput({
         ]}
       >
         <TextInput
-          accessibilityLabel="Dice rolls"
+          accessibilityLabel={inputLabel}
           autoCapitalize="none"
           autoComplete="off"
           autoCorrect={false}
@@ -51,7 +53,7 @@ export function DiceTranscriptInput({
           keyboardType="number-pad"
           multiline
           onChangeText={onChange}
-          placeholder="Enter or paste faces 1-6"
+          placeholder={inputPlaceholder}
           placeholderTextColor={colors.placeholder}
           selectionColor={colors.accent}
           spellCheck={false}
@@ -68,14 +70,9 @@ export function DiceTranscriptInput({
             ]}
           />
         </View>
-        <View style={styles.progressRow}>
-          <Text style={[styles.progressText, { color: colors.muted }]}>
-            {rollCount} of {requiredRolls} recommended rolls
-          </Text>
-          <Text style={[styles.progressText, { color: colors.muted }]}>
-            {estimatedBits.toFixed(1)} bits
-          </Text>
-        </View>
+        <Text style={[styles.progressText, { color: colors.muted }]} testID="dice-progress">
+          {progressText}
+        </Text>
       </View>
     </>
   );
@@ -86,7 +83,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 3,
   },
-  clearText: {
+  clearIcon: {
     fontSize: 14,
     fontWeight: '700',
   },
@@ -99,13 +96,9 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     height: '100%',
   },
-  progressRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 9,
-  },
   progressText: {
     fontSize: 13,
+    marginTop: 9,
   },
   progressTrack: {
     borderRadius: 2,

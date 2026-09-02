@@ -23,30 +23,27 @@ export function DiceMethodSelector({
   onSelect,
 }: Props) {
   return (
-    <>
-      <Text style={[styles.label, { color: colors.muted }]}>HASH METHOD</Text>
-      <View
-        style={[
-          styles.segmentedControl,
-          { backgroundColor: colors.segment, borderColor: colors.border },
-        ]}
-      >
-        <MethodOption
-          colors={colors}
-          copy={coldcardCopy}
-          method="coldcard"
-          onSelect={onSelect}
-          selected={method === 'coldcard'}
-        />
-        <MethodOption
-          colors={colors}
-          copy={colemanCopy}
-          method="coleman"
-          onSelect={onSelect}
-          selected={method === 'coleman'}
-        />
-      </View>
-    </>
+    <View
+      style={[
+        styles.segmentedControl,
+        { backgroundColor: colors.segment, borderColor: colors.border },
+      ]}
+    >
+      <MethodOption
+        colors={colors}
+        copy={coldcardCopy}
+        method="coldcard"
+        onSelect={onSelect}
+        selected={method === 'coldcard'}
+      />
+      <MethodOption
+        colors={colors}
+        copy={colemanCopy}
+        method="coleman"
+        onSelect={onSelect}
+        selected={method === 'coleman'}
+      />
+    </View>
   );
 }
 
@@ -93,11 +90,6 @@ function MethodOption({
 }
 
 const styles = StyleSheet.create({
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
   segment: {
     borderColor: 'transparent',
     borderRadius: 5,

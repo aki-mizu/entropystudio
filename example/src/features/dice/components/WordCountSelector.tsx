@@ -5,17 +5,27 @@ import type { DiceColors } from '../diceTheme';
 
 type Props = {
   readonly colors: DiceColors;
+  readonly label: string;
   readonly onSelect: (wordCount: WordCount) => void;
+  readonly valueLabel: string;
   readonly wordCount: WordCount;
 };
 
-export function WordCountSelector({ colors, onSelect, wordCount }: Props) {
+export function WordCountSelector({
+  colors,
+  label,
+  onSelect,
+  valueLabel,
+  wordCount,
+}: Props) {
   return (
     <>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.label, { color: colors.muted }]}>SEED PHRASE LENGTH</Text>
-        <Text style={[styles.sectionValue, { color: colors.accent }]}>
-          {wordCount} words
+        <Text style={[styles.label, { color: colors.muted }]} testID="seed-length-label">
+          {label}
+        </Text>
+        <Text style={[styles.sectionValue, { color: colors.accent }]} testID="seed-length-value">
+          {valueLabel}
         </Text>
       </View>
       <View style={styles.wordCounts}>

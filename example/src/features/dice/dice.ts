@@ -25,6 +25,8 @@ const ENTROPY_BITS = {
   24: 256,
 } as const;
 
+const UPSTREAM_HASHED_DICE_PLACEHOLDER = '415263415263…';
+
 export type WordCount = (typeof WORD_COUNTS)[number];
 export type DiceFace = (typeof DICE_FACES)[number];
 export type DiceMethod = 'coldcard' | 'coleman';
@@ -42,16 +44,70 @@ export function recommendedRolls(wordCount: WordCount): number {
 
 export function diceMethodCopy(method: DiceMethod, wordCount: WordCount) {
   const prefix = method === 'coldcard' ? 'dice.coldcard' : 'dice.coleman';
-  const description = entropyLabEnglish[`${prefix}.desc`].replace(
-    '{bits}',
-    String(ENTROPY_BITS[wordCount]),
-  )
-    .replace('{words}', String(wordCount))
-    .replace('{hashRolls}', String(RECOMMENDED_ROLLS[wordCount]));
+  const description = formatCopy(entropyLabEnglish[`${prefix}.desc`], {
+    bits: ENTROPY_BITS[wordCount],
+    hashRolls: RECOMMENDED_ROLLS[wordCount],
+    words: wordCount,
+  });
 
   return {
     title: entropyLabEnglish[`${prefix}.title`],
     description,
+  };
+}
+
+export function diceProgressCopy(
+  rollCount: number,
+  method: DiceMethod,
+  wordCount: WordCount,
+): string {
+  const requiredRolls = RECOMMENDED_ROLLS[wordCount];
+  const estimatedBits = (rollCount * Math.log2(6)).toFixed(1);
+
+  if (rollCount === 0) {
+    return formatCopy(entropyLabEnglish['dice.meta.empty'], {
+      method: entropyLabEnglish[`dice.method.${method}`],
+      n: requiredRolls,
+    });
+  }
+
+  if (rollCount < requiredRolls) {
+    return formatCopy(entropyLabEnglish['dice.meta.missing'], {
+      bits: estimatedBits,
+      have: rollCount,
+      missing: requiredRolls - rollCount,
+      n: requiredRolls,
+    });
+  }
+
+  const ready = formatCopy(entropyLabEnglish['dice.meta.ready'], {
+    bits: estimatedBits,
+    have: rollCount,
+  });
+  if (rollCount === requiredRolls) {
+    return ready;
+  }
+
+  return `${ready}${formatCopy(entropyLabEnglish['dice.meta.extra'], {
+    n: rollCount - requiredRolls,
+  })}`;
+}
+
+export function diceScreenCopy(wordCount: WordCount) {
+  return {
+    deriveAction: entropyLabEnglish['action.derive'],
+    how: formatCopy(entropyLabEnglish['dice.how'], { words: wordCount }),
+    inputLabel: entropyLabEnglish['dice.label.hashed'],
+    inputPlaceholder: UPSTREAM_HASHED_DICE_PLACEHOLDER,
+    mode: entropyLabEnglish['mode.dice'],
+    resultEntropy: entropyLabEnglish['result.entropyHex'],
+    resultPhrase: formatCopy(entropyLabEnglish['result.seedPhraseN'], {
+      n: wordCount,
+    }),
+    seedLengthLabel: entropyLabEnglish['seedLength.label'],
+    seedLengthValue: formatCopy(entropyLabEnglish['seedLength.words'], {
+      n: wordCount,
+    }),
   };
 }
 
@@ -79,6 +135,13 @@ function arrayBufferToHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer), byte =>
     byte.toString(16).padStart(2, '0'),
   ).join('');
+}
+
+function formatCopy(template: string, values: Record<string, number | string>): string {
+  return Object.entries(values).reduce(
+    (copy, [name, value]) => copy.replaceAll(`{${name}}`, String(value)),
+    template,
+  );
 }
 
 function upstreamDiceError(error: unknown, rolls: string): string {

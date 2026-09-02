@@ -8,10 +8,11 @@ const DICE_GRID_GAP = 10;
 
 type Props = {
   readonly colors: DiceColors;
+  readonly inputLabel: string;
   readonly onSelect: (face: DiceFace) => void;
 };
 
-export function DiceGrid({ colors, onSelect }: Props) {
+export function DiceGrid({ colors, inputLabel, onSelect }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const diceTileSize = Math.floor(
     (windowWidth - CONTENT_HORIZONTAL_PADDING * 2 - DICE_GRID_GAP * 2) / 3,
@@ -22,7 +23,7 @@ export function DiceGrid({ colors, onSelect }: Props) {
       {DICE_FACES.map(face => (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Add dice face ${face}`}
+          accessibilityLabel={`${inputLabel}: ${face}`}
           key={face}
           onPress={() => onSelect(face)}
           style={({ pressed }) => [

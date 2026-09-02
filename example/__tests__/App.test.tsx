@@ -39,6 +39,12 @@ test('derives a BIP39 phrase from dice through the EntropyStudio binding', async
     app = ReactTestRenderer.create(<App />);
   });
 
+  expect(app!.root.findByProps({ testID: 'dice-screen-title' }).props.children).toBe(
+    entropyLabEnglish['mode.dice'],
+  );
+  expect(app!.root.findByProps({ testID: 'dice-screen-how' }).props.children).toBe(
+    entropyLabEnglish['dice.how'].replace('{words}', '24'),
+  );
   expect(
     app!.root.findByProps({ testID: 'dice-method-coldcard-title' }).props
       .children,
@@ -65,6 +71,26 @@ test('derives a BIP39 phrase from dice through the EntropyStudio binding', async
       .replace('{words}', '24')
       .replace('{hashRolls}', '99'),
   );
+  expect(app!.root.findByProps({ testID: 'seed-length-label' }).props.children).toBe(
+    entropyLabEnglish['seedLength.label'],
+  );
+  expect(app!.root.findByProps({ testID: 'seed-length-value' }).props.children).toBe(
+    entropyLabEnglish['seedLength.words'].replace('{n}', '24'),
+  );
+  expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
+    entropyLabEnglish['dice.label.hashed'],
+  );
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.placeholder).toBe(
+    '415263415263…',
+  );
+  expect(app!.root.findByProps({ testID: 'dice-progress' }).props.children).toBe(
+    entropyLabEnglish['dice.meta.empty']
+      .replace('{n}', '99')
+      .replace('{method}', entropyLabEnglish['dice.method.coldcard']),
+  );
+  expect(
+    app!.root.findByProps({ testID: 'derive-dice-phrase-label' }).props.children,
+  ).toBe(entropyLabEnglish['action.derive']);
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText(
@@ -93,6 +119,12 @@ test('derives a BIP39 phrase from dice through the EntropyStudio binding', async
     app!.root.findByProps({ testID: 'mnemonic-output' }).props.children,
   ).toBe(
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+  );
+  expect(app!.root.findByProps({ testID: 'result-phrase-label' }).props.children).toBe(
+    entropyLabEnglish['result.seedPhraseN'].replace('{n}', '24'),
+  );
+  expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
+    entropyLabEnglish['result.entropyHex'],
   );
 });
 

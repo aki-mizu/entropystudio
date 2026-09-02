@@ -2,6 +2,8 @@ import { useState } from 'react';
 import {
   countDiceFaces,
   diceMethodCopy,
+  diceProgressCopy,
+  diceScreenCopy,
   deriveDiceResult,
   recommendedRolls,
 } from './dice';
@@ -19,10 +21,11 @@ export function useDiceRolls() {
   const [result, setResult] = useState<DiceResult | null>(null);
   const rollCount = countDiceFaces(rolls);
   const requiredRolls = recommendedRolls(wordCount);
-  const estimatedBits = rollCount * Math.log2(6);
   const progress = Math.min(rollCount / requiredRolls, 1);
   const coldcardCopy = diceMethodCopy('coldcard', wordCount);
   const colemanCopy = diceMethodCopy('coleman', wordCount);
+  const copy = diceScreenCopy(wordCount);
+  const progressText = diceProgressCopy(rollCount, method, wordCount);
 
   function updateRolls(value: string) {
     setRolls(value);
@@ -52,11 +55,11 @@ export function useDiceRolls() {
     clearRolls: () => updateRolls(''),
     coldcardCopy,
     colemanCopy,
+    copy,
     derivePhrase,
-    estimatedBits,
     method,
     progress,
-    requiredRolls,
+    progressText,
     result,
     rollCount,
     rolls,
