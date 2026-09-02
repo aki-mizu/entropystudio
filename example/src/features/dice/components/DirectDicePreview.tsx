@@ -6,6 +6,7 @@ import { SeedWordGrid } from './SeedWordGrid';
 type DiceWordListProps = {
   readonly colors: DiceColors;
   readonly finalWord?: string;
+  readonly slotCount?: number;
   readonly testID: string;
   readonly words: readonly string[];
   readonly wordSlotsAria: string;
@@ -14,6 +15,7 @@ type DiceWordListProps = {
 type Props = {
   readonly colors: DiceColors;
   readonly selectedFinalWord: string;
+  readonly slotCount?: number;
   readonly state: DirectDiceState;
   readonly wordSlotsAria: string;
 };
@@ -21,22 +23,25 @@ type Props = {
 export function DiceWordList({
   colors,
   finalWord,
+  slotCount,
   testID,
   words,
   wordSlotsAria,
 }: DiceWordListProps) {
-  if (words.length === 0) {
+  if (words.length === 0 && !slotCount) {
     return null;
   }
 
   return (
     <View
       accessibilityLabel={wordSlotsAria}
+      accessible={words.length === 0}
       style={[styles.container, { borderColor: colors.border }]}
     >
       <SeedWordGrid
         colors={colors}
         finalWord={finalWord}
+        slotCount={slotCount}
         testID={testID}
         words={words}
       />
@@ -47,6 +52,7 @@ export function DiceWordList({
 export function DirectDicePreview({
   colors,
   selectedFinalWord,
+  slotCount,
   state,
   wordSlotsAria,
 }: Props) {
@@ -59,6 +65,7 @@ export function DirectDicePreview({
     <DiceWordList
       colors={colors}
       finalWord={finalWord}
+      slotCount={slotCount}
       testID="direct-dice-words"
       words={words}
       wordSlotsAria={wordSlotsAria}

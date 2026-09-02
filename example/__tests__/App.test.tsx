@@ -50,6 +50,24 @@ jest.mock('entropystudio', () => ({
 const App = require('../src/App').default;
 const { DiceGrid } = require('../src/features/dice/components/DiceGrid');
 
+function expectPlaceholderSeedGrid(
+  app: ReactTestRenderer.ReactTestRenderer,
+  testID: string,
+  wordCount: number,
+) {
+  const rows = wordCount / 3;
+
+  for (const column of [1, 2, 3]) {
+    expect(
+      app.root.findByProps({ testID: `${testID}-column-${column}` }).props.children,
+    ).toHaveLength(rows);
+  }
+  expect(app.root.findByProps({ testID: `${testID}-word-1` }).props.children).toBe('\u2014');
+  expect(
+    app.root.findByProps({ testID: `${testID}-word-${wordCount}` }).props.children,
+  ).toBe('\u2014');
+}
+
 test('shows a live BIP39 phrase from hashed dice through the EntropyStudio binding', async () => {
   const entropy = new Uint8Array(16).buffer;
   mockDiceRollsToEntropy.mockReturnValue(entropy);
@@ -76,6 +94,7 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
   expect(app!.root.findByProps({ testID: 'seed-length-value' }).props.children).toBe(
     entropyLabEnglish['seedLength.words'].replace('{n}', '24'),
   );
+  expectPlaceholderSeedGrid(app!, 'live-dice-words', 24);
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
@@ -137,13 +156,16 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
   expect(liveDiceWords.props.children).toHaveLength(3);
   expect(
     app!.root.findByProps({ testID: 'live-dice-words-column-1' }).props.children,
-  ).toHaveLength(4);
+  ).toHaveLength(8);
   expect(
     app!.root.findByProps({ testID: 'live-dice-words-column-2' }).props.children,
-  ).toHaveLength(4);
+  ).toHaveLength(8);
   expect(
     app!.root.findByProps({ testID: 'live-dice-words-column-3' }).props.children,
-  ).toHaveLength(4);
+  ).toHaveLength(8);
+  expect(
+    app!.root.findByProps({ testID: 'live-dice-words-word-13' }).props.children,
+  ).toBe('\u2014');
   expect(app!.root.findAllByProps({ testID: 'mnemonic-output' })).toHaveLength(0);
 
   await ReactTestRenderer.act(async () => {
@@ -272,6 +294,57 @@ test('adds and clears dice faces through the modular controls', async () => {
   );
 });
 
+test('shows placeholders for every dice method and selected seed length', async () => {
+  mockDirectDiceState.mockReturnValue({
+    activeRoll: 0,
+    activeWord: 1,
+    candidates: [],
+    complete: false,
+    completedGroups: 0,
+    extraCount: 0,
+    finalWord: '',
+    invalidCount: 0,
+    partialWords: 23,
+    skippedCount: 0,
+    step: 3,
+    words: [],
+  });
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  expectPlaceholderSeedGrid(app!, 'live-dice-words', 24);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-method-coleman' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+  });
+
+  expectPlaceholderSeedGrid(app!, 'live-dice-words', 24);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-method-bitbox' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'word-count-12' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+  });
+
+  expectPlaceholderSeedGrid(app!, 'direct-dice-words', 12);
+});
+
 test('reveals each D8/D16 word as its three-roll group completes', async () => {
   const emptyState = {
     activeRoll: 0,
@@ -308,10 +381,14 @@ test('reveals each D8/D16 word as its three-roll group completes', async () => {
     app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
   });
 
+  expectPlaceholderSeedGrid(app!, 'direct-dice-words', 24);
+
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('10');
   });
-  expect(app!.root.findAllByProps({ testID: 'direct-dice-words' })).toHaveLength(0);
+  expect(
+    app!.root.findByProps({ testID: 'direct-dice-words-word-1' }).props.children,
+  ).toBe('\u2014');
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('100');

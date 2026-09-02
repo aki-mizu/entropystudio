@@ -62,7 +62,6 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
   const isCompactHeight = windowHeight < 700;
   const maxTileSize =
     method === 'd8d16' ? (isCompactHeight ? 48 : 56) : isCompactHeight ? 68 : 84;
-  const hasDirectWords = Boolean(directState && directState.words.length > 0);
   const liveHashedWords =
     !directState && result && typeof result.mnemonic === 'string'
       ? result.mnemonic.split(' ')
@@ -148,22 +147,23 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
         />
 
         <View style={styles.rollArea}>
-          {hasDirectWords && directState ? (
+          {directState ? (
             <DirectDicePreview
               colors={colors}
               selectedFinalWord={selectedFinalWord}
+              slotCount={wordCount}
               state={directState}
               wordSlotsAria={copy.wordSlotsAria}
             />
-          ) : null}
-          {liveHashedWords.length > 0 ? (
+          ) : (
             <DiceWordList
               colors={colors}
+              slotCount={wordCount}
               testID="live-dice-words"
               words={liveHashedWords}
               wordSlotsAria={copy.wordSlotsAria}
             />
-          ) : null}
+          )}
           {canChooseFinalWord && directCopy ? (
             <Pressable
               accessibilityRole="button"
@@ -319,9 +319,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   rollArea: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    minHeight: 0,
+    marginTop: 12,
   },
   screen: {
     flex: 1,

@@ -6,23 +6,36 @@ const SEED_WORD_COLUMNS = 3;
 type Props = {
   readonly colors: DiceColors;
   readonly finalWord?: string;
+  readonly slotCount?: number;
   readonly testID: string;
   readonly words: readonly string[];
 };
 
-export function SeedWordGrid({ colors, finalWord, testID, words }: Props) {
-  if (words.length === 0) {
+export function SeedWordGrid({
+  colors,
+  finalWord,
+  slotCount,
+  testID,
+  words,
+}: Props) {
+  const displayedSlotCount = Math.max(words.length, slotCount ?? 0);
+  if (displayedSlotCount === 0) {
     return null;
   }
 
+  const slots = Array.from(
+    { length: displayedSlotCount },
+    (_, index) => words[index] ?? '',
+  );
+
   return (
     <View
-      accessibilityLabel={words.join(' ')}
-      accessible
+      accessibilityLabel={words.length > 0 ? words.join(' ') : undefined}
+      accessible={words.length > 0}
       style={styles.grid}
       testID={testID}
     >
-      {seedWordColumns(words).map((column, columnIndex) => (
+      {seedWordColumns(slots).map((column, columnIndex) => (
         <View
           key={columnIndex}
           style={styles.column}
@@ -35,6 +48,7 @@ export function SeedWordGrid({ colors, finalWord, testID, words }: Props) {
                 styles.slot,
                 { backgroundColor: colors.surface, borderColor: colors.border },
               ]}
+              testID={`${testID}-slot-${index + 1}`}
             >
               <Text style={[styles.number, { color: colors.muted }]}>{`${index + 1}.`}</Text>
               <Text
@@ -44,10 +58,18 @@ export function SeedWordGrid({ colors, finalWord, testID, words }: Props) {
                 selectable
                 style={[
                   styles.word,
-                  { color: index === words.length - 1 && finalWord ? colors.accent : colors.text },
+                  {
+                    color:
+                      index === words.length - 1 && finalWord
+                        ? colors.accent
+                        : word
+                          ? colors.text
+                          : colors.placeholder,
+                  },
                 ]}
+                testID={`${testID}-word-${index + 1}`}
               >
-                {word}
+                {word || '\u2014'}
               </Text>
             </View>
           ))}
