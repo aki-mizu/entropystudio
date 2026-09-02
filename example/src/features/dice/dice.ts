@@ -288,9 +288,6 @@ export function diceScreenCopy(method: DiceMethod, wordCount: WordCount) {
     lastWordPlaceholder: entropyLabEnglish['seed.lastWordPlaceholder'],
     mode: entropyLabEnglish['mode.dice'],
     resultEntropy: entropyLabEnglish['result.entropyHex'],
-    resultPhrase: formatCopy(entropyLabEnglish['result.seedPhraseN'], {
-      n: wordCount,
-    }),
     seedLengthLabel: entropyLabEnglish['seedLength.label'],
     seedLengthValue: formatCopy(entropyLabEnglish['seedLength.words'], {
       n: wordCount,

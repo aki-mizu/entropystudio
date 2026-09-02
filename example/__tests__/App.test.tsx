@@ -173,25 +173,11 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
   });
 
   expect(app!.root.findByProps({ testID: 'dice-result-sheet' })).toBeDefined();
-  const mnemonic =
-    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
-  const mnemonicOutput = app!.root.findByProps({
-    accessibilityLabel: mnemonic,
-    testID: 'mnemonic-output',
-  });
-  expect(mnemonicOutput.props.accessibilityLabel).toBe(
-    mnemonic,
+  expect(app!.root.findAllByProps({ testID: 'mnemonic-output' })).toHaveLength(0);
+  expect(app!.root.findAllByProps({ testID: 'result-phrase-label' })).toHaveLength(0);
+  expect(app!.root.findByProps({ testID: 'entropy-output' }).props.children).toBe(
+    '00000000000000000000000000000000',
   );
-  expect(mnemonicOutput.props.children).toHaveLength(3);
-  expect(
-    app!.root.findByProps({ testID: 'mnemonic-output-column-1' }).props.children,
-  ).toHaveLength(4);
-  expect(
-    app!.root.findByProps({ testID: 'mnemonic-output-column-2' }).props.children,
-  ).toHaveLength(4);
-  expect(
-    app!.root.findByProps({ testID: 'mnemonic-output-column-3' }).props.children,
-  ).toHaveLength(4);
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-result-sheet-close' }).props.onPress();
@@ -229,15 +215,7 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
   expect(
     app!.root.findByProps({ testID: 'entropy-output' }).props.children,
   ).toBe('00000000000000000000000000000000');
-  expect(
-    app!.root.findByProps({ accessibilityLabel: mnemonic, testID: 'mnemonic-output' }).props
-      .accessibilityLabel,
-  ).toBe(
-    mnemonic,
-  );
-  expect(app!.root.findByProps({ testID: 'result-phrase-label' }).props.children).toBe(
-    entropyLabEnglish['result.seedPhraseN'].replace('{n}', '24'),
-  );
+  expect(app!.root.findAllByProps({ testID: 'mnemonic-output' })).toHaveLength(0);
   expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
     entropyLabEnglish['result.entropyHex'],
   );
@@ -470,8 +448,9 @@ test('derives a BitBox direct-dice phrase from a selected checksum word', async 
 
   const mnemonic = `${Array.from({ length: 11 }, () => 'abandon').join(' ')} about`;
   expect(mockMnemonicToEntropy).toHaveBeenCalledWith(mnemonic);
+  expect(app!.root.findAllByProps({ testID: 'mnemonic-output' })).toHaveLength(0);
   expect(
-    app!.root.findByProps({ accessibilityLabel: mnemonic, testID: 'mnemonic-output' }).props
+    app!.root.findByProps({ accessibilityLabel: mnemonic, testID: 'direct-dice-words' }).props
       .accessibilityLabel,
   ).toBe(mnemonic);
 });
@@ -542,8 +521,9 @@ test('derives a D8/D16 direct-dice phrase from its final roll selection', async 
 
   const mnemonic = `${Array.from({ length: 11 }, () => 'abandon').join(' ')} about`;
   expect(mockMnemonicToEntropy).toHaveBeenCalledWith(mnemonic);
+  expect(app!.root.findAllByProps({ testID: 'mnemonic-output' })).toHaveLength(0);
   expect(
-    app!.root.findByProps({ accessibilityLabel: mnemonic, testID: 'mnemonic-output' }).props
+    app!.root.findByProps({ accessibilityLabel: mnemonic, testID: 'direct-dice-words' }).props
       .accessibilityLabel,
   ).toBe(mnemonic);
 });

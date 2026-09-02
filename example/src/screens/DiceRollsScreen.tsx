@@ -261,13 +261,12 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
         colors={colors}
         onDismiss={() => setActiveSheet(null)}
         testID="dice-result-sheet"
-        title={copy.resultPhrase}
+        title={copy.deriveAction}
         visible={activeSheet === 'result' && Boolean(result)}
       >
         <DiceResultPanel
           colors={colors}
           entropyLabel={copy.resultEntropy}
-          phraseLabel={copy.resultPhrase}
           result={result}
         />
       </NativeSheet>
