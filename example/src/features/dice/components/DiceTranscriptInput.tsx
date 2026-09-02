@@ -2,16 +2,22 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { DiceMethod, WordCount } from '../dice';
 import type { DiceColors } from '../diceTheme';
 
+export type DiceTranscriptSelection = {
+  readonly end: number;
+  readonly start: number;
+};
+
 type Props = {
   readonly colors: DiceColors;
   readonly inputLabel: string;
   readonly inputPlaceholder: string;
   readonly method: DiceMethod;
   readonly onChange: (rolls: string) => void;
-  readonly onClear: () => void;
+  readonly onSelectionChange: (selection: DiceTranscriptSelection) => void;
   readonly progress: number;
   readonly progressText: string;
   readonly rolls: string;
+  readonly selection: DiceTranscriptSelection | null;
   readonly wordCount: WordCount;
 };
 
@@ -21,13 +27,17 @@ export function DiceTranscriptInput({
   inputPlaceholder,
   method,
   onChange,
-  onClear,
+  onSelectionChange,
   progress,
   progressText,
   rolls,
+  selection,
   wordCount,
 }: Props) {
   const displayRolls = formatDiceTranscript(rolls, method, wordCount);
+  const displaySelection = selection
+    ? displaySelectionFromRawSelection(displayRolls, selection)
+    : undefined;
   const isD8D16 = method === 'd8d16';
 
   return (
@@ -38,12 +48,20 @@ export function DiceTranscriptInput({
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={inputLabel}
-          onPress={onClear}
-          style={styles.clearButton}
-          testID="clear-dice-rolls"
+          accessibilityLabel="Remove roll before cursor"
+          disabled={rolls.length === 0}
+          onPress={() => {
+            const result = removeDiceRollAtCursor(rolls, selection);
+            onSelectionChange(result.selection);
+            onChange(result.rolls);
+          }}
+          style={({ pressed }) => [
+            styles.undoButton,
+            { opacity: rolls.length === 0 ? 0.38 : pressed ? 0.72 : 1 },
+          ]}
+          testID="remove-dice-roll"
         >
-          <Text style={[styles.clearIcon, { color: colors.accent }]}>Clear</Text>
+          <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
         </Pressable>
       </View>
       <View
@@ -62,12 +80,16 @@ export function DiceTranscriptInput({
           multiline={false}
           numberOfLines={1}
           onChangeText={value => onChange(value.replace(/\s/g, ''))}
+          onSelectionChange={({ nativeEvent }) => {
+            onSelectionChange(rawSelectionFromDisplaySelection(displayRolls, nativeEvent.selection));
+          }}
           placeholder={inputPlaceholder}
           placeholderTextColor={colors.placeholder}
           selectionColor={colors.accent}
           showSoftInputOnFocus={false}
           spellCheck={false}
           style={[styles.rollInput, { color: colors.text }]}
+          selection={displaySelection}
           testID="dice-rolls-input"
           textContentType="none"
           value={displayRolls}
@@ -147,12 +169,72 @@ function formatD8D16Transcript(rolls: string, wordCount: WordCount): string {
   }).join('');
 }
 
+function rawSelectionFromDisplaySelection(
+  displayRolls: string,
+  selection: DiceTranscriptSelection,
+): DiceTranscriptSelection {
+  return {
+    end: rawPositionFromDisplayPosition(displayRolls, selection.end),
+    start: rawPositionFromDisplayPosition(displayRolls, selection.start),
+  };
+}
+
+function displaySelectionFromRawSelection(
+  displayRolls: string,
+  selection: DiceTranscriptSelection,
+): DiceTranscriptSelection {
+  return {
+    end: displayPositionFromRawPosition(displayRolls, selection.end),
+    start: displayPositionFromRawPosition(displayRolls, selection.start),
+  };
+}
+
+function rawPositionFromDisplayPosition(displayRolls: string, position: number): number {
+  const end = Math.min(Math.max(position, 0), displayRolls.length);
+  return Array.from(displayRolls.slice(0, end)).filter(character => character !== ' ').length;
+}
+
+function displayPositionFromRawPosition(displayRolls: string, position: number): number {
+  const rawLength = rawPositionFromDisplayPosition(displayRolls, displayRolls.length);
+  const target = Math.min(Math.max(position, 0), rawLength);
+  let rawPosition = 0;
+
+  for (let index = 0; index < displayRolls.length; index += 1) {
+    if (rawPosition === target && displayRolls[index] !== ' ') {
+      return index;
+    }
+    if (displayRolls[index] !== ' ') {
+      rawPosition += 1;
+    }
+  }
+
+  return displayRolls.length;
+}
+
+function removeDiceRollAtCursor(
+  rolls: string,
+  selection: DiceTranscriptSelection | null,
+): { readonly rolls: string; readonly selection: DiceTranscriptSelection } {
+  if (!rolls) {
+    return { rolls: '', selection: { end: 0, start: 0 } };
+  }
+
+  const cursor = Math.min(Math.max(selection?.start ?? rolls.length, 0), rolls.length);
+  const deleteStart = Math.max(cursor - 1, 0);
+  const nextRolls = `${rolls.slice(0, deleteStart)}${rolls.slice(cursor)}`;
+
+  return {
+    rolls: nextRolls,
+    selection: { end: deleteStart, start: deleteStart },
+  };
+}
+
 const styles = StyleSheet.create({
-  clearButton: {
+  undoButton: {
     paddingHorizontal: 4,
     paddingVertical: 3,
   },
-  clearIcon: {
+  undoLabel: {
     fontSize: 13,
     fontWeight: '700',
   },

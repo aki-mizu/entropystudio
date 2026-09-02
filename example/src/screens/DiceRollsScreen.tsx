@@ -13,9 +13,11 @@ import { DiceWordList, DirectDicePreview } from '../features/dice/components/Dir
 import { DiceMethodSelector } from '../features/dice/components/DiceMethodSelector';
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceTranscriptInput } from '../features/dice/components/DiceTranscriptInput';
+import type { DiceTranscriptSelection } from '../features/dice/components/DiceTranscriptInput';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { WordCountSelector } from '../features/dice/components/WordCountSelector';
 import { D8_D16_FACES, enabledDiceFaces } from '../features/dice/dice';
+import type { DiceInputFace } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
 import { useDiceRolls } from '../features/dice/useDiceRolls';
 
@@ -26,11 +28,12 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
   const safeAreaInsets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
+  const [transcriptSelection, setTranscriptSelection] =
+    useState<DiceTranscriptSelection | null>(null);
   const {
     appendFace,
     bitboxCopy,
     canDerive,
-    clearRolls,
     coldcardCopy,
     colemanCopy,
     copy,
@@ -78,6 +81,15 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
   function chooseFinalWord(word: string) {
     selectFinalWord(word);
     setActiveSheet(null);
+  }
+
+  function insertDiceFace(face: DiceInputFace) {
+    const cursor = appendFace(
+      face,
+      transcriptSelection?.start,
+      transcriptSelection?.end,
+    );
+    setTranscriptSelection({ end: cursor, start: cursor });
   }
 
   return (
@@ -141,10 +153,11 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
           inputPlaceholder={copy.inputPlaceholder}
           method={method}
           onChange={updateRolls}
-          onClear={clearRolls}
+          onSelectionChange={setTranscriptSelection}
           progress={progress}
           progressText={progressText}
           rolls={rolls}
+          selection={transcriptSelection}
           wordCount={wordCount}
         />
 
@@ -186,7 +199,7 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
             faces={method === 'd8d16' ? D8_D16_FACES : undefined}
             inputLabel={copy.inputLabel}
             maxTileSize={maxTileSize}
-            onSelect={appendFace}
+            onSelect={insertDiceFace}
           />
         </View>
 

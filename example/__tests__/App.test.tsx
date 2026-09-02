@@ -263,7 +263,7 @@ test('uses the upstream dice validation text', async () => {
   );
 });
 
-test('adds and clears dice faces through the modular controls', async () => {
+test('adds and removes dice faces through the modular controls', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
     app = ReactTestRenderer.create(<App />);
@@ -279,7 +279,7 @@ test('adds and clears dice faces through the modular controls', async () => {
   );
 
   await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'clear-dice-rolls' }).props.onPress();
+    app!.root.findByProps({ testID: 'remove-dice-roll' }).props.onPress();
   });
 
   expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe(
@@ -378,8 +378,43 @@ test('formats direct-dice transcript groups without storing separators', async (
   expect(mockDirectDiceState).toHaveBeenCalledWith('1111111', 0, 24);
 
   await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'clear-dice-rolls' }).props.onPress();
+    app!.root.findByProps({ testID: 'remove-dice-roll' }).props.onPress();
   });
+
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe(
+    '111111',
+  );
+  expect(mockDirectDiceState).toHaveBeenCalledWith('111111', 0, 24);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'remove-dice-roll' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('11111');
+
+  await ReactTestRenderer.act(async () => {
+    app!.root
+      .findByProps({ testID: 'dice-rolls-input' })
+      .props.onChangeText('');
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root
+      .findByProps({ testID: 'dice-rolls-input' })
+      .props.onChangeText('111111222222333333');
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onSelectionChange({
+      nativeEvent: { selection: { start: 9 } },
+    });
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'remove-dice-roll' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe(
+    '111111 222223 33333',
+  );
+  expect(mockDirectDiceState).toHaveBeenCalledWith('11111122222333333', 0, 24);
+
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
   });
@@ -395,6 +430,84 @@ test('formats direct-dice transcript groups without storing separators', async (
 
   expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('123 4');
   expect(mockDirectDiceState).toHaveBeenCalledWith('1234', 1, 24);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'remove-dice-roll' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('123');
+  expect(mockDirectDiceState).toHaveBeenCalledWith('123', 1, 24);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('123456789');
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onSelectionChange({
+      nativeEvent: { selection: { start: 5 } },
+    });
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'remove-dice-roll' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe(
+    '123 567 89',
+  );
+  expect(mockDirectDiceState).toHaveBeenCalledWith('12356789', 1, 24);
+});
+
+test('inserts keypad faces at the transcript cursor', async () => {
+  mockDirectDiceState.mockReturnValue({
+    activeRoll: 1,
+    activeWord: 1,
+    candidates: [],
+    complete: false,
+    completedGroups: 0,
+    extraCount: 0,
+    finalWord: '',
+    invalidCount: 0,
+    partialWords: 23,
+    skippedCount: 0,
+    step: 0,
+    words: [],
+  });
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-method-bitbox' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root
+      .findByProps({ testID: 'dice-rolls-input' })
+      .props.onChangeText('111111222222333333');
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onSelectionChange({
+      nativeEvent: { selection: { end: 9, start: 9 } },
+    });
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-face-4' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe(
+    '111111 224222 233333 3',
+  );
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.selection).toEqual({
+    end: 10,
+    start: 10,
+  });
+  expect(mockDirectDiceState).toHaveBeenLastCalledWith('1111112242222333333', 0, 24);
 });
 
 test('enables only dice faces valid for the current direct-dice step', async () => {

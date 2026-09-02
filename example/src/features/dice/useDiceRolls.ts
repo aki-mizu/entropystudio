@@ -68,8 +68,15 @@ export function useDiceRolls() {
     setSelectedFinalWord('');
   }
 
-  function appendFace(face: DiceInputFace) {
-    updateRolls(`${rolls}${face}`);
+  function appendFace(
+    face: DiceInputFace,
+    selectionStart = rolls.length,
+    selectionEnd = selectionStart,
+  ): number {
+    const start = Math.min(Math.max(selectionStart, 0), rolls.length);
+    const end = Math.min(Math.max(selectionEnd, start), rolls.length);
+    updateRolls(`${rolls.slice(0, start)}${face}${rolls.slice(end)}`);
+    return start + face.length;
   }
 
   function selectMethod(value: DiceMethod) {
@@ -105,7 +112,6 @@ export function useDiceRolls() {
     appendFace,
     bitboxCopy,
     canDerive,
-    clearRolls: () => updateRolls(''),
     coldcardCopy,
     colemanCopy,
     copy,
