@@ -25,7 +25,7 @@ jest.mock('entropystudio', () => ({
   entropyToMnemonic: mockEntropyToMnemonic,
 }));
 
-const App = require('../App').default;
+const App = require('../src/App').default;
 
 test('derives a BIP39 phrase from dice through the EntropyStudio binding', async () => {
   const entropy = new Uint8Array(16).buffer;
@@ -120,5 +120,28 @@ test('uses the upstream dice validation text', async () => {
 
   expect(app!.root.findByProps({ testID: 'dice-error' }).props.children).toBe(
     entropyLabEnglish['error.diceFaces'].replace('{chars}', JSON.stringify('x')),
+  );
+});
+
+test('adds and clears dice faces through the modular controls', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-face-6' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe(
+    '6',
+  );
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'clear-dice-rolls' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe(
+    '',
   );
 });
