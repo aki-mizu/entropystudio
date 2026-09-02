@@ -74,6 +74,7 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 def appVersionName = project.findProperty("versionName") ?: "1.0"
 def appVersionCode = (project.findProperty("versionCode") ?: "1").toInteger()
+def metroHost = (project.findProperty("metroHost") ?: System.getenv("METRO_HOST") ?: "").toString()
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -87,6 +88,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode
         versionName appVersionName
+        buildConfigField "String", "METRO_HOST", "\"\""
     }
     signingConfigs {
         debug {
@@ -99,6 +101,7 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            buildConfigField "String", "METRO_HOST", "\"${metroHost}\""
         }
         release {
             // Caution! In production, you need to generate your own keystore file.

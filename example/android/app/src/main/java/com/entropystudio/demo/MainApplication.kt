@@ -1,6 +1,7 @@
 package com.entropystudio.demo
 
 import android.app.Application
+import android.preference.PreferenceManager
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
@@ -22,6 +23,12 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    if (BuildConfig.DEBUG) {
+      PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        .edit()
+        .putString("debug_http_host", BuildConfig.METRO_HOST)
+        .apply()
+    }
     loadReactNative(this)
   }
 }
