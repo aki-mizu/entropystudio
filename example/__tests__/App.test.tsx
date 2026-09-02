@@ -68,6 +68,18 @@ function expectPlaceholderSeedGrid(
   ).toBe('\u2014');
 }
 
+function expectEnabledDiceFaces(
+  app: ReactTestRenderer.ReactTestRenderer,
+  faces: readonly string[],
+  enabledFaces: readonly string[],
+) {
+  for (const face of faces) {
+    expect(app.root.findByProps({ testID: `dice-face-${face}` }).props.disabled).toBe(
+      !enabledFaces.includes(face),
+    );
+  }
+}
+
 test('shows a live BIP39 phrase from hashed dice through the EntropyStudio binding', async () => {
   const entropy = new Uint8Array(16).buffer;
   mockDiceRollsToEntropy.mockReturnValue(entropy);
@@ -324,6 +336,91 @@ test('shows placeholders for every dice method and selected seed length', async 
   });
 
   expectPlaceholderSeedGrid(app!, 'direct-dice-words', 12);
+});
+
+test('enables only dice faces valid for the current direct-dice step', async () => {
+  const directState = {
+    activeRoll: 1,
+    activeWord: 1,
+    candidates: [],
+    complete: false,
+    completedGroups: 0,
+    extraCount: 0,
+    finalWord: '',
+    invalidCount: 0,
+    partialWords: 23,
+    skippedCount: 0,
+    step: 0,
+    words: [],
+  };
+  mockDirectDiceState.mockImplementation((rolls: string, method: number) => {
+    if (method === 0) {
+      if (rolls === '11111') {
+        return { ...directState, activeRoll: 6, step: 1 };
+      }
+      if (rolls === 'complete') {
+        return { ...directState, step: 2 };
+      }
+      return directState;
+    }
+    if (rolls === '1') {
+      return { ...directState, activeRoll: 2, step: 4 };
+    }
+    if (rolls === 'correction') {
+      return { ...directState, activeRoll: 0, step: 9 };
+    }
+    return { ...directState, step: 3 };
+  });
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-method-bitbox' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+  });
+
+  expectEnabledDiceFaces(app!, ['1', '2', '3', '4', '5', '6'], ['1', '2', '3', '4']);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('11111');
+  });
+  expectEnabledDiceFaces(app!, ['1', '2', '3', '4', '5', '6'], ['1', '2', '3', '4', '5', '6']);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('complete');
+  });
+  expectEnabledDiceFaces(app!, ['1', '2', '3', '4', '5', '6'], []);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-method-d8d16' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+  });
+
+  const d8D16Faces = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
+  expectEnabledDiceFaces(app!, d8D16Faces, ['1', '2', '3', '4', '5', '6', '7', '8']);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1');
+  });
+  expectEnabledDiceFaces(app!, d8D16Faces, d8D16Faces);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('correction');
+  });
+  expectEnabledDiceFaces(app!, d8D16Faces, []);
 });
 
 test('reveals each D8/D16 word as its three-roll group completes', async () => {

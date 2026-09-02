@@ -12,6 +12,8 @@ import type { DirectDiceState } from '../../native/entropyStudio';
 import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
 
 export const DICE_FACES = ['1', '2', '3', '4', '5', '6'] as const;
+const BITBOX_D4_FACES = ['1', '2', '3', '4'] as const;
+const D8_FACES = ['1', '2', '3', '4', '5', '6', '7', '8'] as const;
 export const D8_D16_FACES = [
   '0',
   '1',
@@ -116,6 +118,38 @@ export function isHashedDiceMethod(method: DiceMethod): method is HashedDiceMeth
 
 export function isDirectDiceMethod(method: DiceMethod): method is DirectDiceMethodId {
   return method === 'bitbox' || method === 'd8d16';
+}
+
+export function enabledDiceFaces(
+  method: DiceMethod,
+  directState: DirectDiceState | null,
+): readonly DiceInputFace[] {
+  if (isHashedDiceMethod(method)) {
+    return DICE_FACES;
+  }
+  if (!directState) {
+    return [];
+  }
+  if (method === 'bitbox') {
+    return directState.step === DirectDiceStep.BitboxDie
+      ? BITBOX_D4_FACES
+      : directState.step === DirectDiceStep.BitboxCoin
+        ? DICE_FACES
+        : [];
+  }
+
+  switch (directState.step) {
+    case DirectDiceStep.D8D16WordD8:
+    case DirectDiceStep.D8D16ChecksumD8:
+    case DirectDiceStep.D8D16ChecksumCoin:
+      return D8_FACES;
+    case DirectDiceStep.D8D16WordD16First:
+    case DirectDiceStep.D8D16WordD16Second:
+    case DirectDiceStep.D8D16ChecksumD16:
+      return D8_D16_FACES;
+    default:
+      return [];
+  }
 }
 
 export function diceMethodCopy(method: DiceMethod, wordCount: WordCount) {

@@ -9,6 +9,7 @@ const DICE_GRID_GAP = 6;
 type Props = {
   readonly columns?: number;
   readonly colors: DiceColors;
+  readonly enabledFaces?: readonly DiceInputFace[];
   readonly faces?: readonly DiceInputFace[];
   readonly inputLabel: string;
   readonly maxTileSize?: number;
@@ -18,11 +19,13 @@ type Props = {
 export function DiceGrid({
   columns = 6,
   colors,
+  enabledFaces,
   faces = DICE_FACES,
   inputLabel,
   maxTileSize = columns >= 6 ? 56 : 84,
   onSelect,
 }: Props) {
+  const activeFaces = enabledFaces ?? faces;
   const { width: windowWidth } = useWindowDimensions();
   const availableGridWidth =
     windowWidth - CONTENT_HORIZONTAL_PADDING * 2 - DICE_GRID_GAP * (columns - 1);
@@ -35,38 +38,43 @@ export function DiceGrid({
 
   return (
     <View style={[styles.grid, { width: gridWidth }]}>
-      {faces.map(face => (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${inputLabel}: ${face}`}
-          key={face}
-          onPress={() => onSelect(face)}
-          style={({ pressed }) => [
-            styles.diceFace,
-            {
-              backgroundColor: colors.diceSurface,
-              borderColor: colors.diceBorder,
-              height: diceTileSize,
-              opacity: pressed ? 0.78 : 1,
-              width: diceTileSize,
-            },
-          ]}
-          testID={`dice-face-${face}`}
-        >
-          <Text
-            style={[
-              styles.diceFaceText,
+      {faces.map(face => {
+        const disabled = !activeFaces.includes(face);
+
+        return (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${inputLabel}: ${face}`}
+            disabled={disabled}
+            key={face}
+            onPress={() => onSelect(face)}
+            style={({ pressed }) => [
+              styles.diceFace,
               {
-                color: colors.diceText,
-                fontSize: diceFaceFontSize,
-                lineHeight: diceFaceFontSize + 4,
+                backgroundColor: colors.diceSurface,
+                borderColor: colors.diceBorder,
+                height: diceTileSize,
+                opacity: disabled ? 0.38 : pressed ? 0.78 : 1,
+                width: diceTileSize,
               },
             ]}
+            testID={`dice-face-${face}`}
           >
-            {face}
-          </Text>
-        </Pressable>
-      ))}
+            <Text
+              style={[
+                styles.diceFaceText,
+                {
+                  color: colors.diceText,
+                  fontSize: diceFaceFontSize,
+                  lineHeight: diceFaceFontSize + 4,
+                },
+              ]}
+            >
+              {face}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
