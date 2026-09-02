@@ -109,13 +109,17 @@ jobs:
         working-directory: entropystudio
         run: npm ci
 
-      - name: Test Rust and TypeScript bindings
+      - name: Test Rust bindings
         working-directory: entropystudio
-        run: npm test
+        run: npm run test:rust
 
       - name: Build Android UniFFI library
         working-directory: entropystudio
         run: npm run build:android
+
+      - name: Type-check generated TypeScript bindings
+        working-directory: entropystudio
+        run: npm run typecheck
 
       - name: Install example dependencies
         working-directory: entropystudio/example
