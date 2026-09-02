@@ -48,6 +48,7 @@ jest.mock('entropystudio', () => ({
 }));
 
 const App = require('../src/App').default;
+const { DiceGrid } = require('../src/features/dice/components/DiceGrid');
 
 test('shows a live BIP39 phrase from hashed dice through the EntropyStudio binding', async () => {
   const entropy = new Uint8Array(16).buffer;
@@ -68,6 +69,7 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
     entropyLabEnglish['dice.how'].replace('{words}', '24'),
   );
   expect(app!.root.findAllByType(ScrollView)).toHaveLength(0);
+  expect(app!.root.findByType(DiceGrid).props.columns).toBe(6);
   expect(app!.root.findByProps({ testID: 'dice-method-summary' }).props.children).toBe(
     entropyLabEnglish['dice.coldcard.title'],
   );
@@ -427,6 +429,7 @@ test('derives a D8/D16 direct-dice phrase from its final roll selection', async 
     '100 2AF…',
   );
   expect(app!.root.findByProps({ testID: 'dice-face-A' })).toBeDefined();
+  expect(app!.root.findByType(DiceGrid).props.columns).toBe(8);
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();

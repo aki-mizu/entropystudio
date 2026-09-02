@@ -178,7 +178,7 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
           ) : null}
 
           <DiceGrid
-            columns={method === 'd8d16' ? 4 : 3}
+            columns={method === 'd8d16' ? 8 : 6}
             colors={colors}
             faces={method === 'd8d16' ? D8_D16_FACES : undefined}
             inputLabel={copy.inputLabel}

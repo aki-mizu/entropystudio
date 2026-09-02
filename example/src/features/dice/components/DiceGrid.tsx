@@ -4,7 +4,7 @@ import type { DiceInputFace } from '../dice';
 import type { DiceColors } from '../diceTheme';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
-const DICE_GRID_GAP = 10;
+const DICE_GRID_GAP = 6;
 
 type Props = {
   readonly columns?: number;
@@ -16,24 +16,21 @@ type Props = {
 };
 
 export function DiceGrid({
-  columns = 3,
+  columns = 6,
   colors,
   faces = DICE_FACES,
   inputLabel,
-  maxTileSize = columns === 4 ? 56 : 84,
+  maxTileSize = columns >= 6 ? 56 : 84,
   onSelect,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
-  const diceTileSize = Math.max(
-    48,
-    Math.min(
-      maxTileSize,
-      Math.floor(
-        (windowWidth - CONTENT_HORIZONTAL_PADDING * 2 - DICE_GRID_GAP * (columns - 1)) /
-          columns,
-      ),
-    ),
+  const availableGridWidth =
+    windowWidth - CONTENT_HORIZONTAL_PADDING * 2 - DICE_GRID_GAP * (columns - 1);
+  const diceTileSize = Math.min(
+    maxTileSize,
+    Math.floor(availableGridWidth / columns),
   );
+  const diceFaceFontSize = Math.max(16, Math.min(22, Math.floor(diceTileSize * 0.52)));
   const gridWidth = diceTileSize * columns + DICE_GRID_GAP * (columns - 1);
 
   return (
@@ -56,7 +53,18 @@ export function DiceGrid({
           ]}
           testID={`dice-face-${face}`}
         >
-          <Text style={[styles.diceFaceText, { color: colors.diceText }]}>{face}</Text>
+          <Text
+            style={[
+              styles.diceFaceText,
+              {
+                color: colors.diceText,
+                fontSize: diceFaceFontSize,
+                lineHeight: diceFaceFontSize + 4,
+              },
+            ]}
+          >
+            {face}
+          </Text>
         </Pressable>
       ))}
     </View>
@@ -72,10 +80,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   diceFaceText: {
-    fontSize: 22,
     fontWeight: '700',
     includeFontPadding: false,
-    lineHeight: 26,
     textAlign: 'center',
     textAlignVertical: 'center',
   },
