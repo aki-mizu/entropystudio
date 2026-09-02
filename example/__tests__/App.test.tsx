@@ -338,6 +338,65 @@ test('shows placeholders for every dice method and selected seed length', async 
   expectPlaceholderSeedGrid(app!, 'direct-dice-words', 12);
 });
 
+test('formats direct-dice transcript groups without storing separators', async () => {
+  mockDirectDiceState.mockReturnValue({
+    activeRoll: 1,
+    activeWord: 1,
+    candidates: [],
+    complete: false,
+    completedGroups: 0,
+    extraCount: 0,
+    finalWord: '',
+    invalidCount: 0,
+    partialWords: 23,
+    skippedCount: 0,
+    step: 0,
+    words: [],
+  });
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-method-bitbox' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1111111');
+  });
+
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe(
+    '111111 1',
+  );
+  expect(mockDirectDiceState).toHaveBeenCalledWith('1111111', 0, 24);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'clear-dice-rolls' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-method-d8d16' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('123 4');
+  });
+
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('123 4');
+  expect(mockDirectDiceState).toHaveBeenCalledWith('1234', 1, 24);
+});
+
 test('enables only dice faces valid for the current direct-dice step', async () => {
   const directState = {
     activeRoll: 1,

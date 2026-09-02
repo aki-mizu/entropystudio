@@ -139,12 +139,13 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
           colors={colors}
           inputLabel={copy.inputLabel}
           inputPlaceholder={copy.inputPlaceholder}
-          isD8D16={method === 'd8d16'}
+          method={method}
           onChange={updateRolls}
           onClear={clearRolls}
           progress={progress}
           progressText={progressText}
           rolls={rolls}
+          wordCount={wordCount}
         />
 
         <View style={styles.rollArea}>

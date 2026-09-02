@@ -1,29 +1,35 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { DiceMethod, WordCount } from '../dice';
 import type { DiceColors } from '../diceTheme';
 
 type Props = {
   readonly colors: DiceColors;
   readonly inputLabel: string;
   readonly inputPlaceholder: string;
-  readonly isD8D16: boolean;
+  readonly method: DiceMethod;
   readonly onChange: (rolls: string) => void;
   readonly onClear: () => void;
   readonly progress: number;
   readonly progressText: string;
   readonly rolls: string;
+  readonly wordCount: WordCount;
 };
 
 export function DiceTranscriptInput({
   colors,
   inputLabel,
   inputPlaceholder,
-  isD8D16,
+  method,
   onChange,
   onClear,
   progress,
   progressText,
   rolls,
+  wordCount,
 }: Props) {
+  const displayRolls = formatDiceTranscript(rolls, method, wordCount);
+  const isD8D16 = method === 'd8d16';
+
   return (
     <>
       <View style={styles.sectionHeader}>
@@ -55,7 +61,7 @@ export function DiceTranscriptInput({
           keyboardType={isD8D16 ? 'default' : 'number-pad'}
           multiline={false}
           numberOfLines={1}
-          onChangeText={onChange}
+          onChangeText={value => onChange(value.replace(/\s/g, ''))}
           placeholder={inputPlaceholder}
           placeholderTextColor={colors.placeholder}
           selectionColor={colors.accent}
@@ -64,7 +70,7 @@ export function DiceTranscriptInput({
           style={[styles.rollInput, { color: colors.text }]}
           testID="dice-rolls-input"
           textContentType="none"
-          value={rolls}
+          value={displayRolls}
         />
         <View style={[styles.progressTrack, { backgroundColor: colors.segment }]}>
           <View
@@ -84,6 +90,61 @@ export function DiceTranscriptInput({
       </View>
     </>
   );
+}
+
+function formatDiceTranscript(
+  rolls: string,
+  method: DiceMethod,
+  wordCount: WordCount,
+): string {
+  if (method === 'bitbox') {
+    return formatBitBoxTranscript(rolls, wordCount);
+  }
+  if (method === 'd8d16') {
+    return formatD8D16Transcript(rolls, wordCount);
+  }
+  return rolls;
+}
+
+function formatBitBoxTranscript(rolls: string, wordCount: WordCount): string {
+  let completedWords = 0;
+  let rollsInWord = 0;
+  let separateNextRoll = false;
+  let transcript = '';
+
+  for (const face of rolls) {
+    if (separateNextRoll) {
+      transcript += ' ';
+      separateNextRoll = false;
+    }
+    transcript += face;
+
+    if (completedWords >= wordCount - 1) {
+      continue;
+    }
+    if (rollsInWord < 5) {
+      if (face >= '1' && face <= '4') {
+        rollsInWord += 1;
+      }
+    } else {
+      completedWords += 1;
+      rollsInWord = 0;
+      separateNextRoll = true;
+    }
+  }
+
+  return transcript;
+}
+
+function formatD8D16Transcript(rolls: string, wordCount: WordCount): string {
+  const wordRollCount = (wordCount - 1) * 3;
+
+  return Array.from(rolls, (face, index) => {
+    const startsNewWord =
+      index > 0 &&
+      (index === wordRollCount || (index < wordRollCount && index % 3 === 0));
+    return `${startsNewWord ? ' ' : ''}${face}`;
+  }).join('');
 }
 
 const styles = StyleSheet.create({
