@@ -59,13 +59,11 @@ Prerequisites:
 - Android NDK and `cargo-ndk` for Android builds
 - macOS, Xcode, and the Rust iOS targets for iOS builds
 
-Initialize the pinned EntropyLab source, install the JavaScript tooling, and
-generate host bindings:
+Initialize the pinned EntropyLab source and install the JavaScript tooling:
 
 ```sh
 git submodule update --init --recursive
 npm install
-npm run generate
 ```
 
 Run the Rust contract tests:
