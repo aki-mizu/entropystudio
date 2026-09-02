@@ -20,7 +20,7 @@ export function DiceResultPanel({
   }
 
   return (
-    <View style={[styles.result, { borderColor: colors.border }]}>
+    <View style={styles.result}>
       {result.error ? (
         <Text style={[styles.error, { color: colors.error }]} testID="dice-error">
           {result.error}
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   entropyLabel: {
-    marginTop: 22,
+    marginTop: 18,
   },
   error: {
     fontSize: 15,
@@ -68,11 +68,9 @@ const styles = StyleSheet.create({
   },
   mnemonic: {
     fontSize: 16,
-    lineHeight: 25,
+    lineHeight: 24,
   },
   result: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: 28,
-    paddingTop: 22,
+    paddingBottom: 4,
   },
 });

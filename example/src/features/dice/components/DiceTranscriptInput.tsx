@@ -37,7 +37,7 @@ export function DiceTranscriptInput({
           style={styles.clearButton}
           testID="clear-dice-rolls"
         >
-          <Text style={[styles.clearIcon, { color: colors.accent }]}>X</Text>
+          <Text style={[styles.clearIcon, { color: colors.accent }]}>Clear</Text>
         </Pressable>
       </View>
       <View
@@ -53,7 +53,8 @@ export function DiceTranscriptInput({
           autoCorrect={false}
           importantForAutofill="no"
           keyboardType={isD8D16 ? 'default' : 'number-pad'}
-          multiline
+          multiline={false}
+          numberOfLines={1}
           onChangeText={onChange}
           placeholder={inputPlaceholder}
           placeholderTextColor={colors.placeholder}
@@ -72,7 +73,11 @@ export function DiceTranscriptInput({
             ]}
           />
         </View>
-        <Text style={[styles.progressText, { color: colors.muted }]} testID="dice-progress">
+        <Text
+          numberOfLines={2}
+          style={[styles.progressText, { color: colors.muted }]}
+          testID="dice-progress"
+        >
           {progressText}
         </Text>
       </View>
@@ -86,7 +91,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   clearIcon: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   label: {
@@ -100,32 +105,33 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 13,
+    lineHeight: 18,
     marginTop: 9,
   },
   progressTrack: {
     borderRadius: 2,
     height: 4,
-    marginTop: 18,
+    marginTop: 10,
     overflow: 'hidden',
   },
   rollInput: {
     fontFamily: 'monospace',
-    fontSize: 18,
-    lineHeight: 26,
-    minHeight: 76,
+    fontSize: 17,
+    height: 42,
+    lineHeight: 22,
     padding: 0,
-    textAlignVertical: 'top',
+    textAlignVertical: 'center',
   },
   sectionHeader: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
-    marginTop: 26,
+    marginTop: 16,
   },
   surface: {
     borderRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
-    padding: 18,
+    padding: 14,
   },
 });

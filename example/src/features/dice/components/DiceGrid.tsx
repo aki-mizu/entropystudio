@@ -11,6 +11,7 @@ type Props = {
   readonly colors: DiceColors;
   readonly faces?: readonly DiceInputFace[];
   readonly inputLabel: string;
+  readonly maxTileSize?: number;
   readonly onSelect: (face: DiceInputFace) => void;
 };
 
@@ -19,19 +20,24 @@ export function DiceGrid({
   colors,
   faces = DICE_FACES,
   inputLabel,
+  maxTileSize = columns === 4 ? 56 : 84,
   onSelect,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const diceTileSize = Math.max(
     48,
-    Math.floor(
-      (windowWidth - CONTENT_HORIZONTAL_PADDING * 2 - DICE_GRID_GAP * (columns - 1)) /
-        columns,
+    Math.min(
+      maxTileSize,
+      Math.floor(
+        (windowWidth - CONTENT_HORIZONTAL_PADDING * 2 - DICE_GRID_GAP * (columns - 1)) /
+          columns,
+      ),
     ),
   );
+  const gridWidth = diceTileSize * columns + DICE_GRID_GAP * (columns - 1);
 
   return (
-    <View style={styles.grid}>
+    <View style={[styles.grid, { width: gridWidth }]}>
       {faces.map(face => (
         <Pressable
           accessibilityRole="button"
@@ -74,10 +80,11 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
   },
   grid: {
+    alignSelf: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: DICE_GRID_GAP,
     justifyContent: 'flex-start',
-    marginTop: 14,
+    marginTop: 12,
   },
 });

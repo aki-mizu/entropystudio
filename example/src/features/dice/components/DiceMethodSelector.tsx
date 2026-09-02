@@ -21,23 +21,33 @@ export function DiceMethodSelector({
   method,
   onSelect,
 }: Props) {
+  const selectedCopy = copies[method];
+
   return (
-    <View
-      style={[
-        styles.segmentedControl,
-        { backgroundColor: colors.segment, borderColor: colors.border },
-      ]}
-    >
-      {DICE_METHODS.map(methodOption => (
-        <MethodOption
-          colors={colors}
-          copy={copies[methodOption]}
-          key={methodOption}
-          method={methodOption}
-          onSelect={onSelect}
-          selected={method === methodOption}
-        />
-      ))}
+    <View>
+      <View
+        style={[
+          styles.segmentedControl,
+          { backgroundColor: colors.segment, borderColor: colors.border },
+        ]}
+      >
+        {DICE_METHODS.map(methodOption => (
+          <MethodOption
+            colors={colors}
+            copy={copies[methodOption]}
+            key={methodOption}
+            method={methodOption}
+            onSelect={onSelect}
+            selected={method === methodOption}
+          />
+        ))}
+      </View>
+      <Text
+        style={[styles.selectedDescription, { color: colors.muted }]}
+        testID={`dice-method-${method}-description`}
+      >
+        {selectedCopy.description}
+      </Text>
     </View>
   );
 }
@@ -72,33 +82,24 @@ function MethodOption({
       >
         {copy.title}
       </Text>
-      <Text
-        style={[styles.segmentDetail, { color: colors.muted }]}
-        testID={`dice-method-${method}-description`}
-      >
-        {copy.description}
-      </Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   segment: {
+    alignItems: 'center',
     borderColor: 'transparent',
     borderRadius: 5,
     borderWidth: 1,
-    minHeight: 66,
+    minHeight: 44,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  segmentDetail: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 3,
+    paddingVertical: 8,
   },
   segmentLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
+    lineHeight: 18,
   },
   segmentedControl: {
     borderRadius: 7,
@@ -106,5 +107,10 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: 3,
     padding: 3,
+  },
+  selectedDescription: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 12,
   },
 });

@@ -4,6 +4,7 @@
 
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
+import { ScrollView } from 'react-native';
 import entropyLabEnglish from '../../entropylab/src/locales/en.json';
 
 const mockDiceRollsToEntropy = jest.fn<ArrayBuffer, [string, number, number]>();
@@ -66,6 +67,19 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
   expect(app!.root.findByProps({ testID: 'dice-screen-how' }).props.children).toBe(
     entropyLabEnglish['dice.how'].replace('{words}', '24'),
   );
+  expect(app!.root.findAllByType(ScrollView)).toHaveLength(0);
+  expect(app!.root.findByProps({ testID: 'dice-method-summary' }).props.children).toBe(
+    entropyLabEnglish['dice.coldcard.title'],
+  );
+  expect(app!.root.findByProps({ testID: 'seed-length-value' }).props.children).toBe(
+    entropyLabEnglish['seedLength.words'].replace('{n}', '24'),
+  );
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'dice-settings-sheet' })).toBeDefined();
   expect(
     app!.root.findByProps({ testID: 'dice-method-coldcard-title' }).props
       .children,
@@ -83,21 +97,14 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
     app!.root.findByProps({ testID: 'dice-method-coleman-title' }).props
       .children,
   ).toBe(entropyLabEnglish['dice.coleman.title']);
-  expect(
-    app!.root.findByProps({ testID: 'dice-method-coleman-description' }).props
-      .children,
-  ).toBe(
-    entropyLabEnglish['dice.coleman.desc']
-      .replace('{bits}', '256')
-      .replace('{words}', '24')
-      .replace('{hashRolls}', '99'),
-  );
   expect(app!.root.findByProps({ testID: 'seed-length-label' }).props.children).toBe(
     entropyLabEnglish['seedLength.label'],
   );
-  expect(app!.root.findByProps({ testID: 'seed-length-value' }).props.children).toBe(
-    entropyLabEnglish['seedLength.words'].replace('{n}', '24'),
-  );
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+  });
+
   expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
     entropyLabEnglish['dice.label.hashed'],
   );
@@ -119,12 +126,25 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
 
   expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(false);
   expect(mockDiceRollsToEntropy).toHaveBeenCalledWith('1', 0, 24);
+  expect(
+    app!.root.findByProps({
+      accessibilityLabel:
+        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+    }).props.testID,
+  ).toBe('live-dice-words');
+  expect(app!.root.findAllByProps({ testID: 'mnemonic-output' })).toHaveLength(0);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'dice-result-sheet' })).toBeDefined();
   expect(app!.root.findByProps({ testID: 'mnemonic-output' }).props.children).toBe(
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
   );
 
   await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+    app!.root.findByProps({ testID: 'dice-result-sheet-close' }).props.onPress();
   });
 
   const completeRolls = `${'123456'.repeat(16)}123`;
@@ -133,7 +153,15 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
   });
 
   await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-method-coleman' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
   });
 
   expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(false);
@@ -201,6 +229,7 @@ test('adds and clears dice faces through the modular controls', async () => {
     app!.root.findByProps({ testID: 'dice-face-6' }).props.onPress();
   });
 
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.multiline).toBe(false);
   expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe(
     '6',
   );
@@ -211,6 +240,55 @@ test('adds and clears dice faces through the modular controls', async () => {
 
   expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe(
     '',
+  );
+});
+
+test('reveals each D8/D16 word as its three-roll group completes', async () => {
+  const emptyState = {
+    activeRoll: 0,
+    activeWord: 1,
+    candidates: [],
+    complete: false,
+    completedGroups: 0,
+    extraCount: 0,
+    finalWord: '',
+    invalidCount: 0,
+    partialWords: 23,
+    skippedCount: 0,
+    step: 3,
+    words: [],
+  };
+  mockDirectDiceState.mockImplementation((rolls: string, method: number) =>
+    method === 1 && rolls === '100'
+      ? { ...emptyState, activeWord: 2, completedGroups: 1, words: ['abandon'] }
+      : emptyState,
+  );
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-method-d8d16' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('10');
+  });
+  expect(app!.root.findAllByProps({ testID: 'direct-dice-words' })).toHaveLength(0);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('100');
+  });
+  expect(app!.root.findByProps({ accessibilityLabel: 'abandon' }).props.testID).toBe(
+    'direct-dice-words',
   );
 });
 
@@ -238,7 +316,14 @@ test('derives a BitBox direct-dice phrase from a selected checksum word', async 
   });
 
   await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-method-bitbox' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'word-count-12' }).props.onPress();
   });
 
@@ -250,12 +335,21 @@ test('derives a BitBox direct-dice phrase from a selected checksum word', async 
       .replace('{partialWords}', '11')
       .replace('{candidates}', '128'),
   );
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+  });
+
   expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
     entropyLabEnglish['dice.label.bitbox'],
   );
   expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.placeholder).toBe(
     '111111 222224…',
   );
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-direct-final-word' }).props.onPress();
+  });
+
   expect(app!.root.findByProps({ testID: 'direct-final-word-label' }).props.children).toBe(
     entropyLabEnglish['seed.lastWordLabel'].replace('{n}', '1'),
   );
@@ -299,7 +393,14 @@ test('derives a D8/D16 direct-dice phrase from its final roll selection', async 
   });
 
   await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-method-d8d16' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'word-count-12' }).props.onPress();
   });
 
@@ -311,6 +412,11 @@ test('derives a D8/D16 direct-dice phrase from its final roll selection', async 
       .replace('{partialWords}', '11')
       .replace('{final}', 'roll a final D8 and D16'),
   );
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+  });
+
   expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
     entropyLabEnglish['dice.label.dplus'].replace(
       '{final}',

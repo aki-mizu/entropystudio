@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
-    marginTop: 26,
+    marginTop: 18,
   },
   sectionValue: {
     fontSize: 14,
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flex: 1,
     justifyContent: 'center',
-    minHeight: 42,
+    minHeight: 40,
   },
   wordCountText: {
     fontSize: 14,
