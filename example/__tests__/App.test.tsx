@@ -48,7 +48,7 @@ jest.mock('entropystudio', () => ({
 
 const App = require('../src/App').default;
 
-test('derives a BIP39 phrase from dice through the EntropyStudio binding', async () => {
+test('shows a live BIP39 phrase from hashed dice through the EntropyStudio binding', async () => {
   const entropy = new Uint8Array(16).buffer;
   mockDiceRollsToEntropy.mockReturnValue(entropy);
   mockEntropyToMnemonic.mockReturnValue(
@@ -114,21 +114,36 @@ test('derives a BIP39 phrase from dice through the EntropyStudio binding', async
   ).toBe(entropyLabEnglish['action.derive']);
 
   await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText(
-      '123456',
-    );
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1');
+  });
+
+  expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(false);
+  expect(mockDiceRollsToEntropy).toHaveBeenCalledWith('1', 0, 24);
+  expect(app!.root.findByProps({ testID: 'mnemonic-output' }).props.children).toBe(
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+  );
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+  });
+
+  const completeRolls = `${'123456'.repeat(16)}123`;
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText(completeRolls);
   });
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-method-coleman' }).props.onPress();
   });
 
+  expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(false);
+
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
   });
 
   expect(mockDiceRollsToEntropy).toHaveBeenCalledWith(
-    '123456',
+    completeRolls,
     1,
     24,
   );
@@ -163,7 +178,7 @@ test('uses the upstream dice validation text', async () => {
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText(
-      '123x',
+      `${'1'.repeat(99)}x`,
     );
   });
 

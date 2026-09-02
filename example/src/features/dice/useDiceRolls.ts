@@ -30,6 +30,12 @@ export function useDiceRolls() {
     }
     return getDirectDiceState(rolls, method, wordCount);
   }, [method, rolls, wordCount]);
+  const hashedResult = useMemo(() => {
+    if (!isHashedDiceMethod(method) || rollCount === 0) {
+      return null;
+    }
+    return deriveDiceResult(rolls, method, wordCount);
+  }, [method, rollCount, rolls, wordCount]);
   const directCopy = directState ? directDiceSelectionCopy(directState) : null;
   let progress = 0;
   let progressText = '';
@@ -84,6 +90,10 @@ export function useDiceRolls() {
   }
 
   function derivePhrase() {
+    if (!canDerive) {
+      return;
+    }
+
     if (isHashedDiceMethod(method)) {
       setResult(deriveDiceResult(rolls, method, wordCount));
     } else if (directState) {
@@ -106,7 +116,7 @@ export function useDiceRolls() {
     method,
     progress,
     progressText,
-    result,
+    result: isHashedDiceMethod(method) ? hashedResult : result,
     rollCount,
     rolls,
     selectedFinalWord,
