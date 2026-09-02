@@ -1,4 +1,6 @@
+import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import type { DiceMethod, WordCount } from '../dice';
 import type { DiceColors } from '../diceTheme';
 
@@ -13,11 +15,13 @@ type Props = {
   readonly inputPlaceholder: string;
   readonly method: DiceMethod;
   readonly onChange: (rolls: string) => void;
+  readonly onProgrammaticSelectionChange: (selection: DiceTranscriptSelection) => void;
   readonly onSelectionChange: (selection: DiceTranscriptSelection) => void;
   readonly progress: number;
   readonly progressText: string;
   readonly rolls: string;
   readonly selection: DiceTranscriptSelection | null;
+  readonly selectionRequestId: number;
   readonly wordCount: WordCount;
 };
 
@@ -27,18 +31,34 @@ export function DiceTranscriptInput({
   inputPlaceholder,
   method,
   onChange,
+  onProgrammaticSelectionChange,
   onSelectionChange,
   progress,
   progressText,
   rolls,
   selection,
+  selectionRequestId,
   wordCount,
 }: Props) {
+  const inputRef = useRef<TextInputInstance>(null);
+  const appliedSelectionRequestId = useRef(selectionRequestId);
   const displayRolls = formatDiceTranscript(rolls, method, wordCount);
   const displaySelection = selection
     ? displaySelectionFromRawSelection(displayRolls, selection)
     : undefined;
+  const hasSelectedRange = Boolean(selection && selection.end > selection.start);
   const isD8D16 = method === 'd8d16';
+
+  useEffect(() => {
+    if (selectionRequestId === appliedSelectionRequestId.current) {
+      return;
+    }
+
+    appliedSelectionRequestId.current = selectionRequestId;
+    if (displaySelection) {
+      inputRef.current?.setSelection?.(displaySelection.start, displaySelection.end);
+    }
+  }, [displaySelection, selectionRequestId]);
 
   return (
     <>
@@ -48,11 +68,11 @@ export function DiceTranscriptInput({
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Remove roll before cursor"
+          accessibilityLabel={hasSelectedRange ? 'Remove selected rolls' : 'Remove roll before cursor'}
           disabled={rolls.length === 0}
           onPress={() => {
-            const result = removeDiceRollAtCursor(rolls, selection);
-            onSelectionChange(result.selection);
+            const result = removeDiceRollAtSelection(rolls, selection);
+            onProgrammaticSelectionChange(result.selection);
             onChange(result.rolls);
           }}
           style={({ pressed }) => [
@@ -89,7 +109,7 @@ export function DiceTranscriptInput({
           showSoftInputOnFocus={false}
           spellCheck={false}
           style={[styles.rollInput, { color: colors.text }]}
-          selection={displaySelection}
+          ref={inputRef}
           testID="dice-rolls-input"
           textContentType="none"
           value={displayRolls}
@@ -211,7 +231,7 @@ function displayPositionFromRawPosition(displayRolls: string, position: number):
   return displayRolls.length;
 }
 
-function removeDiceRollAtCursor(
+function removeDiceRollAtSelection(
   rolls: string,
   selection: DiceTranscriptSelection | null,
 ): { readonly rolls: string; readonly selection: DiceTranscriptSelection } {
@@ -219,9 +239,18 @@ function removeDiceRollAtCursor(
     return { rolls: '', selection: { end: 0, start: 0 } };
   }
 
-  const cursor = Math.min(Math.max(selection?.start ?? rolls.length, 0), rolls.length);
-  const deleteStart = Math.max(cursor - 1, 0);
-  const nextRolls = `${rolls.slice(0, deleteStart)}${rolls.slice(cursor)}`;
+  const selectionStart = Math.min(
+    Math.max(selection?.start ?? rolls.length, 0),
+    rolls.length,
+  );
+  const selectionEnd = Math.min(
+    Math.max(selection?.end ?? selectionStart, selectionStart),
+    rolls.length,
+  );
+  const deleteStart =
+    selectionEnd > selectionStart ? selectionStart : Math.max(selectionStart - 1, 0);
+  const deleteEnd = selectionEnd > selectionStart ? selectionEnd : selectionStart;
+  const nextRolls = `${rolls.slice(0, deleteStart)}${rolls.slice(deleteEnd)}`;
 
   return {
     rolls: nextRolls,

@@ -34,6 +34,7 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [transcriptSelection, setTranscriptSelection] =
     useState<DiceTranscriptSelection | null>(null);
+  const [selectionRequestId, setSelectionRequestId] = useState(0);
   const {
     appendFace,
     bitboxCopy,
@@ -94,13 +95,18 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
     selectMethod(value);
   }
 
+  function setProgrammaticTranscriptSelection(selection: DiceTranscriptSelection) {
+    setTranscriptSelection(selection);
+    setSelectionRequestId(requestId => requestId + 1);
+  }
+
   function insertDiceFace(face: DiceInputFace) {
     const cursor = appendFace(
       face,
       transcriptSelection?.start,
       transcriptSelection?.end,
     );
-    setTranscriptSelection({ end: cursor, start: cursor });
+    setProgrammaticTranscriptSelection({ end: cursor, start: cursor });
   }
 
   return (
@@ -171,11 +177,13 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
           inputPlaceholder={copy.inputPlaceholder}
           method={method}
           onChange={updateRolls}
+          onProgrammaticSelectionChange={setProgrammaticTranscriptSelection}
           onSelectionChange={setTranscriptSelection}
           progress={progress}
           progressText={progressText}
           rolls={rolls}
           selection={transcriptSelection}
+          selectionRequestId={selectionRequestId}
           wordCount={wordCount}
         />
 
