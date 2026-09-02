@@ -1,26 +1,38 @@
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { DICE_FACES } from '../dice';
-import type { DiceFace } from '../dice';
+import type { DiceInputFace } from '../dice';
 import type { DiceColors } from '../diceTheme';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 const DICE_GRID_GAP = 10;
 
 type Props = {
+  readonly columns?: number;
   readonly colors: DiceColors;
+  readonly faces?: readonly DiceInputFace[];
   readonly inputLabel: string;
-  readonly onSelect: (face: DiceFace) => void;
+  readonly onSelect: (face: DiceInputFace) => void;
 };
 
-export function DiceGrid({ colors, inputLabel, onSelect }: Props) {
+export function DiceGrid({
+  columns = 3,
+  colors,
+  faces = DICE_FACES,
+  inputLabel,
+  onSelect,
+}: Props) {
   const { width: windowWidth } = useWindowDimensions();
-  const diceTileSize = Math.floor(
-    (windowWidth - CONTENT_HORIZONTAL_PADDING * 2 - DICE_GRID_GAP * 2) / 3,
+  const diceTileSize = Math.max(
+    48,
+    Math.floor(
+      (windowWidth - CONTENT_HORIZONTAL_PADDING * 2 - DICE_GRID_GAP * (columns - 1)) /
+        columns,
+    ),
   );
 
   return (
     <View style={styles.grid}>
-      {DICE_FACES.map(face => (
+      {faces.map(face => (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${inputLabel}: ${face}`}
@@ -65,7 +77,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: DICE_GRID_GAP,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     marginTop: 14,
   },
 });

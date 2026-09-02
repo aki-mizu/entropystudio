@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { DICE_METHODS } from '../dice';
 import type { DiceMethod } from '../dice';
 import type { DiceColors } from '../diceTheme';
 
@@ -8,16 +9,14 @@ type DiceMethodCopy = {
 };
 
 type Props = {
-  readonly coldcardCopy: DiceMethodCopy;
-  readonly colemanCopy: DiceMethodCopy;
+  readonly copies: Record<DiceMethod, DiceMethodCopy>;
   readonly colors: DiceColors;
   readonly method: DiceMethod;
   readonly onSelect: (method: DiceMethod) => void;
 };
 
 export function DiceMethodSelector({
-  coldcardCopy,
-  colemanCopy,
+  copies,
   colors,
   method,
   onSelect,
@@ -29,20 +28,16 @@ export function DiceMethodSelector({
         { backgroundColor: colors.segment, borderColor: colors.border },
       ]}
     >
-      <MethodOption
-        colors={colors}
-        copy={coldcardCopy}
-        method="coldcard"
-        onSelect={onSelect}
-        selected={method === 'coldcard'}
-      />
-      <MethodOption
-        colors={colors}
-        copy={colemanCopy}
-        method="coleman"
-        onSelect={onSelect}
-        selected={method === 'coleman'}
-      />
+      {DICE_METHODS.map(methodOption => (
+        <MethodOption
+          colors={colors}
+          copy={copies[methodOption]}
+          key={methodOption}
+          method={methodOption}
+          onSelect={onSelect}
+          selected={method === methodOption}
+        />
+      ))}
     </View>
   );
 }
@@ -60,8 +55,6 @@ function MethodOption({
   readonly onSelect: (method: DiceMethod) => void;
   readonly selected: boolean;
 }) {
-  const methodLabel = method === 'coldcard' ? 'coldcard' : 'coleman';
-
   return (
     <Pressable
       accessibilityRole="button"
@@ -71,17 +64,17 @@ function MethodOption({
         styles.segment,
         selected && { backgroundColor: colors.surface, borderColor: colors.border },
       ]}
-      testID={`dice-method-${methodLabel}`}
+      testID={`dice-method-${method}`}
     >
       <Text
         style={[styles.segmentLabel, { color: selected ? colors.text : colors.muted }]}
-        testID={`dice-method-${methodLabel}-title`}
+        testID={`dice-method-${method}-title`}
       >
         {copy.title}
       </Text>
       <Text
         style={[styles.segmentDetail, { color: colors.muted }]}
-        testID={`dice-method-${methodLabel}-description`}
+        testID={`dice-method-${method}-description`}
       >
         {copy.description}
       </Text>
@@ -94,7 +87,6 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     borderRadius: 5,
     borderWidth: 1,
-    flex: 1,
     minHeight: 66,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -111,7 +103,7 @@ const styles = StyleSheet.create({
   segmentedControl: {
     borderRadius: 7,
     borderWidth: 1,
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 3,
     padding: 3,
   },

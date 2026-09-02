@@ -7,10 +7,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DiceGrid } from '../features/dice/components/DiceGrid';
+import { DirectDicePreview } from '../features/dice/components/DirectDicePreview';
 import { DiceMethodSelector } from '../features/dice/components/DiceMethodSelector';
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceTranscriptInput } from '../features/dice/components/DiceTranscriptInput';
 import { WordCountSelector } from '../features/dice/components/WordCountSelector';
+import { D8_D16_FACES } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
 import { useDiceRolls } from '../features/dice/useDiceRolls';
 
@@ -20,17 +22,23 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
   const safeAreaInsets = useSafeAreaInsets();
   const {
     appendFace,
+    bitboxCopy,
+    canDerive,
     clearRolls,
     coldcardCopy,
     colemanCopy,
     copy,
+    directCopy,
+    directState,
     derivePhrase,
+    d8D16Copy,
     method,
     progress,
     progressText,
     result,
-    rollCount,
     rolls,
+    selectedFinalWord,
+    selectFinalWord,
     selectMethod,
     selectWordCount,
     updateRolls,
@@ -59,8 +67,12 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
       </View>
 
       <DiceMethodSelector
-        coldcardCopy={coldcardCopy}
-        colemanCopy={colemanCopy}
+        copies={{
+          bitbox: bitboxCopy,
+          coldcard: coldcardCopy,
+          coleman: colemanCopy,
+          d8d16: d8D16Copy,
+        }}
         colors={colors}
         method={method}
         onSelect={selectMethod}
@@ -78,6 +90,7 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
         colors={colors}
         inputLabel={copy.inputLabel}
         inputPlaceholder={copy.inputPlaceholder}
+        isD8D16={method === 'd8d16'}
         onChange={updateRolls}
         onClear={clearRolls}
         progress={progress}
@@ -85,17 +98,37 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
         rolls={rolls}
       />
 
-      <DiceGrid colors={colors} inputLabel={copy.inputLabel} onSelect={appendFace} />
+      <DiceGrid
+        columns={method === 'd8d16' ? 4 : 3}
+        colors={colors}
+        faces={method === 'd8d16' ? D8_D16_FACES : undefined}
+        inputLabel={copy.inputLabel}
+        onSelect={appendFace}
+      />
+
+      {directState && directCopy && (method === 'bitbox' || method === 'd8d16') ? (
+        <DirectDicePreview
+          colors={colors}
+          finalWordAria={copy.lastWordAria}
+          finalWordLabel={directCopy.finalWordLabel}
+          finalWordPlaceholder={copy.lastWordPlaceholder}
+          method={method}
+          onSelectFinalWord={selectFinalWord}
+          selectedFinalWord={selectedFinalWord}
+          state={directState}
+          wordSlotsAria={copy.wordSlotsAria}
+        />
+      ) : null}
 
       <Pressable
         accessibilityRole="button"
-        disabled={rollCount === 0}
+        disabled={!canDerive}
         onPress={derivePhrase}
         style={({ pressed }) => [
           styles.button,
           {
             backgroundColor: colors.accent,
-            opacity: rollCount === 0 ? 0.45 : pressed ? 0.82 : 1,
+            opacity: !canDerive ? 0.45 : pressed ? 0.82 : 1,
           },
         ]}
         testID="derive-dice-phrase"

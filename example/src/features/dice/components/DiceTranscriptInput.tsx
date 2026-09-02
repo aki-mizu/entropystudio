@@ -5,6 +5,7 @@ type Props = {
   readonly colors: DiceColors;
   readonly inputLabel: string;
   readonly inputPlaceholder: string;
+  readonly isD8D16: boolean;
   readonly onChange: (rolls: string) => void;
   readonly onClear: () => void;
   readonly progress: number;
@@ -16,6 +17,7 @@ export function DiceTranscriptInput({
   colors,
   inputLabel,
   inputPlaceholder,
+  isD8D16,
   onChange,
   onClear,
   progress,
@@ -46,11 +48,11 @@ export function DiceTranscriptInput({
       >
         <TextInput
           accessibilityLabel={inputLabel}
-          autoCapitalize="none"
+          autoCapitalize={isD8D16 ? 'characters' : 'none'}
           autoComplete="off"
           autoCorrect={false}
           importantForAutofill="no"
-          keyboardType="number-pad"
+          keyboardType={isD8D16 ? 'default' : 'number-pad'}
           multiline
           onChangeText={onChange}
           placeholder={inputPlaceholder}
