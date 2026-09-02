@@ -49,6 +49,8 @@ jest.mock('entropystudio', () => ({
 
 const App = require('../src/App').default;
 const { DiceGrid } = require('../src/features/dice/components/DiceGrid');
+const { DiceWordList } = require('../src/features/dice/components/DirectDicePreview');
+const { diceScreenCopy } = require('../src/features/dice/dice');
 
 function expectPlaceholderSeedGrid(
   app: ReactTestRenderer.ReactTestRenderer,
@@ -80,6 +82,24 @@ function expectEnabledDiceFaces(
   }
 }
 
+test('uses EntropyLab help copy for every dice method', () => {
+  expect(diceScreenCopy('coldcard', 24).inputHelp).toBe(
+    entropyLabEnglish['dice.help.coldcard'].replace('{hashRolls}', '99'),
+  );
+  expect(diceScreenCopy('coleman', 24).inputHelp).toBe(
+    entropyLabEnglish['dice.help.coleman'].replace('{hashRolls}', '99'),
+  );
+  expect(diceScreenCopy('bitbox', 24).inputHelp).toBe(
+    entropyLabEnglish['dice.help.bitbox'].replace('{partialWords}', '23'),
+  );
+  expect(diceScreenCopy('d8d16', 24).inputHelp).toBe(
+    entropyLabEnglish['dice.help.dplus'].replace(
+      '{finalHelp}',
+      entropyLabEnglish['dice.dplus.helpOne'].replace('{die}', 'D8'),
+    ),
+  );
+});
+
 test('shows a live BIP39 phrase from hashed dice through the EntropyStudio binding', async () => {
   const entropy = new Uint8Array(16).buffer;
   mockDiceRollsToEntropy.mockReturnValue(entropy);
@@ -100,6 +120,7 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
   );
   expect(app!.root.findAllByType(ScrollView)).toHaveLength(0);
   expect(app!.root.findByType(DiceGrid).props.columns).toBe(6);
+  expect(app!.root.findByType(DiceWordList).props.compact).toBe(true);
   expect(app!.root.findByProps({ testID: 'dice-method-summary' }).props.children).toBe(
     entropyLabEnglish['dice.coldcard.title'],
   );
@@ -140,6 +161,9 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
 
   expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
     entropyLabEnglish['dice.label.hashed'],
+  );
+  expect(app!.root.findByProps({ testID: 'dice-method-help' }).props.children).toBe(
+    entropyLabEnglish['dice.help.coldcard'].replace('{hashRolls}', '99'),
   );
   expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.placeholder).toBe(
     '415263415263…',

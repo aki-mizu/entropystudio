@@ -16,7 +16,11 @@ import { DiceTranscriptInput } from '../features/dice/components/DiceTranscriptI
 import type { DiceTranscriptSelection } from '../features/dice/components/DiceTranscriptInput';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { WordCountSelector } from '../features/dice/components/WordCountSelector';
-import { D8_D16_FACES, enabledDiceFaces } from '../features/dice/dice';
+import {
+  D8_D16_FACES,
+  enabledDiceFaces,
+  isHashedDiceMethod,
+} from '../features/dice/dice';
 import type { DiceInputFace } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
 import { useDiceRolls } from '../features/dice/useDiceRolls';
@@ -65,6 +69,8 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
   const isCompactHeight = windowHeight < 700;
   const maxTileSize =
     method === 'd8d16' ? (isCompactHeight ? 48 : 56) : isCompactHeight ? 68 : 84;
+  const usesCompactSeedGrid =
+    isCompactHeight || method === 'd8d16' || (wordCount === 24 && isHashedDiceMethod(method));
   const enabledFaces = enabledDiceFaces(method, directState);
   const liveHashedWords =
     !directState && result && typeof result.mnemonic === 'string'
@@ -152,6 +158,13 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
           </Text>
         </Pressable>
 
+        <Text
+          style={[styles.methodHelp, { color: colors.muted }]}
+          testID="dice-method-help"
+        >
+          {copy.inputHelp}
+        </Text>
+
         <DiceTranscriptInput
           colors={colors}
           inputLabel={copy.inputLabel}
@@ -169,6 +182,7 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
         <View style={styles.rollArea}>
           {directState ? (
             <DirectDicePreview
+              compact={usesCompactSeedGrid}
               colors={colors}
               selectedFinalWord={selectedFinalWord}
               slotCount={wordCount}
@@ -177,6 +191,7 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
             />
           ) : (
             <DiceWordList
+              compact={usesCompactSeedGrid}
               colors={colors}
               slotCount={wordCount}
               testID="live-dice-words"
@@ -327,6 +342,11 @@ const styles = StyleSheet.create({
   headerCopy: {
     flex: 1,
     minWidth: 0,
+  },
+  methodHelp: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 10,
   },
   optionsButton: {
     alignItems: 'center',

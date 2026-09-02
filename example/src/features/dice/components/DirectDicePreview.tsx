@@ -4,6 +4,7 @@ import type { DiceColors } from '../diceTheme';
 import { SeedWordGrid } from './SeedWordGrid';
 
 type DiceWordListProps = {
+  readonly compact?: boolean;
   readonly colors: DiceColors;
   readonly finalWord?: string;
   readonly slotCount?: number;
@@ -13,6 +14,7 @@ type DiceWordListProps = {
 };
 
 type Props = {
+  readonly compact?: boolean;
   readonly colors: DiceColors;
   readonly selectedFinalWord: string;
   readonly slotCount?: number;
@@ -21,6 +23,7 @@ type Props = {
 };
 
 export function DiceWordList({
+  compact = false,
   colors,
   finalWord,
   slotCount,
@@ -36,9 +39,14 @@ export function DiceWordList({
     <View
       accessibilityLabel={wordSlotsAria}
       accessible={words.length === 0}
-      style={[styles.container, { borderColor: colors.border }]}
+      style={[
+        styles.container,
+        compact && styles.compactContainer,
+        { borderColor: colors.border },
+      ]}
     >
       <SeedWordGrid
+        compact={compact}
         colors={colors}
         finalWord={finalWord}
         slotCount={slotCount}
@@ -50,6 +58,7 @@ export function DiceWordList({
 }
 
 export function DirectDicePreview({
+  compact,
   colors,
   selectedFinalWord,
   slotCount,
@@ -63,6 +72,7 @@ export function DirectDicePreview({
 
   return (
     <DiceWordList
+      compact={compact}
       colors={colors}
       finalWord={finalWord}
       slotCount={slotCount}
@@ -74,6 +84,11 @@ export function DirectDicePreview({
 }
 
 const styles = StyleSheet.create({
+  compactContainer: {
+    marginBottom: 4,
+    paddingBottom: 2,
+    paddingTop: 4,
+  },
   container: {
     borderTopWidth: StyleSheet.hairlineWidth,
     marginBottom: 8,

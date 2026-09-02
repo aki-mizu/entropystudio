@@ -306,6 +306,18 @@ export function diceScreenCopy(method: DiceMethod, wordCount: WordCount) {
         final: d8D16FinalDescription(wordCount),
           })
         : entropyLabEnglish['dice.label.hashed'];
+    const inputHelp =
+      method === 'bitbox'
+        ? formatCopy(entropyLabEnglish['dice.help.bitbox'], {
+            partialWords: wordCount - 1,
+          })
+        : method === 'd8d16'
+          ? formatCopy(entropyLabEnglish['dice.help.dplus'], {
+              finalHelp: d8D16FinalHelp(wordCount),
+            })
+          : formatCopy(entropyLabEnglish[`dice.help.${method}`], {
+              hashRolls: RECOMMENDED_ROLLS[wordCount],
+            });
   const inputPlaceholder =
     method === 'bitbox'
       ? UPSTREAM_DICE_PLACEHOLDERS.bitbox
@@ -317,6 +329,7 @@ export function diceScreenCopy(method: DiceMethod, wordCount: WordCount) {
     deriveAction: entropyLabEnglish['action.derive'],
     how: formatCopy(entropyLabEnglish['dice.how'], { words: wordCount }),
     inputLabel,
+    inputHelp,
     inputPlaceholder,
     lastWordAria: formatCopy(entropyLabEnglish['seed.lastWordAria'], { n: wordCount }),
     lastWordPlaceholder: entropyLabEnglish['seed.lastWordPlaceholder'],
@@ -418,8 +431,31 @@ function d8D16FinalDescription(wordCount: WordCount): string {
   });
 }
 
+function d8D16FinalHelp(wordCount: WordCount): string {
+  const labels = D8_D16_FINAL_STEPS[wordCount].map(d8D16HelpStepLabel);
+  if (labels.length === 1) {
+    return formatCopy(entropyLabEnglish['dice.dplus.helpOne'], { die: labels[0] });
+  }
+  if (labels[0] === labels[1]) {
+    return formatCopy(entropyLabEnglish['dice.dplus.helpTwoSame'], { die: labels[0] });
+  }
+  return formatCopy(entropyLabEnglish['dice.dplus.helpTwo'], {
+    a: labels[0],
+    b: labels[1],
+    coin: labels.includes(entropyLabEnglish['dice.dplus.coinFlip'])
+      ? entropyLabEnglish['dice.dplus.coinNote']
+      : '',
+  });
+}
+
 function d8D16StepLabel(step: (typeof D8_D16_FINAL_STEPS)[WordCount][number]): string {
   return step === 'coin' ? entropyLabEnglish['dice.dplus.aCoinFlip'] : step.toUpperCase();
+}
+
+function d8D16HelpStepLabel(
+  step: (typeof D8_D16_FINAL_STEPS)[WordCount][number],
+): string {
+  return step === 'coin' ? entropyLabEnglish['dice.dplus.coinFlip'] : step.toUpperCase();
 }
 
 function arrayBufferToHex(buffer: ArrayBuffer): string {
