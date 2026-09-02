@@ -132,6 +132,9 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
   expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.placeholder).toBe(
     '415263415263…',
   );
+  expect(
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.showSoftInputOnFocus,
+  ).toBe(false);
   expect(app!.root.findByProps({ testID: 'dice-progress' }).props.children).toBe(
     entropyLabEnglish['dice.meta.empty']
       .replace('{n}', '99')

@@ -59,6 +59,7 @@ export function DiceTranscriptInput({
           placeholder={inputPlaceholder}
           placeholderTextColor={colors.placeholder}
           selectionColor={colors.accent}
+          showSoftInputOnFocus={false}
           spellCheck={false}
           style={[styles.rollInput, { color: colors.text }]}
           testID="dice-rolls-input"
