@@ -83,6 +83,11 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
     setActiveSheet(null);
   }
 
+  function changeMethod(value: typeof method) {
+    setTranscriptSelection(null);
+    selectMethod(value);
+  }
+
   function insertDiceFace(face: DiceInputFace) {
     const cursor = appendFace(
       face,
@@ -241,7 +246,7 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
           }}
           colors={colors}
           method={method}
-          onSelect={selectMethod}
+          onSelect={changeMethod}
         />
         <WordCountSelector
           colors={colors}

@@ -287,6 +287,63 @@ test('adds and removes dice faces through the modular controls', async () => {
   );
 });
 
+test('shares hashed rolls and restores independent direct-dice transcripts', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  async function selectMethod(testID: string) {
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+    });
+  }
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('123456');
+  });
+  await selectMethod('dice-method-coleman');
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('123456');
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('654321');
+  });
+  await selectMethod('dice-method-bitbox');
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('');
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1111111');
+  });
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe(
+    '111111 1',
+  );
+
+  await selectMethod('dice-method-d8d16');
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('');
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1234');
+  });
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('123 4');
+
+  await selectMethod('dice-method-bitbox');
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe(
+    '111111 1',
+  );
+
+  await selectMethod('dice-method-d8d16');
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('123 4');
+
+  await selectMethod('dice-method-coldcard');
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('654321');
+});
+
 test('shows placeholders for every dice method and selected seed length', async () => {
   mockDirectDiceState.mockReturnValue({
     activeRoll: 0,

@@ -17,11 +17,18 @@ import {
 import type { DiceInputFace, DiceMethod, DiceResult, WordCount } from './dice';
 
 export function useDiceRolls() {
-  const [rolls, setRolls] = useState('');
+  const [hashedRolls, setHashedRolls] = useState('');
+  const [bitboxRolls, setBitboxRolls] = useState('');
+  const [d8D16Rolls, setD8D16Rolls] = useState('');
   const [method, setMethod] = useState<DiceMethod>('coldcard');
   const [wordCount, setWordCount] = useState<WordCount>(24);
   const [result, setResult] = useState<DiceResult | null>(null);
   const [selectedFinalWord, setSelectedFinalWord] = useState('');
+  const rolls = isHashedDiceMethod(method)
+    ? hashedRolls
+    : method === 'bitbox'
+      ? bitboxRolls
+      : d8D16Rolls;
   const rollCount = countDiceFaces(rolls);
   const requiredRolls = recommendedRolls(wordCount);
   const directState = useMemo(() => {
@@ -63,7 +70,13 @@ export function useDiceRolls() {
   const copy = diceScreenCopy(method, wordCount);
 
   function updateRolls(value: string) {
-    setRolls(value);
+    if (isHashedDiceMethod(method)) {
+      setHashedRolls(value);
+    } else if (method === 'bitbox') {
+      setBitboxRolls(value);
+    } else {
+      setD8D16Rolls(value);
+    }
     setResult(null);
     setSelectedFinalWord('');
   }
