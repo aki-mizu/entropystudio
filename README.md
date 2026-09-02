@@ -19,13 +19,35 @@ ios/                Generated iOS TurboModule integration
 ubrn.config.yaml    UBRN build and generation configuration
 ```
 
-The initial public API intentionally stays small:
+The current public API intentionally stays small:
 
 - `sha256(input: ArrayBuffer): ArrayBuffer`
 - `mnemonicToEntropy(normalizedPhrase: string): ArrayBuffer`
+- `entropyToMnemonic(entropy: ArrayBuffer): string`
+- `diceRollsToEntropy(rolls: string, method: DiceRollMethod, targetWords: number): ArrayBuffer`
 
 `mnemonicToEntropy` expects an NFKD-normalized English BIP39 phrase. In
 TypeScript, call `phrase.normalize("NFKD")` before passing text to it.
+
+## Dice rolls
+
+`diceRollsToEntropy` ports EntropyLab's two SHA-256 dice transcript methods.
+It accepts faces `1` through `6` with whitespace, commas, semicolons, or pipes
+as separators, and supports `12`, `15`, `18`, `21`, and `24` BIP39 words.
+
+- `DiceRollMethod.Coldcard` hashes the original dice digits, matching the
+	COLDCARD and SeedSigner convention.
+- `DiceRollMethod.Coleman` maps every `6` to `0` before hashing, matching the
+	Keystone-compatible dice convention used by EntropyLab.
+
+Both methods hash every accepted roll, then return the leading 128-256 bits of
+the SHA-256 digest for the chosen BIP39 length. EntropyLab recommends 50, 62,
+75, 87, or 99 fair six-sided rolls respectively. `entropyToMnemonic` converts
+that returned buffer into the checksum-valid English BIP39 phrase.
+
+This first dice slice does not yet include EntropyLab's direct BitBox diceware
+or D++ word-selection workflows, transcript fairness analysis, or the broader
+key-derivation workflow.
 
 ## Setup
 
@@ -68,20 +90,55 @@ not committed or pushed to EntropyLab.
 
 ## Local Android debug build
 
-With an ADB-connected device, build and install the example app's debug variant
-from its Android directory:
+The debug variant loads JavaScript from Metro rather than packaging a bundle.
+With the development machine and device connected to Tailscale, configure the
+debug APK to use the development machine's Tailscale address when installing it:
 
 ```sh
-cd example/android
-./gradlew :app:installDebug
+METRO_HOST="$(tailscale ip -4):8081" npm run install:android
 ```
 
-`installDebug` builds the APK when needed, then installs or updates it on the
-connected device. Confirm that ADB can see the device before running it:
+Then start Metro whenever you want to run or reload the debug app:
+
+```sh
+cd example
+npm start
+```
+
+The device fetches the bundle directly from Metro over Tailscale; it does not
+need an ADB connection or `adb reverse` to load JavaScript. Rebuild with a new
+`METRO_HOST` only when the development machine's reachable address changes.
+
+APK installation still uses ADB. For a device already paired through Android's
+Wireless debugging settings, connect it with the reachable device address and
+the wireless-debugging port shown on the device:
+
+```sh
+adb connect <device-ip>:<wireless-debugging-port>
+```
+
+Confirm that ADB can see the device before installing:
 
 ```sh
 adb devices -l
 ```
+
+Keep `METRO_HOST` in any Gradle command that might build or repackage the debug
+APK, including a reinstall after deleting the local APK:
+
+```sh
+cd example/android
+METRO_HOST="$(tailscale ip -4):8081" ./gradlew :app:installDebug
+```
+
+If `app-debug.apk` already exists and was built with the correct host, ADB can
+install that exact file without invoking Gradle:
+
+```sh
+adb install -r example/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+`installDebug` does not rebuild the Rust library or start Metro.
 
 To build an APK without installing it, use:
 

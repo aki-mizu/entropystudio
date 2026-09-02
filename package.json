@@ -35,6 +35,7 @@
     "generate": "npm run prepare:entropylab && node scripts/generate.mjs",
     "build": "npm run clean && npm run generate",
     "build:android": "npm run update:entropylab && npm run prepare:entropylab && ubrn build android --config ubrn.config.yaml --release --and-generate",
+    "install:android": "npm run build:android && cd example/android && ./gradlew :app:installDebug",
     "build:ios": "npm run prepare:entropylab && ubrn build ios --config ubrn.config.yaml --release --and-generate",
     "test:rust": "npm run prepare:entropylab && cargo test --manifest-path Cargo.toml --locked",
     "typecheck": "tsc --noEmit",
