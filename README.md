@@ -62,6 +62,31 @@ iOS, following the UBRN configuration used by Nostr SDK's React Native package.
 The existing EntropyLab web build remains a separate `cdylib`/WASM consumer of
 the same underlying crate.
 
+## Local Android debug build
+
+With an ADB-connected device, build and install the example app's debug variant
+from its Android directory:
+
+```sh
+cd example/android
+./gradlew :app:installDebug
+```
+
+`installDebug` builds the APK when needed, then installs or updates it on the
+connected device. Confirm that ADB can see the device before running it:
+
+```sh
+adb devices -l
+```
+
+To build an APK without installing it, use:
+
+```sh
+./gradlew :app:assembleDebug
+```
+
+The APK is written to `example/android/app/build/outputs/apk/debug/app-debug.apk`.
+
 ## Android APK workflow
 
 Run **Build Android APK** from the repository's Actions tab and provide a
