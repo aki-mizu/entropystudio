@@ -4,8 +4,8 @@ EntropyStudio is a React Native TurboModule scaffold for selected, typed
 EntropyLab operations. It uses UniFFI and `uniffi-bindgen-react-native` to
 generate the JavaScript, C++, Android, and iOS binding layers.
 
-The Rust wrapper depends on the sibling EntropyLab checkout at
-`../entropylab/entropylab-wasm`. It calls that crate internally while exposing
+The Rust wrapper depends on the pinned EntropyLab Git submodule at
+`entropylab/entropylab-wasm`. It calls that crate internally while exposing
 safe, typed UniFFI functions to React Native.
 
 ## Layout
@@ -33,13 +33,15 @@ Prerequisites:
 
 - Node.js 20 or newer
 - Rust and Cargo
-- A sibling clone of EntropyLab at `../entropylab`
+- Git with submodule support
 - Android NDK and `cargo-ndk` for Android builds
 - macOS, Xcode, and the Rust iOS targets for iOS builds
 
-Install the JavaScript tooling and generate host bindings:
+Initialize the pinned EntropyLab source, install the JavaScript tooling, and
+generate host bindings:
 
 ```sh
+git submodule update --init --recursive
 npm install
 npm run generate
 ```
@@ -60,7 +62,9 @@ npm run build:ios
 The generated native bridge uses static linking (`staticlib`) for Android and
 iOS, following the UBRN configuration used by Nostr SDK's React Native package.
 The existing EntropyLab web build remains a separate `cdylib`/WASM consumer of
-the same underlying crate.
+the same underlying crate. Rust-dependent npm commands apply a guarded local
+change to the submodule so `entropylab-wasm` also exports `rlib`; the change is
+not committed or pushed to EntropyLab.
 
 ## Local Android debug build
 
@@ -100,11 +104,11 @@ The prerelease is tagged `v<version>` at the workflow's commit and is available
 for download from the GitHub Release page. It can be promoted to a formal
 release from that page when it is ready.
 
-The workflow checks out EntropyLab as a sibling repository, then applies a
-guarded, one-line change to that runner-local checkout so `entropylab-wasm`
-exports both `cdylib` and `rlib`. The script accepts only the known
-`crate-type` declaration or an already-patched form, and never pushes a change
-to EntropyLab.
+The workflow initializes the pinned EntropyLab submodule. Rust-dependent npm
+commands then apply a guarded, one-line change to that runner-local checkout so
+`entropylab-wasm` exports both `cdylib` and `rlib`. The script accepts only the
+known `crate-type` declaration or an already-patched form, and never pushes a
+change to EntropyLab.
 
 Before testing, the workflow verifies that `Cargo.lock` resolves the checked-out
 EntropyLab dependency graph. If it does not, it regenerates and commits only

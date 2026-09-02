@@ -30,11 +30,12 @@
   ],
   "scripts": {
     "clean": "node scripts/clean.mjs",
-    "generate": "node scripts/generate.mjs",
+    "prepare:entropylab": "node scripts/enable-entropylab-rlib.mjs entropylab",
+    "generate": "npm run prepare:entropylab && node scripts/generate.mjs",
     "build": "npm run clean && npm run generate",
-    "build:android": "ubrn build android --config ubrn.config.yaml --release --and-generate",
-    "build:ios": "ubrn build ios --config ubrn.config.yaml --release --and-generate",
-    "test:rust": "cargo test --manifest-path Cargo.toml --locked",
+    "build:android": "npm run prepare:entropylab && ubrn build android --config ubrn.config.yaml --release --and-generate",
+    "build:ios": "npm run prepare:entropylab && ubrn build ios --config ubrn.config.yaml --release --and-generate",
+    "test:rust": "npm run prepare:entropylab && cargo test --manifest-path Cargo.toml --locked",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:rust && npm run typecheck"
   },

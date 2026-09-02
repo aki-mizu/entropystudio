@@ -10,5 +10,5 @@ description = "UniFFI bindings for EntropyLab operations in EntropyStudio"
 crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
-entropylab-wasm = { path = "../entropylab/entropylab-wasm" }
+entropylab-wasm = { path = "entropylab/entropylab-wasm" }
 uniffi = "=0.31.2"

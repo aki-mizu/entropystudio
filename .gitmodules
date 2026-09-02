@@ -1,0 +1,4 @@
+[submodule "entropylab"]
+	path = entropylab
+	url = https://github.com/w-s-bitcoin/entropylab.git
+	ignore = dirty
