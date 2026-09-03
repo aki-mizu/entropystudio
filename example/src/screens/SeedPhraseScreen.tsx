@@ -455,7 +455,7 @@ function seedNumberStatus(
 export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectTool }: Props) {
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<SeedPhraseView>('setup');
-  const [autocompleteEnabled, setAutocompleteEnabled] = useState(false);
+  const [autocompleteEnabled, setAutocompleteEnabled] = useState(true);
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
   const [numberInput, setNumberInput] = useState('');
   const [result, setResult] = useState<DiceResult | null>(null);
@@ -523,6 +523,27 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
     }
     setResult(null);
     return normalized;
+  }
+
+  function setSeedAutocompleteEnabled(enabled: boolean) {
+    setAutocompleteEnabled(enabled);
+    if (!enabled || seedMethod !== 'words') {
+      return;
+    }
+
+    const selection = normalizedInputSelection(wordInput, inputSelection);
+    if (selection.start !== selection.end) {
+      return;
+    }
+
+    const autocompleted = autocompleteSeedInput(wordInput, selection.end, wordCount, true);
+    if (autocompleted.value === wordInput) {
+      return;
+    }
+
+    const nextInput = updateInput(autocompleted.value);
+    const cursor = Math.min(autocompleted.cursor, nextInput.length);
+    setInputSelection({ end: cursor, start: cursor });
   }
 
   function canInsertInputCharacter(character: string): boolean {
@@ -682,26 +703,6 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
                 );
               })}
             </View>
-            {seedMethod === 'words' && (
-              <View style={styles.autocompleteToggle}>
-                <View style={styles.autocompleteCopy}>
-                  <Text style={[styles.autocompleteLabel, { color: colors.text }]}>
-                    {entropyLabEnglish['seed.autocomplete']}
-                  </Text>
-                  <Text style={[styles.autocompleteNote, { color: colors.muted }]}>
-                    {entropyLabEnglish['seed.autocompleteNote']}
-                  </Text>
-                </View>
-                <Switch
-                  accessibilityLabel={entropyLabEnglish['seed.autocomplete']}
-                  onValueChange={setAutocompleteEnabled}
-                  testID="seed-phrase-autocomplete"
-                  thumbColor={autocompleteEnabled ? colors.surface : colors.muted}
-                  trackColor={{ false: colors.segment, true: colors.accent }}
-                  value={autocompleteEnabled}
-                />
-              </View>
-            )}
             <WordCountSelector
               colors={colors}
               label={entropyLabEnglish['seedLength.label']}
@@ -750,6 +751,7 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
             <DiceWordList
               compact
               colors={colors}
+              dense={wordCount === 24}
               slotCount={wordCount}
               testID="seed-phrase-words"
               words={previewWords}
@@ -791,6 +793,23 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
                   range: entropyLabEnglish[zeroIndexed ? 'seed.range0' : 'seed.range1'],
                 })}
           </Text>
+          {seedMethod === 'words' && (
+            <View style={styles.autocompleteToggle}>
+              <View style={styles.autocompleteCopy}>
+                <Text style={[styles.autocompleteLabel, { color: colors.text }]}>
+                  {entropyLabEnglish['seed.autocomplete']}
+                </Text>
+              </View>
+              <Switch
+                accessibilityLabel={entropyLabEnglish['seed.autocomplete']}
+                onValueChange={setSeedAutocompleteEnabled}
+                testID="seed-phrase-autocomplete"
+                thumbColor={autocompleteEnabled ? colors.surface : colors.muted}
+                trackColor={{ false: colors.segment, true: colors.accent }}
+                value={autocompleteEnabled}
+              />
+            </View>
+          )}
           {seedMethod === 'numbers' && (
             <View style={styles.zeroIndexToggle}>
               <View style={styles.zeroIndexCopy}>
@@ -913,11 +932,6 @@ const styles = StyleSheet.create({
   autocompleteLabel: {
     fontSize: 12,
     fontWeight: '700',
-  },
-  autocompleteNote: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 1,
   },
   autocompleteToggle: {
     alignItems: 'center',

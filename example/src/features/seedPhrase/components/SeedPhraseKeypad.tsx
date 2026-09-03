@@ -26,30 +26,34 @@ export function SeedPhraseKeypad({
         style={styles.numberKeypad}
         testID="seed-number-keypad"
       >
-        <View style={styles.numberGrid}>
-          {'1234567890'.split('').map(character => {
-            const enabled = canInsert(character);
-            return (
-              <Pressable
-                accessibilityLabel={`Enter ${character}`}
-                accessibilityRole="button"
-                disabled={!enabled}
-                key={character}
-                onPress={() => onInsert(character)}
-                style={({ pressed }) => [
-                  styles.numberKey,
-                  {
-                    backgroundColor: colors.diceSurface,
-                    borderColor: colors.diceBorder,
-                    opacity: enabled ? (pressed ? 0.78 : 1) : 0.38,
-                  },
-                ]}
-                testID={`seed-number-key-${character}`}
-              >
-                <Text style={[styles.keyLabel, { color: colors.diceText }]}>{character}</Text>
-              </Pressable>
-            );
-          })}
+        <View style={styles.numberGrid} testID="seed-number-key-grid">
+          {['01234', '56789'].map((row, rowIndex) => (
+            <View key={row} style={styles.numberRow} testID={`seed-number-key-row-${rowIndex}`}>
+              {row.split('').map(character => {
+                const enabled = canInsert(character);
+                return (
+                  <Pressable
+                    accessibilityLabel={`Enter ${character}`}
+                    accessibilityRole="button"
+                    disabled={!enabled}
+                    key={character}
+                    onPress={() => onInsert(character)}
+                    style={({ pressed }) => [
+                      styles.numberKey,
+                      {
+                        backgroundColor: colors.diceSurface,
+                        borderColor: colors.diceBorder,
+                        opacity: enabled ? (pressed ? 0.78 : 1) : 0.38,
+                      },
+                    ]}
+                    testID={`seed-number-key-${character}`}
+                  >
+                    <Text style={[styles.keyLabel, { color: colors.diceText }]}>{character}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
         </View>
         <Pressable
           accessibilityLabel="Enter next BIP39 word number"
@@ -110,17 +114,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   numberGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 6,
   },
   numberKey: {
     alignItems: 'center',
     borderRadius: 6,
     borderWidth: 1,
-    flexBasis: '18.7%',
+    flex: 1,
     justifyContent: 'center',
     minHeight: 42,
+  },
+  numberRow: {
+    flexDirection: 'row',
+    gap: 6,
   },
   numberKeypad: {
     marginTop: 10,

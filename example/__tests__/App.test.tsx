@@ -308,23 +308,38 @@ test('validates and autocompletes Seed Phrase keyboard prefixes', async () => {
   });
 
   await selectEntropyTool(app!, 'seed');
+  expect(app!.root.findAllByProps({ testID: 'seed-phrase-autocomplete' })).toHaveLength(0);
   const seedPhraseSetup = app!.root.findByProps({ testID: 'seed-phrase-setup-view' });
   await ReactTestRenderer.act(async () => {
     seedPhraseSetup.findByProps({ testID: 'word-count-12' }).props.onPress();
-    seedPhraseSetup.findByProps({ testID: 'seed-phrase-autocomplete' }).props.onValueChange(true);
     seedPhraseSetup.findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
   });
 
   await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'seed-phrase-input' }).props.onChangeText('aban');
+    app!.root.findByProps({ testID: 'seed-phrase-input' }).props.onChangeText('aba');
   });
 
-  expect(app!.root.findByProps({ testID: 'seed-phrase-key-d' }).props.disabled).toBe(false);
+  expect(app!.root.findByProps({ testID: 'seed-phrase-autocomplete' }).props.value).toBe(true);
+  expect(app!.root.findByProps({ testID: 'seed-phrase-key-n' }).props.disabled).toBe(false);
   expect(app!.root.findByProps({ testID: 'seed-phrase-key-z' }).props.disabled).toBe(true);
   expect(app!.root.findByProps({ testID: 'seed-phrase-key-space' }).props.disabled).toBe(true);
 
   await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'seed-phrase-input' }).props.onChangeText(`${prefix} `);
+    app!.root.findByProps({ testID: 'seed-phrase-key-n' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'seed-phrase-input' }).props.value).toBe('abandon ');
+
+  const finalWordPrefix = `${prefix} `;
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'seed-phrase-input' }).props.onChangeText(finalWordPrefix);
+  });
+  await ReactTestRenderer.act(async () => {
+    app!
+      .root.findByProps({ testID: 'seed-phrase-input' })
+      .props.onSelectionChange({
+        nativeEvent: { selection: { end: finalWordPrefix.length, start: finalWordPrefix.length } },
+      });
   });
 
   expect(app!.root.findByProps({ testID: 'seed-phrase-key-a' }).props.disabled).toBe(false);
@@ -392,6 +407,16 @@ test('converts BIP39 word numbers through the on-screen Seed Phrase keypad', asy
   );
   expect(app!.root.findByProps({ testID: 'seed-number-key-1' })).toBeDefined();
   expect(app!.root.findByProps({ testID: 'seed-number-next-word' }).props.disabled).toBe(true);
+  expect(
+    app!
+      .root.findByProps({ testID: 'seed-number-key-row-0' })
+      .props.children.map((key: { props: { testID: string } }) => key.props.testID),
+  ).toEqual('01234'.split('').map(digit => `seed-number-key-${digit}`));
+  expect(
+    app!
+      .root.findByProps({ testID: 'seed-number-key-row-1' })
+      .props.children.map((key: { props: { testID: string } }) => key.props.testID),
+  ).toEqual('56789'.split('').map(digit => `seed-number-key-${digit}`));
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'seed-number-key-1' }).props.onPress();
