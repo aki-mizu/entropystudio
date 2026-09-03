@@ -102,9 +102,7 @@ npm run build:ios
 The generated native bridge uses static linking (`staticlib`) for Android and
 iOS, following the UBRN configuration used by Nostr SDK's React Native package.
 The existing EntropyLab web build remains a separate `cdylib`/WASM consumer of
-the same underlying crate. Rust-dependent npm commands apply a guarded local
-change to the submodule so `entropylab-wasm` also exports `rlib`; the change is
-not committed or pushed to EntropyLab.
+the same underlying crate.
 
 ## Local Android debug build
 
@@ -179,17 +177,8 @@ The prerelease is tagged `v<version>` at the workflow's commit and is available
 for download from the GitHub Release page. It can be promoted to a formal
 release from that page when it is ready.
 
-The workflow initializes the pinned EntropyLab submodule. Rust-dependent npm
-commands then apply a guarded, one-line change to that runner-local checkout so
-`entropylab-wasm` exports both `cdylib` and `rlib`. The script accepts only the
-known `crate-type` declaration or an already-patched form, and never pushes a
-change to EntropyLab.
-
-Before testing, the workflow verifies that `Cargo.lock` resolves the checked-out
-EntropyLab dependency graph. If it does not, it regenerates and commits only
-`Cargo.lock` with `cargo update -p entropylab-wasm` to avoid unrelated version
-updates. It commits the result to the branch that dispatched the workflow, then
-builds and tags the prerelease at that commit. Run the workflow from a branch
+The workflow commits a required `Cargo.lock` refresh to the branch that
+dispatched it before building and tagging the prerelease. Run it from a branch
 whose GitHub Actions token may write contents; a required refresh from a tag or
 a protected branch that rejects the push stops the build rather than publishing
 an APK from an uncommitted dependency graph.
