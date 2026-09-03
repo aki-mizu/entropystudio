@@ -112,7 +112,7 @@ function activeMethodList(app: ReactTestRenderer.ReactTestRenderer) {
 
 async function selectEntropyTool(
   app: ReactTestRenderer.ReactTestRenderer,
-  tool: 'cards' | 'dice' | 'hex',
+  tool: 'cards' | 'dice' | 'hex' | 'seed',
 ) {
   await ReactTestRenderer.act(async () => {
     activeMethodList(app).findByProps({ testID: `key-method-${tool}` }).props.onPress();
@@ -179,7 +179,7 @@ test('uses EntropyLab help copy for every dice method', () => {
   );
 });
 
-test('shows Dice, Cards, and Number Bases workflows on the shared setup screen', async () => {
+test('shows Dice, Cards, Number Bases, and Seed Phrase workflows on the shared setup screen', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
     app = ReactTestRenderer.create(<App />);
@@ -198,6 +198,9 @@ test('shows Dice, Cards, and Number Bases workflows on the shared setup screen',
     selected: false,
   });
   expect(diceMethodList.findByProps({ testID: 'key-method-hex' }).props.accessibilityState).toEqual({
+    selected: false,
+  });
+  expect(diceMethodList.findByProps({ testID: 'key-method-seed' }).props.accessibilityState).toEqual({
     selected: false,
   });
 
@@ -227,6 +230,202 @@ test('shows Dice, Cards, and Number Bases workflows on the shared setup screen',
   expect(app!.root.findByProps({ testID: 'card-method-direct' }).props.accessibilityState).toEqual({
     selected: true,
   });
+});
+
+test('validates a typed Seed Phrase through the native BIP39 binding', async () => {
+  const mnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const entropy = new Uint8Array(16).buffer;
+  mockMnemonicToEntropy.mockImplementation(phrase => {
+    if (phrase !== mnemonic) {
+      throw new Error('Invalid mnemonic');
+    }
+    return entropy;
+  });
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await selectEntropyTool(app!, 'seed');
+
+  expect(app!.root.findByProps({ testID: 'seed-phrase-setup-view' })).toBeDefined();
+  expect(app!.root.findByProps({ testID: 'seed-phrase-screen-title' }).props.children).toBe(
+    entropyLabEnglish['mode.seed'],
+  );
+  expect(
+    activeMethodList(app!).findByProps({ testID: 'key-method-seed' }).props.accessibilityState,
+  ).toEqual({ selected: true });
+
+  const seedPhraseSetup = app!.root.findByProps({ testID: 'seed-phrase-setup-view' });
+  await ReactTestRenderer.act(async () => {
+    seedPhraseSetup.findByProps({ testID: 'word-count-12' }).props.onPress();
+    seedPhraseSetup.findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'seed-phrase-entry-view' })).toBeDefined();
+  expect(app!.root.findByProps({ testID: 'seed-phrase-input' }).props.showSoftInputOnFocus).toBe(
+    false,
+  );
+  expect(app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.disabled).toBe(true);
+  expect(app!.root.findByProps({ testID: 'seed-phrase-status' }).props.children).toBe(
+    '0 of 12 BIP39 words entered · 12 remaining',
+  );
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'seed-phrase-input' }).props.onChangeText(mnemonic);
+  });
+
+  expect(app!.root.findByProps({ testID: 'seed-phrase-words-word-1' }).props.children).toBe(
+    'abandon',
+  );
+  expect(app!.root.findByProps({ testID: 'seed-phrase-words-word-12' }).props.children).toBe(
+    'about',
+  );
+  expect(app!.root.findByProps({ testID: 'seed-phrase-status' }).props.children).toBe(
+    '12 of 12 BIP39 words entered · checksum valid · ready to derive',
+  );
+  expect(app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.disabled).toBe(false);
+  expect(mockMnemonicToEntropy).toHaveBeenLastCalledWith(mnemonic);
+});
+
+test('validates and autocompletes Seed Phrase keyboard prefixes', async () => {
+  const prefix = Array.from({ length: 11 }, () => 'abandon').join(' ');
+  const mnemonic = `${prefix} about`;
+  const entropy = new Uint8Array(16).buffer;
+  mockEntropyToMnemonic.mockReturnValue(mnemonic);
+  mockMnemonicToEntropy.mockImplementation(phrase => {
+    if (phrase !== mnemonic) {
+      throw new Error('Invalid mnemonic');
+    }
+    return entropy;
+  });
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await selectEntropyTool(app!, 'seed');
+  const seedPhraseSetup = app!.root.findByProps({ testID: 'seed-phrase-setup-view' });
+  await ReactTestRenderer.act(async () => {
+    seedPhraseSetup.findByProps({ testID: 'word-count-12' }).props.onPress();
+    seedPhraseSetup.findByProps({ testID: 'seed-phrase-autocomplete' }).props.onValueChange(true);
+    seedPhraseSetup.findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'seed-phrase-input' }).props.onChangeText('aban');
+  });
+
+  expect(app!.root.findByProps({ testID: 'seed-phrase-key-d' }).props.disabled).toBe(false);
+  expect(app!.root.findByProps({ testID: 'seed-phrase-key-z' }).props.disabled).toBe(true);
+  expect(app!.root.findByProps({ testID: 'seed-phrase-key-space' }).props.disabled).toBe(true);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'seed-phrase-input' }).props.onChangeText(`${prefix} `);
+  });
+
+  expect(app!.root.findByProps({ testID: 'seed-phrase-key-a' }).props.disabled).toBe(false);
+  expect(app!.root.findByProps({ testID: 'seed-phrase-key-z' }).props.disabled).toBe(true);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'seed-phrase-key-a' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'seed-phrase-input' }).props.value).toBe(`${mnemonic} `);
+  expect(app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.disabled).toBe(false);
+});
+
+test('uses EntropyLab alphabetical Seed Phrase keyboard rows', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await selectEntropyTool(app!, 'seed');
+  await ReactTestRenderer.act(async () => {
+    app!
+      .root.findByProps({ testID: 'seed-phrase-setup-view' })
+      .findByProps({ testID: 'open-seed-phrase-entry' })
+      .props.onPress();
+  });
+
+  const rowKeys = (row: number) =>
+    app!
+      .root.findByProps({ testID: `seed-phrase-key-row-${row}` })
+      .props.children.map((key: { props: { testID: string } }) => key.props.testID);
+
+  expect(rowKeys(1)).toEqual('abcdefghij'.split('').map(character => `seed-phrase-key-${character}`));
+  expect(rowKeys(2)).toEqual('klmnopqrs'.split('').map(character => `seed-phrase-key-${character}`));
+  expect(rowKeys(3)).toEqual('tuvwxyz'.split('').map(character => `seed-phrase-key-${character}`));
+  expect(app!.root.findByProps({ testID: 'seed-phrase-keypad-mode' }).props.disabled).toBe(true);
+});
+
+test('converts BIP39 word numbers through the on-screen Seed Phrase keypad', async () => {
+  const mnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const entropy = new Uint8Array(16).buffer;
+  mockMnemonicToEntropy.mockImplementation(phrase => {
+    if (phrase !== mnemonic) {
+      throw new Error('Invalid mnemonic');
+    }
+    return entropy;
+  });
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await selectEntropyTool(app!, 'seed');
+  const seedPhraseSetup = app!.root.findByProps({ testID: 'seed-phrase-setup-view' });
+  await ReactTestRenderer.act(async () => {
+    seedPhraseSetup.findByProps({ testID: 'seed-method-numbers' }).props.onPress();
+    seedPhraseSetup.findByProps({ testID: 'word-count-12' }).props.onPress();
+    seedPhraseSetup.findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'seed-number-input' }).props.showSoftInputOnFocus).toBe(
+    false,
+  );
+  expect(app!.root.findByProps({ testID: 'seed-number-key-1' })).toBeDefined();
+  expect(app!.root.findByProps({ testID: 'seed-number-next-word' }).props.disabled).toBe(true);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'seed-number-key-1' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'seed-number-next-word' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'seed-number-input' }).props.value).toBe('1 ');
+
+  await ReactTestRenderer.act(async () => {
+    app!
+      .root.findByProps({ testID: 'seed-number-input' })
+      .props.onChangeText('1 1 1 1 1 1 1 1 1 1 1 4');
+  });
+
+  expect(app!.root.findByProps({ testID: 'seed-phrase-words-word-1' }).props.children).toBe(
+    'abandon',
+  );
+  expect(app!.root.findByProps({ testID: 'seed-phrase-words-word-12' }).props.children).toBe(
+    'about',
+  );
+  expect(app!.root.findByProps({ testID: 'seed-number-status' }).props.children).toBe(
+    '12 of 12 BIP39 word numbers entered · checksum valid · ready to derive',
+  );
+  expect(app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.disabled).toBe(false);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'seed-number-zero-index' }).props.onValueChange(true);
+  });
+
+  expect(app!.root.findByProps({ testID: 'seed-number-input' }).props.value).toBe(
+    '0 0 0 0 0 0 0 0 0 0 0 3',
+  );
 });
 
 test('derives Number Bases entropy through the native BIP39 binding', async () => {

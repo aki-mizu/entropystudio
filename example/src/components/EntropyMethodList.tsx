@@ -2,9 +2,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import entropyLabEnglish from '../../../entropylab/src/locales/en.json';
 import type { DiceColors } from '../features/dice/diceTheme';
 
-export type EntropyTool = 'cards' | 'dice' | 'hex';
+export type EntropyTool = 'cards' | 'dice' | 'hex' | 'seed';
 
-const ENTROPY_TOOLS: readonly EntropyTool[] = ['dice', 'cards', 'hex'];
+const ENTROPY_TOOLS: readonly EntropyTool[] = ['dice', 'cards', 'hex', 'seed'];
 
 type Props = {
   readonly activeTool: EntropyTool;
@@ -46,7 +46,9 @@ export function EntropyMethodList({ activeTool, colors, isActive, onSelect }: Pr
                   ? entropyLabEnglish['mode.dice']
                   : tool === 'cards'
                     ? entropyLabEnglish['mode.cards']
-                    : entropyLabEnglish['mode.hex']}
+                    : tool === 'hex'
+                      ? entropyLabEnglish['mode.hex']
+                      : entropyLabEnglish['mode.seed']}
               </Text>
             </Pressable>
           );
