@@ -11,7 +11,7 @@ import type { DirectCardState } from '../../native/entropyStudio';
 import type { WordCount } from '../dice/dice';
 import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
 
-export const CARD_METHODS = ['ascii', 'coleman', 'direct'] as const;
+export const CARD_METHODS = ['hashed', 'direct'] as const;
 export const CARD_RANKS = [
   'A',
   '2',
@@ -78,8 +78,8 @@ export type CardResult =
   | { readonly entropy: string; readonly mnemonic: string; readonly error?: never }
   | { readonly entropy?: never; readonly mnemonic?: never; readonly error: string };
 
-export function isHashedCardMethod(method: CardMethod): method is 'ascii' | 'coleman' {
-  return method === 'ascii' || method === 'coleman';
+export function isHashedCardMethod(method: CardMethod): method is 'hashed' {
+  return method === 'hashed';
 }
 
 export function cardMethodCopy(method: CardMethod, wordCount: WordCount) {
@@ -101,18 +101,16 @@ export function cardMethodCopy(method: CardMethod, wordCount: WordCount) {
   });
 
   return {
-    description:
-      method === 'coleman'
-        ? `${hashedDescription} ${entropyLabEnglish['cards.coleman.note']}`
-        : hashedDescription,
-    title:
-      method === 'coleman'
-        ? `${entropyLabEnglish['cards.hashed.title']} / ${entropyLabEnglish['cards.coleman']}`
-        : entropyLabEnglish['cards.hashed.title'],
+    description: hashedDescription,
+    title: entropyLabEnglish['cards.hashed.title'],
   };
 }
 
-export function cardScreenCopy(method: CardMethod, wordCount: WordCount) {
+export function cardScreenCopy(
+  method: CardMethod,
+  wordCount: WordCount,
+  matchesIanColeman: boolean,
+) {
   const isDirect = method === 'direct';
   const deal =
     wordCount === 24
@@ -128,7 +126,11 @@ export function cardScreenCopy(method: CardMethod, wordCount: WordCount) {
     inputLabel: isDirect
       ? entropyLabEnglish['cards.transcriptDirect']
       : entropyLabEnglish['cards.transcript'],
-    inputPlaceholder: isDirect ? 'A284 37A2...' : 'As Th Td...',
+    inputPlaceholder: isDirect
+      ? 'A284 37A2...'
+      : matchesIanColeman
+        ? 'A\u2660 2\u2663 T\u2665 T\u2666...'
+        : 'As Th Td...',
     mode: entropyLabEnglish['mode.cards'],
     resultEntropy: entropyLabEnglish['result.entropyHex'],
     seedLengthLabel: entropyLabEnglish['seedLength.label'],
@@ -160,7 +162,7 @@ export function normalizeCardToken(token: string): string | null {
 
 export function formatCardTranscript(
   transcript: string,
-  method: Exclude<CardMethod, 'direct'>,
+  matchesIanColeman: boolean,
 ): string {
   return transcript.replace(CARD_TOKEN_PATTERN, token => {
     const card = normalizeCardToken(token);
@@ -170,7 +172,7 @@ export function formatCardTranscript(
 
     const rank = card[0];
     const suit = card[1];
-    if (method === 'ascii') {
+    if (!matchesIanColeman) {
       return `${rank}${suit.toLowerCase()}`;
     }
 
@@ -386,13 +388,13 @@ export function cardInstruction(
 
 export function deriveHashedCardResult(
   transcript: string,
-  method: Exclude<CardMethod, 'direct'>,
+  matchesIanColeman: boolean,
   wordCount: WordCount,
 ): CardResult {
   try {
     const entropy = cardTranscriptToEntropy(
       transcript,
-      method === 'ascii' ? CardHashMethod.Ascii : CardHashMethod.Coleman,
+      matchesIanColeman ? CardHashMethod.Coleman : CardHashMethod.Ascii,
       wordCount,
     );
     return {

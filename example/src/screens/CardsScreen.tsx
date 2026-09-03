@@ -53,10 +53,12 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
     directState,
     derivePhrase,
     instruction,
+    matchesIanColeman,
     method,
     progress,
     progressText,
     result,
+    selectIanColemanMatch,
     selectMethod,
     selectWordCount,
     transcript,
@@ -67,7 +69,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
   const colors = diceColors(isDarkMode);
   const isDirect = method === 'direct';
   const displayedTranscript = isHashedCardMethod(method)
-    ? formatCardTranscript(transcript, method)
+    ? formatCardTranscript(transcript, matchesIanColeman)
     : transcript;
   const selection = cardSelectionState(transcript, wordCount, selectedRank, selectedSuit);
   const words = directState
@@ -168,6 +170,36 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
             </Pressable>
           );
         })}
+        {!isDirect ? (
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: matchesIanColeman }}
+            onPress={() => selectIanColemanMatch(!matchesIanColeman)}
+            style={({ pressed }) => [
+              styles.colemanToggle,
+              pressed && styles.pressed,
+            ]}
+            testID="card-ian-coleman-toggle"
+          >
+            <View
+              style={[
+                styles.checkbox,
+                { borderColor: matchesIanColeman ? colors.accent : colors.muted },
+                matchesIanColeman && { backgroundColor: colors.accent },
+              ]}
+            >
+              {matchesIanColeman ? (
+                <Text style={[styles.checkboxMark, { color: colors.onAccent }]}>{'\u2713'}</Text>
+              ) : null}
+            </View>
+            <View style={styles.colemanCopy}>
+              <Text style={[styles.colemanLabel, { color: colors.text }]}>Match Ian Coleman method</Text>
+              <Text style={[styles.colemanNote, { color: colors.muted }]}>
+                {'(show and hash A\u2660 2\u2663 instead of As 2c)'}
+              </Text>
+            </View>
+          </Pressable>
+        ) : null}
       </View>
     );
   }
@@ -302,6 +334,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
               placeholder={copy.inputPlaceholder}
               placeholderTextColor={colors.placeholder}
               selectionColor={colors.accent}
+              showSoftInputOnFocus={false}
               spellCheck={false}
               style={[styles.transcriptInput, { color: colors.text }]}
               testID="card-transcript-input"
@@ -562,6 +595,40 @@ const styles = StyleSheet.create({
   cardArea: {
     marginTop: 12,
   },
+  checkbox: {
+    alignItems: 'center',
+    borderRadius: 3,
+    borderWidth: StyleSheet.hairlineWidth,
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
+  },
+  checkboxMark: {
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  colemanCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  colemanLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 19,
+  },
+  colemanNote: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  colemanToggle: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 44,
+    paddingHorizontal: 2,
+    paddingVertical: 4,
+  },
   entryContent: {
     flex: 1,
     paddingBottom: 12,
@@ -689,6 +756,9 @@ const styles = StyleSheet.create({
     height: 4,
     marginTop: 10,
     overflow: 'hidden',
+  },
+  pressed: {
+    opacity: 0.72,
   },
   rankButton: {
     alignItems: 'center',
