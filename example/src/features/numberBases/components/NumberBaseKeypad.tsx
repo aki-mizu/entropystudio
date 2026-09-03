@@ -15,24 +15,20 @@ const BASE64_SOFT_KEYBOARD_LAYOUTS = {
 type Base64KeyboardMode = keyof typeof BASE64_SOFT_KEYBOARD_LAYOUTS;
 
 type Props = {
-  readonly canDelete: boolean;
   readonly canInsert: (character: string) => boolean;
   readonly canInsertSpace: boolean;
   readonly characters: string;
   readonly colors: DiceColors;
   readonly format: NumberBaseFormat;
-  readonly onDelete: () => void;
   readonly onInsert: (character: string) => void;
 };
 
 export function NumberBaseKeypad({
-  canDelete,
   canInsert,
   canInsertSpace,
   characters,
   colors,
   format,
-  onDelete,
   onInsert,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
@@ -40,11 +36,9 @@ export function NumberBaseKeypad({
   if (format === 'base64') {
     return (
       <Base64SoftKeyboard
-        canDelete={canDelete}
         canInsert={canInsert}
         canInsertSpace={canInsertSpace}
         colors={colors}
-        onDelete={onDelete}
         onInsert={onInsert}
       />
     );
@@ -98,39 +92,19 @@ export function NumberBaseKeypad({
           );
         })}
       </View>
-
-      <Pressable
-        accessibilityLabel="Delete selected entropy characters"
-        accessibilityRole="button"
-        disabled={!canDelete}
-        onPress={onDelete}
-        style={({ pressed }) => [
-          styles.deleteButton,
-          {
-            backgroundColor: colors.segment,
-            borderColor: colors.border,
-            opacity: canDelete ? (pressed ? 0.72 : 1) : 0.38,
-          },
-        ]}
-        testID="number-base-key-delete"
-      >
-        <Text style={[styles.deleteLabel, { color: colors.accent }]}>Delete</Text>
-      </Pressable>
     </View>
   );
 }
 
 type Base64SoftKeyboardProps = Pick<
   Props,
-  'canDelete' | 'canInsert' | 'canInsertSpace' | 'colors' | 'onDelete' | 'onInsert'
+  'canInsert' | 'canInsertSpace' | 'colors' | 'onInsert'
 >;
 
 function Base64SoftKeyboard({
-  canDelete,
   canInsert,
   canInsertSpace,
   colors,
-  onDelete,
   onInsert,
 }: Base64SoftKeyboardProps) {
   const [mode, setMode] = useState<Base64KeyboardMode>('lower');
@@ -187,25 +161,6 @@ function Base64SoftKeyboard({
               </Pressable>
             );
           })}
-          {rowIndex === 2 ? (
-            <Pressable
-              accessibilityLabel="Delete selected entropy characters"
-              accessibilityRole="button"
-              disabled={!canDelete}
-              onPress={onDelete}
-              style={({ pressed }) => [
-                styles.softKeyboardKey,
-                {
-                  backgroundColor: colors.segment,
-                  borderColor: colors.border,
-                  opacity: canDelete ? (pressed ? 0.72 : 1) : 0.38,
-                },
-              ]}
-              testID="number-base-key-delete"
-            >
-              <Text style={[styles.softKeyboardDeleteLabel, { color: colors.accent }]}>Del</Text>
-            </Pressable>
-          ) : null}
         </View>
       ))}
       <View style={styles.softKeyboardActionRow}>
@@ -268,18 +223,6 @@ function keypadMaxKeySize(columns: number): number {
 }
 
 const styles = StyleSheet.create({
-  deleteButton: {
-    alignItems: 'center',
-    borderRadius: 6,
-    borderWidth: 1,
-    justifyContent: 'center',
-    marginTop: 8,
-    minHeight: 40,
-  },
-  deleteLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
   key: {
     alignItems: 'center',
     borderRadius: 6,
@@ -312,10 +255,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 4,
     marginTop: 4,
-  },
-  softKeyboardDeleteLabel: {
-    fontSize: 12,
-    fontWeight: '700',
   },
   softKeyboardKey: {
     alignItems: 'center',

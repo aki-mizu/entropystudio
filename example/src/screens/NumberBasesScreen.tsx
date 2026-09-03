@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   BackHandler,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -60,6 +61,37 @@ function formatCopy(template: string, values: Record<string, number | string>): 
     (copy, [key, value]) => copy.replaceAll(`{${key}}`, String(value)),
     template,
   );
+}
+
+function numberBaseInputHelp(
+  format: NumberBaseFormat,
+  config: ReturnType<typeof numberBaseFormatConfig>,
+): string {
+  const remainder = config.remainderBits
+    ? config.binaryRemainder
+      ? formatCopy(entropyLabEnglish['hex.remainderBinary'], {
+          fullDigits: config.fullDigits,
+          n: config.remainderBits,
+          shortLabel: config.shortLabel,
+        })
+      : formatCopy(entropyLabEnglish['hex.remainderMixed'], {
+          chars: [...config.finalCharacters].join(', '),
+          n: config.remainderBits,
+        })
+    : '';
+
+  const helpTemplate = entropyLabEnglish['hex.help'].replace(
+    'bit(s)',
+    config.bitsPerDigit === 1 ? 'bit' : 'bits',
+  );
+  return formatCopy(helpTemplate, {
+    bits: config.bitsPerDigit,
+    digits: config.digits,
+    except: config.binaryRemainder ? '' : entropyLabEnglish['hex.exceptMixed'],
+    remainder,
+    shortLabel: config.shortLabel,
+    spaces: format === 'bin' ? entropyLabEnglish['hex.spacesBin'] : '',
+  });
 }
 
 function inputStatus(
@@ -260,7 +292,11 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
       testID="number-bases-screen-safe-area"
     >
       {activeView === 'setup' ? (
-        <View style={styles.setupContent} testID="number-bases-setup-view">
+        <ScrollView
+          contentContainerStyle={styles.setupContent}
+          style={styles.setupScroll}
+          testID="number-bases-setup-view"
+        >
           <View style={styles.header}>
             <View style={styles.headerCopy}>
               <Text style={[styles.title, { color: colors.text }]} testID="number-bases-screen-title">
@@ -337,7 +373,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
               <Text style={[styles.buttonText, { color: colors.onAccent }]}>Enter entropy</Text>
             </Pressable>
           </View>
-        </View>
+        </ScrollView>
       ) : (
         <View style={styles.entryContent} testID="number-bases-entry-view">
           <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
@@ -369,9 +405,42 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
             />
           </View>
 
-          <Text style={[styles.label, { color: colors.muted }]} testID="number-base-input-label">
-            {`${analysis.config.label} entropy for a ${wordCount}-word seed`}
-          </Text>
+          <View style={styles.inputHeader}>
+            <Text
+              style={[styles.inputLabel, { color: colors.muted }]}
+              testID="number-base-input-label"
+            >
+              {`${analysis.config.label} entropy for a ${wordCount}-word seed`}
+            </Text>
+            <Pressable
+              accessibilityLabel={
+                selectedInput.end > selectedInput.start
+                  ? 'Remove selected entropy characters'
+                  : 'Remove entropy character before cursor'
+              }
+              accessibilityRole="button"
+              disabled={!canDeleteInput}
+              onPress={deleteInputCharacter}
+              style={({ pressed }) => [
+                styles.undoButton,
+                { opacity: canDeleteInput ? (pressed ? 0.72 : 1) : 0.38 },
+              ]}
+              testID="number-base-undo"
+            >
+              <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
+            </Pressable>
+          </View>
+          <ScrollView
+            contentContainerStyle={styles.inputHelpContent}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+            style={styles.inputHelpScroll}
+            testID="number-base-help-scroll"
+          >
+            <Text style={[styles.inputHelp, { color: colors.muted }]} testID="number-base-help">
+              {numberBaseInputHelp(format, analysis.config)}
+            </Text>
+          </ScrollView>
           <View style={[styles.inputSurface, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <TextInput
               accessibilityLabel={`${analysis.config.label} entropy`}
@@ -427,19 +496,13 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
 
           <NumberBaseKeypad
             key={format}
-            canDelete={canDeleteInput}
             canInsert={canInsertInputCharacter}
             canInsertSpace={canInsertInputSpace}
             characters={analysis.config.alphabet}
             colors={colors}
             format={format}
-            onDelete={deleteInputCharacter}
             onInsert={insertInputCharacter}
           />
-
-          <Text style={[styles.methodHelp, { color: colors.muted }]} testID="number-base-help">
-            {entropyLabEnglish[`hex.desc.${format}`]}
-          </Text>
 
           <Pressable
             accessibilityRole="button"
@@ -556,6 +619,26 @@ const styles = StyleSheet.create({
   hidden: {
     display: 'none',
   },
+  inputHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  inputHelp: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  inputHelpContent: {
+    paddingRight: 4,
+  },
+  inputHelpScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+    marginBottom: 10,
+    maxHeight: 68,
+    minHeight: 0,
+  },
   input: {
     fontFamily: 'monospace',
     fontSize: 15,
@@ -564,6 +647,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingTop: 10,
     textAlignVertical: 'top',
+  },
+  inputLabel: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    minWidth: 0,
+    paddingRight: 12,
   },
   inputSurface: {
     borderRadius: 6,
@@ -574,11 +664,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     marginBottom: 10,
-  },
-  methodHelp: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 10,
   },
   progressFill: {
     height: '100%',
@@ -605,10 +690,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   setupContent: {
-    flex: 1,
+    flexGrow: 1,
     paddingBottom: 12,
     paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
     paddingTop: 12,
+  },
+  setupScroll: {
+    flex: 1,
   },
   setupSettings: {
     marginTop: 16,
@@ -628,5 +716,13 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     lineHeight: 34,
+  },
+  undoButton: {
+    paddingHorizontal: 4,
+    paddingVertical: 3,
+  },
+  undoLabel: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

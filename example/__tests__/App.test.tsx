@@ -275,7 +275,7 @@ test('derives Number Bases entropy through the native BIP39 binding', async () =
   expect(app!.root.findByProps({ testID: 'number-base-input' }).props.value).toBe('0A');
 
   await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'number-base-key-delete' }).props.onPress();
+    app!.root.findByProps({ testID: 'number-base-undo' }).props.onPress();
   });
 
   expect(app!.root.findByProps({ testID: 'number-base-input' }).props.value).toBe('0');
@@ -344,6 +344,18 @@ test('matches EntropyLab Base64 coin-flip progress text exactly', async () => {
     numberBasesSetup.findByProps({ testID: 'word-count-21' }).props.onPress();
     numberBasesSetup.findByProps({ testID: 'open-number-bases-entry' }).props.onPress();
   });
+
+  expect(app!.root.findByProps({ testID: 'number-base-help' }).props.children).toBe(
+    'Each complete Base64 character contributes 6 bits. Seed-word cards fill as enough bits arrive; the checksum-derived final word appears when all 39 characters are entered. Enter 37 complete Base64 characters; the controls and progress message then switch to 2 coin flip(s), using Heads (0) or Tails (1). No generator \u2014 enter entropy you already created.',
+  );
+  expect(
+    app!
+      .root.findByProps({ testID: 'number-bases-entry-view' })
+      .findAllByType(ScrollView),
+  ).toHaveLength(1);
+  expect(app!.root.findByProps({ testID: 'number-base-help-scroll' }).props.nestedScrollEnabled).toBe(
+    true,
+  );
 
   const input = app!.root.findByProps({ testID: 'number-base-input' });
   await ReactTestRenderer.act(async () => {
@@ -415,7 +427,11 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
   expect(app!.root.findByProps({ testID: 'dice-screen-how' }).props.children).toBe(
     entropyLabEnglish['dice.how'].replace('{words}', '24'),
   );
-  expect(app!.root.findAllByType(ScrollView)).toHaveLength(0);
+  expect(
+    app!.root
+      .findByProps({ testID: 'dice-screen-safe-area' })
+      .findAllByType(ScrollView),
+  ).toHaveLength(0);
   expect(app!.root.findByProps({ testID: 'dice-screen-safe-area' }).props.edges).toEqual([
     'top',
     'bottom',
