@@ -43,7 +43,9 @@ describe('Number Bases / Hexadecimal', () => {
 
     expect(app!.root.findByProps({ testID: 'number-bases-entry-view' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'number-base-input' }).props.placeholder).toBe(
-      'Enter 32 hexadecimal characters',
+      entropyLabEnglish['hex.placeholder']
+        .replace('{digits}', '32')
+        .replace('{unit}', entropyLabEnglish['hex.unit.hex']),
     );
     expect(app!.root.findByProps({ testID: 'number-base-input' }).props.showSoftInputOnFocus).toBe(
       false,

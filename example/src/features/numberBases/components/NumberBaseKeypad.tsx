@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import entropyLabEnglish from '../../../../../entropylab/src/locales/en.json';
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
 import type { NumberBaseFormat } from '../numberBases';
@@ -12,7 +13,9 @@ type Props = {
   readonly characters: string;
   readonly colors: DiceColors;
   readonly format: NumberBaseFormat;
+  readonly label: string;
   readonly onInsert: (character: string) => void;
+  readonly shortLabel: string;
 };
 
 export function NumberBaseKeypad({
@@ -21,7 +24,9 @@ export function NumberBaseKeypad({
   characters,
   colors,
   format,
+  label,
   onInsert,
+  shortLabel,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
 
@@ -56,14 +61,17 @@ export function NumberBaseKeypad({
   return (
     <View style={styles.keypad} testID="number-base-keypad">
       <View
-        accessibilityLabel={`${format} entropy keypad`}
+        accessibilityLabel={formatCopy(entropyLabEnglish['hex.keypadAria'], { label })}
         style={[styles.keyGrid, { width: gridWidth }]}
       >
         {[...characters].map(character => {
           const enabled = canInsert(character);
           return (
             <Pressable
-              accessibilityLabel={`Enter ${character}`}
+              accessibilityLabel={formatCopy(entropyLabEnglish['hex.enterDigit'], {
+                character,
+                shortLabel,
+              })}
               accessibilityRole="button"
               disabled={!enabled}
               key={character}
@@ -93,6 +101,13 @@ export function NumberBaseKeypad({
         })}
       </View>
     </View>
+  );
+}
+
+function formatCopy(template: string, values: Record<string, string>): string {
+  return Object.entries(values).reduce(
+    (copy, [key, value]) => copy.replaceAll(`{${key}}`, value),
+    template,
   );
 }
 

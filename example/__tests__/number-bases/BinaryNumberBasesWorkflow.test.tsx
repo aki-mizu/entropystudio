@@ -4,6 +4,7 @@
 
 import {
   App,
+  entropyLabEnglish,
   React,
   ReactTestRenderer,
   selectEntropyTool,
@@ -23,7 +24,14 @@ describe('Number Bases / Binary', () => {
       numberBasesSetup.findByProps({ testID: 'open-number-bases-entry' }).props.onPress();
     });
 
-    expect(app!.root.findByProps({ accessibilityLabel: 'bin entropy keypad' })).toBeDefined();
+    expect(
+      app!.root.findByProps({
+        accessibilityLabel: entropyLabEnglish['hex.keypadAria'].replace(
+          '{label}',
+          entropyLabEnglish['hex.format.bin'],
+        ),
+      }),
+    ).toBeDefined();
     expect(app!.root.findByProps({ testID: 'number-base-key-0' }).props.disabled).toBe(false);
     expect(app!.root.findByProps({ testID: 'number-base-key-1' }).props.disabled).toBe(false);
 

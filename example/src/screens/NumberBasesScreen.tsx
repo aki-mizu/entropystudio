@@ -463,7 +463,10 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
               numberOfLines={2}
               onChangeText={updateInput}
               onSelectionChange={({ nativeEvent }) => setInputSelection(nativeEvent.selection)}
-              placeholder={`Enter ${analysis.config.digits} ${analysis.config.unit}`}
+              placeholder={formatCopy(entropyLabEnglish['hex.placeholder'], {
+                digits: analysis.config.digits,
+                unit: analysis.config.unit,
+              })}
               placeholderTextColor={colors.placeholder}
               selection={inputSelection ?? undefined}
               selectionColor={colors.accent}
@@ -511,7 +514,9 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
             characters={analysis.config.alphabet}
             colors={colors}
             format={format}
+            label={analysis.config.label}
             onInsert={insertInputCharacter}
+            shortLabel={analysis.config.shortLabel}
           />
 
           <Pressable

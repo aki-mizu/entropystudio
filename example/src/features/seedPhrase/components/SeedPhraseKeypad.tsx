@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import entropyLabEnglish from '../../../../../entropylab/src/locales/en.json';
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
 
@@ -22,7 +23,7 @@ export function SeedPhraseKeypad({
   if (method === 'numbers') {
     return (
       <View
-        accessibilityLabel="BIP39 word number keypad"
+        accessibilityLabel={entropyLabEnglish['seed.numberKeypadAria']}
         style={styles.numberKeypad}
         testID="seed-number-keypad"
       >
@@ -33,7 +34,10 @@ export function SeedPhraseKeypad({
                 const enabled = canInsert(character);
                 return (
                   <Pressable
-                    accessibilityLabel={`Enter ${character}`}
+                      accessibilityLabel={entropyLabEnglish['seed.enterDigit'].replace(
+                        '{n}',
+                        character,
+                      )}
                     accessibilityRole="button"
                     disabled={!enabled}
                     key={character}
@@ -70,7 +74,9 @@ export function SeedPhraseKeypad({
           ]}
           testID="seed-number-next-word"
         >
-          <Text style={[styles.nextWordLabel, { color: colors.text }]}>Next word</Text>
+          <Text style={[styles.nextWordLabel, { color: colors.text }]}>
+            {entropyLabEnglish['seed.nextWord']}
+          </Text>
         </Pressable>
       </View>
     );

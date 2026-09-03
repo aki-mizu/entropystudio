@@ -5,6 +5,7 @@ import {
 } from '../../native/entropyStudio';
 import type { NumberBaseAnalysis as NativeNumberBaseAnalysis } from '../../native/entropyStudio';
 import type { WordCount } from '../dice/dice';
+import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
 
 export const NUMBER_BASE_FORMATS = [
   'bin',
@@ -43,39 +44,6 @@ export type NumberBaseInputAnalysis = {
   readonly invalidCharacterCount: number;
   readonly isReady: boolean;
   readonly previewWords: readonly string[];
-};
-
-const FORMAT_DEFINITIONS: Record<NumberBaseFormat, NumberBaseDefinition> = {
-  base4: {
-    label: 'Base 4',
-    shortLabel: 'Base 4',
-    unit: 'base-4 digits',
-  },
-  base8: {
-    label: 'Octal (Base 8)',
-    shortLabel: 'Octal',
-    unit: 'octal digits',
-  },
-  base32: {
-    label: 'Crockford Base32',
-    shortLabel: 'Base32',
-    unit: 'characters',
-  },
-  base64: {
-    label: 'Base64 (RFC 4648 alphabet)',
-    shortLabel: 'Base64',
-    unit: 'characters',
-  },
-  bin: {
-    label: 'Binary (Base 2)',
-    shortLabel: 'Binary',
-    unit: 'binary digits',
-  },
-  hex: {
-    label: 'Hexadecimal (Base 16)',
-    shortLabel: 'Hexadecimal',
-    unit: 'hexadecimal characters',
-  },
 };
 
 export function numberBaseFormatConfig(
@@ -148,7 +116,7 @@ function formatConfig(
   analysis: NativeNumberBaseAnalysis,
 ): NumberBaseFormatConfig {
   return {
-    ...FORMAT_DEFINITIONS[format],
+    ...formatDefinition(format),
     alphabet: analysis.alphabet,
     binaryRemainder: analysis.binaryRemainder,
     bits: analysis.entropyBits,
@@ -158,5 +126,13 @@ function formatConfig(
     finalCharacters: analysis.finalCharacters,
     fullDigits: analysis.fullDigits,
     remainderBits: analysis.remainderBits,
+  };
+}
+
+function formatDefinition(format: NumberBaseFormat): NumberBaseDefinition {
+  return {
+    label: entropyLabEnglish[`hex.format.${format}`],
+    shortLabel: entropyLabEnglish[`hex.short.${format}`],
+    unit: entropyLabEnglish[`hex.unit.${format}`],
   };
 }

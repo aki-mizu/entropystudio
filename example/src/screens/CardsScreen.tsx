@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import entropyLabEnglish from '../../../entropylab/src/locales/en.json';
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
 import {
@@ -210,9 +211,11 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
               ) : null}
             </View>
             <View style={styles.colemanCopy}>
-              <Text style={[styles.colemanLabel, { color: colors.text }]}>Match Ian Coleman method</Text>
+              <Text style={[styles.colemanLabel, { color: colors.text }]}>
+                {entropyLabEnglish['cards.coleman']}
+              </Text>
               <Text style={[styles.colemanNote, { color: colors.muted }]}>
-                {'(show and hash A\u2660 2\u2663 instead of As 2c)'}
+                {entropyLabEnglish['cards.coleman.note']}
               </Text>
             </View>
           </Pressable>
@@ -319,7 +322,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
               {copy.inputLabel}
             </Text>
             <Pressable
-              accessibilityLabel={isDirect ? 'Undo last rank draw' : 'Undo last card'}
+              accessibilityLabel={isDirect ? 'Undo last rank draw' : entropyLabEnglish['cards.undo']}
               accessibilityRole="button"
               disabled={!transcript}
               onPress={undoLastEntry}

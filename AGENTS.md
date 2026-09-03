@@ -13,12 +13,27 @@ Guidelines for AI coding agents.
   Prefer a typed upstream Rust API when one exists; add wrapper logic only when
   upstream has no equivalent native implementation. Do not substitute upstream
   web or TypeScript code for native behavior.
+- Treat `entropylab/` as read-only upstream. Never edit its source, locales,
+  tests, documentation, lockfiles, or submodule revision. Reuse upstream code
+  or text only when it already exists in the pinned upstream revision.
 - React Native in `example/src/` is a UI layer. It may own rendering,
   navigation, local view state, selection and text-editing behavior,
   accessibility, localized copy, and display formatting, but must not recreate
   native domain rules or introduce TypeScript fallbacks for them.
 - When the UI needs domain information, expose it through a typed Rust/UniFFI
   API or state record.
+
+## Copy and Localization
+
+- For visible and accessibility copy in `example/src/`, check the pinned
+  upstream catalog at `entropylab/src/locales/en.json`. Reuse an existing
+  upstream key only when it exists in the pinned upstream revision; do not use
+  uncommitted submodule content as a copy source.
+- Never add or alter upstream locale entries. When no suitable upstream key
+  exists, keep the Studio-specific copy local rather than substituting merely
+  similar upstream text.
+- When Studio uses upstream copy, UI tests must derive their expected text from
+  the same upstream locale key rather than repeat a local string literal.
 
 ## Generated Outputs and Dependencies
 
