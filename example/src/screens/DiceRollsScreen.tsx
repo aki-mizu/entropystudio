@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MethodPicker } from '../components/MethodPicker';
+import type { EntropyTool } from '../components/MethodPicker';
 import { DirectDiceFinalWordPicker } from '../features/dice/components/DirectDiceFinalWordPicker';
 import { DiceGrid } from '../features/dice/components/DiceGrid';
 import { DiceWordList, DirectDicePreview } from '../features/dice/components/DirectDicePreview';
@@ -28,7 +31,13 @@ import { useDiceRolls } from '../features/dice/useDiceRolls';
 const CONTENT_HORIZONTAL_PADDING = 24;
 type SheetName = 'final-word' | 'result' | 'settings' | null;
 
-export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
+type Props = {
+  readonly activeTool: EntropyTool;
+  readonly isDarkMode: boolean;
+  readonly onSelectTool: (tool: EntropyTool) => void;
+};
+
+export function DiceRollsScreen({ activeTool, isDarkMode, onSelectTool }: Props) {
   const safeAreaInsets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
@@ -110,17 +119,19 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
   }
 
   return (
-    <View
+    <SafeAreaView
+      edges={['top']}
       style={[styles.screen, { backgroundColor: colors.background }]}
+      testID="dice-screen-safe-area"
     >
-      <View
-        style={[
+      <ScrollView
+        contentContainerStyle={[
           styles.content,
           {
             paddingBottom: Math.max(12, safeAreaInsets.bottom + 8),
-            paddingTop: Math.max(12, safeAreaInsets.top + 8),
           },
         ]}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
           <View style={styles.headerCopy}>
@@ -144,6 +155,8 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
             <Text style={[styles.optionsText, { color: colors.accent }]}>Options</Text>
           </Pressable>
         </View>
+
+        <MethodPicker activeTool={activeTool} colors={colors} onSelect={onSelectTool} />
 
         <Pressable
           accessibilityRole="button"
@@ -251,7 +264,7 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
             {copy.deriveAction}
           </Text>
         </Pressable>
-      </View>
+      </ScrollView>
 
       <NativeSheet
         colors={colors}
@@ -314,7 +327,7 @@ export function DiceRollsScreen({ isDarkMode }: { isDarkMode: boolean }) {
           result={result}
         />
       </NativeSheet>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -331,8 +344,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   content: {
-    flex: 1,
     paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
+    paddingTop: 12,
   },
   finalWordButton: {
     justifyContent: 'center',

@@ -8,6 +8,9 @@ pub enum EntropyStudioError {
     InvalidDiceRolls,
     NoDiceRolls,
     UnsupportedDiceWordCount,
+    InvalidCardTranscript,
+    NoCards,
+    DuplicateCard,
 }
 
 impl fmt::Display for EntropyStudioError {

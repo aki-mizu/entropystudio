@@ -9,10 +9,16 @@ import entropyLabEnglish from '../../entropylab/src/locales/en.json';
 
 const mockDiceRollsToEntropy = jest.fn<ArrayBuffer, [string, number, number]>();
 const mockDirectDiceState = jest.fn();
+const mockCardTranscriptToEntropy = jest.fn<ArrayBuffer, [string, number, number]>();
+const mockDirectCardState = jest.fn();
 const mockEntropyToMnemonic = jest.fn<string, [ArrayBuffer]>();
 const mockMnemonicToEntropy = jest.fn<ArrayBuffer, [string]>();
 
 jest.mock('entropystudio', () => ({
+  CardHashMethod: {
+    Ascii: 0,
+    Coleman: 1,
+  },
   DiceRollMethod: {
     Coldcard: 0,
     Coleman: 1,
@@ -34,13 +40,24 @@ jest.mock('entropystudio', () => ({
     D8d16Correction: 9,
     D8d16Complete: 10,
   },
+  DirectCardStep: {
+    Word: 0,
+    Final: 1,
+    Correction: 2,
+    Complete: 3,
+  },
   EntropyStudioError_Tags: {
     InvalidMnemonic: 'InvalidMnemonic',
     InvalidEntropy: 'InvalidEntropy',
     InvalidDiceRolls: 'InvalidDiceRolls',
     NoDiceRolls: 'NoDiceRolls',
     UnsupportedDiceWordCount: 'UnsupportedDiceWordCount',
+    InvalidCardTranscript: 'InvalidCardTranscript',
+    NoCards: 'NoCards',
+    DuplicateCard: 'DuplicateCard',
   },
+  cardTranscriptToEntropy: mockCardTranscriptToEntropy,
+  directCardState: mockDirectCardState,
   directDiceState: mockDirectDiceState,
   diceRollsToEntropy: mockDiceRollsToEntropy,
   entropyToMnemonic: mockEntropyToMnemonic,
@@ -82,6 +99,15 @@ function expectEnabledDiceFaces(
   }
 }
 
+async function selectEntropyTool(
+  app: ReactTestRenderer.ReactTestRenderer,
+  tool: 'cards' | 'dice',
+) {
+  await ReactTestRenderer.act(async () => {
+    app.root.findByProps({ testID: 'key-method-select' }).props.onValueChange(tool);
+  });
+}
+
 test('uses EntropyLab help copy for every dice method', () => {
   expect(diceScreenCopy('coldcard', 24).inputHelp).toBe(
     entropyLabEnglish['dice.help.coldcard'].replace('{hashRolls}', '99'),
@@ -98,6 +124,23 @@ test('uses EntropyLab help copy for every dice method', () => {
       entropyLabEnglish['dice.dplus.helpOne'].replace('{die}', 'D8'),
     ),
   );
+});
+
+test('uses an upstream-style dropdown for the top-level method', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  const picker = app!.root.findByProps({ testID: 'key-method-select' });
+  expect(app!.root.findByProps({ testID: 'key-method-label' }).props.children).toBe(
+    entropyLabEnglish['keys.methodLabel'],
+  );
+  expect(picker.props.mode).toBe('dropdown');
+  expect(picker.props.selectedValue).toBe('dice');
+
+  await selectEntropyTool(app!, 'cards');
+  expect(app!.root.findByProps({ testID: 'key-method-select' }).props.selectedValue).toBe('cards');
 });
 
 test('shows a live BIP39 phrase from hashed dice through the EntropyStudio binding', async () => {
@@ -118,7 +161,11 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
   expect(app!.root.findByProps({ testID: 'dice-screen-how' }).props.children).toBe(
     entropyLabEnglish['dice.how'].replace('{words}', '24'),
   );
-  expect(app!.root.findAllByType(ScrollView)).toHaveLength(0);
+  const diceScrollView = app!.root.findByType(ScrollView);
+  expect(diceScrollView.props.keyboardShouldPersistTaps).toBe('handled');
+  expect(app!.root.findByProps({ testID: 'dice-screen-safe-area' }).props.edges).toEqual([
+    'top',
+  ]);
   expect(app!.root.findByType(DiceGrid).props.columns).toBe(6);
   expect(app!.root.findByType(DiceWordList).props.compact).toBe(true);
   expect(app!.root.findByProps({ testID: 'dice-method-summary' }).props.children).toBe(
@@ -930,4 +977,144 @@ test('derives a D8/D16 direct-dice phrase from its final roll selection', async 
     app!.root.findByProps({ accessibilityLabel: mnemonic, testID: 'direct-dice-words' }).props
       .accessibilityLabel,
   ).toBe(mnemonic);
+});
+
+test('switches to cards and derives a hashed card transcript through the native binding', async () => {
+  const entropy = new Uint8Array(16).buffer;
+  const mnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  mockCardTranscriptToEntropy.mockReset();
+  mockDirectCardState.mockReset();
+  mockEntropyToMnemonic.mockReset();
+  mockCardTranscriptToEntropy.mockReturnValue(entropy);
+  mockEntropyToMnemonic.mockReturnValue(mnemonic);
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await selectEntropyTool(app!, 'cards');
+
+  expect(app!.root.findByProps({ testID: 'cards-screen-title' }).props.children).toBe(
+    entropyLabEnglish['mode.cards'],
+  );
+  expect(app!.root.findByProps({ testID: 'card-input-label' }).props.children).toBe(
+    entropyLabEnglish['cards.transcript'],
+  );
+  expect(app!.root.findByProps({ testID: 'derive-card-phrase' }).props.disabled).toBe(true);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'card-transcript-input' }).props.onChangeText('4H 3H');
+  });
+
+  expect(app!.root.findByProps({ testID: 'card-transcript-input' }).props.value).toBe('4h 3h');
+  expect(mockCardTranscriptToEntropy).toHaveBeenCalledWith('4h 3h', 0, 24);
+  expect(app!.root.findByProps({ testID: 'derive-card-phrase' }).props.disabled).toBe(false);
+  expect(
+    app!.root.findByProps({ accessibilityLabel: mnemonic, testID: 'live-card-words' }).props
+      .accessibilityLabel,
+  ).toBe(mnemonic);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'derive-card-phrase' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'card-result-sheet' })).toBeDefined();
+  expect(app!.root.findByProps({ testID: 'card-entropy-output' }).props.children).toBe(
+    '00000000000000000000000000000000',
+  );
+});
+
+test('blocks invalid card key presses before they enter the transcript', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+  await selectEntropyTool(app!, 'cards');
+
+  const input = app!.root.findByProps({ testID: 'card-transcript-input' });
+  const preventInvalid = jest.fn();
+  const preventValid = jest.fn();
+  input.props.onKeyPress({ nativeEvent: { key: 'B' }, preventDefault: preventInvalid });
+  input.props.onKeyPress({ nativeEvent: { key: '4' }, preventDefault: preventValid });
+
+  expect(preventInvalid).toHaveBeenCalledTimes(1);
+  expect(preventValid).not.toHaveBeenCalled();
+});
+
+test('locks other ranks after selecting a hashed card rank', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+  await selectEntropyTool(app!, 'cards');
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'card-rank-4' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'card-rank-4' }).props.disabled).toBe(false);
+  expect(app!.root.findByProps({ testID: 'card-rank-3' }).props.disabled).toBe(true);
+  expect(app!.root.findByProps({ testID: 'card-rank-K' }).props.disabled).toBe(true);
+  expect(app!.root.findByProps({ testID: 'card-suit-H' }).props.disabled).toBe(false);
+});
+
+test('commits a hashed card after the rank and suit are selected', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+  await selectEntropyTool(app!, 'cards');
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'card-rank-5' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'card-suit-C' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'card-transcript-input' }).props.value).toBe('5c');
+  expect(app!.root.findAllByProps({ testID: 'deal-card' })).toHaveLength(0);
+  expect(app!.root.findByProps({ testID: 'card-rank-4' }).props.disabled).toBe(false);
+});
+
+test('uses rank-only controls for direct card selection', async () => {
+  mockDirectCardState.mockReset();
+  mockDirectCardState.mockReturnValue({
+    activeDraw: 1,
+    activeMax: 8,
+    activeWord: 1,
+    candidates: [],
+    complete: false,
+    completedGroups: 0,
+    extraCount: 0,
+    finalWord: '',
+    invalidCount: 0,
+    partialWords: 23,
+    step: 0,
+    words: [],
+  });
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await selectEntropyTool(app!, 'cards');
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-card-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'card-method-direct' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'card-settings-sheet-close' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'direct-card-rank-8' }).props.disabled).toBe(false);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'direct-card-rank-A' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'card-transcript-input' }).props.value).toBe('A');
+  expect(mockDirectCardState).toHaveBeenLastCalledWith('A', 24);
 });

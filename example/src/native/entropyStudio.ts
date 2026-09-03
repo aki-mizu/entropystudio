@@ -1,7 +1,11 @@
 import {
+  CardHashMethod,
+  DirectCardStep as GeneratedDirectCardStep,
   DiceRollMethod,
   DirectDiceMethod as GeneratedDirectDiceMethod,
   DirectDiceStep as GeneratedDirectDiceStep,
+  cardTranscriptToEntropy,
+  directCardState,
   directDiceState,
   diceRollsToEntropy,
   entropyToMnemonic,
@@ -12,6 +16,13 @@ import {
 export const DirectDiceMethod = {
   Bitbox: GeneratedDirectDiceMethod.Bitbox,
   D8D16: GeneratedDirectDiceMethod.D8d16,
+} as const;
+
+export const DirectCardStep = {
+  Word: GeneratedDirectCardStep.Word,
+  Final: GeneratedDirectCardStep.Final,
+  Correction: GeneratedDirectCardStep.Correction,
+  Complete: GeneratedDirectCardStep.Complete,
 } as const;
 
 export const DirectDiceStep = {
@@ -29,7 +40,10 @@ export const DirectDiceStep = {
 } as const;
 
 export {
+  CardHashMethod,
   DiceRollMethod,
+  cardTranscriptToEntropy,
+  directCardState,
   directDiceState,
   diceRollsToEntropy,
   entropyToMnemonic,
@@ -37,4 +51,4 @@ export {
   mnemonicToEntropy,
 };
 
-export type { DirectDiceState } from 'entropystudio';
+export type { DirectCardState, DirectDiceState } from 'entropystudio';

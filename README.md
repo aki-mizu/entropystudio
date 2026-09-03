@@ -25,6 +25,9 @@ The current public API intentionally stays small:
 - `mnemonicToEntropy(normalizedPhrase: string): ArrayBuffer`
 - `entropyToMnemonic(entropy: ArrayBuffer): string`
 - `diceRollsToEntropy(rolls: string, method: DiceRollMethod, targetWords: number): ArrayBuffer`
+- `directDiceState(rolls: string, method: DirectDiceMethod, targetWords: number): DirectDiceState`
+- `cardTranscriptToEntropy(transcript: string, method: CardHashMethod, targetWords: number): ArrayBuffer`
+- `directCardState(transcript: string, targetWords: number): DirectCardState`
 
 `mnemonicToEntropy` expects an NFKD-normalized English BIP39 phrase. In
 TypeScript, call `phrase.normalize("NFKD")` before passing text to it.
@@ -45,9 +48,26 @@ the SHA-256 digest for the chosen BIP39 length. EntropyLab recommends 50, 62,
 75, 87, or 99 fair six-sided rolls respectively. `entropyToMnemonic` converts
 that returned buffer into the checksum-valid English BIP39 phrase.
 
-This first dice slice does not yet include EntropyLab's direct BitBox diceware
-or D++ word-selection workflows, transcript fairness analysis, or the broader
-key-derivation workflow.
+`directDiceState` supports EntropyLab's direct BitBox diceware and D++
+word-selection workflows. It returns the completed words, eligible final
+checksum words, validation counts, and the next input step for a native UI.
+
+## Cards
+
+`cardTranscriptToEntropy` ports EntropyLab's hashed card methods. It accepts
+rank-and-suit tokens such as `AS`, `10H`, and `TD`, including Unicode suit
+symbols, and rejects invalid or repeated cards within a shuffle. It supports
+the same `12`, `15`, `18`, `21`, and `24` BIP39 word counts as dice.
+
+- `CardHashMethod.Ascii` hashes the canonical ASCII transcript, such as
+	`As 2c Td`.
+- `CardHashMethod.Coleman` hashes the equivalent Ian Coleman suit-symbol
+	transcript, such as `A♠ 2♣ T♦`.
+
+`directCardState` implements rank-only direct word selection. It accepts
+draws from the currently required rank set, produces each completed BIP39
+word, and calculates the checksum-valid final-word candidates from the final
+rank draw sequence.
 
 ## Setup
 

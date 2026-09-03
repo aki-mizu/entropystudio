@@ -90,6 +90,97 @@ fn dice_rolls_support_each_bip39_entropy_size() {
 }
 
 #[test]
+fn card_transcripts_match_entropylab_ascii_and_coleman_hashes() {
+    let mut ascii_digest = sha256(b"As 2c Td".to_vec());
+    let ascii_expected = ascii_digest[..16].to_vec();
+    wipe_bytes(&mut ascii_digest);
+    assert_eq!(
+        card_transcript_to_entropy(
+            "as, 2C; 10\u{2666}".to_owned(),
+            CardHashMethod::Ascii,
+            12,
+        )
+        .unwrap(),
+        ascii_expected
+    );
+
+    let mut coleman_digest = sha256("A\u{2660} 2\u{2663} T\u{2666}".as_bytes().to_vec());
+    let coleman_expected = coleman_digest[..16].to_vec();
+    wipe_bytes(&mut coleman_digest);
+    assert_eq!(
+        card_transcript_to_entropy(
+            "AS 2C TD".to_owned(),
+            CardHashMethod::Coleman,
+            12,
+        )
+        .unwrap(),
+        coleman_expected
+    );
+}
+
+#[test]
+fn card_transcripts_support_all_bip39_entropy_sizes() {
+    for (words, expected_bytes) in [(12, 16), (15, 20), (18, 24), (21, 28), (24, 32)] {
+        assert_eq!(
+            card_transcript_to_entropy("AS".to_owned(), CardHashMethod::Ascii, words)
+                .unwrap()
+                .len(),
+            expected_bytes
+        );
+    }
+}
+
+#[test]
+fn card_transcripts_reject_invalid_empty_and_duplicate_deals() {
+    assert!(matches!(
+        card_transcript_to_entropy("AS ZZ".to_owned(), CardHashMethod::Ascii, 24),
+        Err(EntropyStudioError::InvalidCardTranscript)
+    ));
+    assert!(matches!(
+        card_transcript_to_entropy(" ,;|".to_owned(), CardHashMethod::Ascii, 24),
+        Err(EntropyStudioError::NoCards)
+    ));
+    assert!(matches!(
+        card_transcript_to_entropy("AS AS".to_owned(), CardHashMethod::Ascii, 24),
+        Err(EntropyStudioError::DuplicateCard)
+    ));
+}
+
+#[test]
+fn direct_card_state_matches_entropylab_rank_draws_for_all_seed_lengths() {
+    for (target_words, draw_count, entropy_bytes, candidate_count) in [
+        (12_u8, 47_usize, 16_usize, 128_usize),
+        (15_u8, 58_usize, 20_usize, 64_usize),
+        (18_u8, 70_usize, 24_usize, 32_usize),
+        (21_u8, 82_usize, 28_usize, 16_usize),
+        (24_u8, 93_usize, 32_usize, 8_usize),
+    ] {
+        let state = direct_card_state("A".repeat(draw_count), target_words).unwrap();
+        assert_eq!(state.words, vec!["abandon".to_owned(); usize::from(target_words - 1)]);
+        assert_eq!(state.candidates.len(), candidate_count);
+        assert!(state.complete);
+        assert_eq!(state.step, DirectCardStep::Complete);
+        assert_eq!(state.final_word, state.candidates[0]);
+
+        let phrase = format!("{} {}", state.words.join(" "), state.final_word);
+        assert_eq!(mnemonic_to_entropy(phrase).unwrap(), vec![0; entropy_bytes]);
+    }
+}
+
+#[test]
+fn direct_card_state_tracks_invalid_and_extra_rank_draws() {
+    let invalid = direct_card_state("AAA5".to_owned(), 24).unwrap();
+    assert_eq!(invalid.invalid_count, 1);
+    assert_eq!(invalid.active_max, 8);
+    assert_eq!(invalid.step, DirectCardStep::Word);
+
+    let extra = direct_card_state("A".repeat(94), 24).unwrap();
+    assert_eq!(extra.extra_count, 1);
+    assert_eq!(extra.step, DirectCardStep::Correction);
+    assert!(!extra.complete);
+}
+
+#[test]
 fn bitbox_direct_dice_matches_upstream_lookup_rows() {
     let cases: [([u8; 4], [&str; 8]); 6] = [
         (
