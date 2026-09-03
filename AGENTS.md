@@ -8,6 +8,11 @@ Guidelines for AI coding agents.
   operations, parsing, normalization, validation, candidate generation, input
   admission, protocol state, progress, readiness, and supported-method
   configuration.
+- Before implementing domain behavior in the wrapper, check
+  `entropylab/entropylab-wasm` for a compatible upstream Rust implementation.
+  Prefer a typed upstream Rust API when one exists; add wrapper logic only when
+  upstream has no equivalent native implementation. Do not substitute upstream
+  web or TypeScript code for native behavior.
 - React Native in `example/src/` is a UI layer. It may own rendering,
   navigation, local view state, selection and text-editing behavior,
   accessibility, localized copy, and display formatting, but must not recreate
