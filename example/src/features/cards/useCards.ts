@@ -7,6 +7,7 @@ import {
   directCardProgress,
   directCardProgressCopy,
   formatCardTranscript,
+  normalizeDirectCardTranscript,
   getDirectCardState,
   hasHashedCardInput,
   hashedCardProgress,
@@ -53,7 +54,7 @@ export function useCards() {
 
   function updateTranscript(value: string) {
     if (method === 'direct') {
-      setDirectTranscript(value);
+      setDirectTranscript(normalizeDirectCardTranscript(value));
     } else {
       setHashedTranscript(formatCardTranscript(value, matchesIanColeman));
     }
@@ -70,13 +71,13 @@ export function useCards() {
   }
 
   function appendDirectRank(rank: string) {
-    setDirectTranscript(`${directTranscript}${rank}`);
+    setDirectTranscript(`${normalizeDirectCardTranscript(directTranscript)}${rank}`);
     setResult(null);
   }
 
   function undoLastEntry() {
     if (method === 'direct') {
-      setDirectTranscript(directTranscript.trimEnd().slice(0, -1));
+      setDirectTranscript(normalizeDirectCardTranscript(directTranscript).slice(0, -1));
     } else {
       setHashedTranscript(
         hashedTranscript

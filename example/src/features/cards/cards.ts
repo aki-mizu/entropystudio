@@ -182,6 +182,16 @@ export function formatCardTranscript(
   });
 }
 
+export function normalizeDirectCardTranscript(transcript: string): string {
+  return Array.from(transcript)
+    .filter(character => !CARD_SEPARATOR.test(character))
+    .join('');
+}
+
+export function formatDirectCardTranscript(transcript: string): string {
+  return normalizeDirectCardTranscript(transcript).replace(/(.{4})(?=.)/g, '$1 ');
+}
+
 export function isCardKeyAllowed(
   key: string,
   method: CardMethod,

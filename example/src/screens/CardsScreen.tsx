@@ -19,6 +19,7 @@ import {
   cardMethodCopy,
   cardSelectionState,
   formatCardTranscript,
+  formatDirectCardTranscript,
   isCardKeyAllowed,
   isHashedCardMethod,
 } from '../features/cards/cards';
@@ -70,7 +71,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
   const isDirect = method === 'direct';
   const displayedTranscript = isHashedCardMethod(method)
     ? formatCardTranscript(transcript, matchesIanColeman)
-    : transcript;
+    : formatDirectCardTranscript(transcript);
   const selection = cardSelectionState(transcript, wordCount, selectedRank, selectedSuit);
   const words = directState
     ? directState.finalWord

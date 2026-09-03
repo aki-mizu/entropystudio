@@ -1232,4 +1232,20 @@ test('uses rank-only controls for direct card selection', async () => {
 
   expect(app!.root.findByProps({ testID: 'card-transcript-input' }).props.value).toBe('A');
   expect(mockDirectCardState).toHaveBeenLastCalledWith('A', 24);
+
+  for (const rank of ['2', '3', '4', '5']) {
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: `direct-card-rank-${rank}` }).props.onPress();
+    });
+  }
+
+  expect(app!.root.findByProps({ testID: 'card-transcript-input' }).props.value).toBe(
+    'A234 5',
+  );
+  expect(mockDirectCardState).toHaveBeenLastCalledWith('A2345', 24);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'undo-card-entry' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'card-transcript-input' }).props.value).toBe('A234');
 });
