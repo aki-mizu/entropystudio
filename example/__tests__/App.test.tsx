@@ -331,6 +331,38 @@ test('uses the upstream-style soft keyboard for Base64 entropy', async () => {
   expect(app!.root.findByProps({ testID: 'number-base-key-/' })).toBeDefined();
 });
 
+test('matches EntropyLab Base64 coin-flip progress text exactly', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await selectEntropyTool(app!, 'hex');
+  const numberBasesSetup = app!.root.findByProps({ testID: 'number-bases-setup-view' });
+  await ReactTestRenderer.act(async () => {
+    numberBasesSetup.findByProps({ testID: 'number-base-format-base64' }).props.onPress();
+    numberBasesSetup.findByProps({ testID: 'word-count-21' }).props.onPress();
+    numberBasesSetup.findByProps({ testID: 'open-number-bases-entry' }).props.onPress();
+  });
+
+  const input = app!.root.findByProps({ testID: 'number-base-input' });
+  await ReactTestRenderer.act(async () => {
+    input.props.onChangeText('A'.repeat(37));
+  });
+
+  expect(app!.root.findByProps({ testID: 'number-base-progress' }).props.children).toBe(
+    '37 Base64 characters complete \u00B7 coin flip 1 of 2 \u00B7 Heads (0) or Tails (1)',
+  );
+
+  await ReactTestRenderer.act(async () => {
+    input.props.onChangeText(`${'A'.repeat(37)}01`);
+  });
+
+  expect(app!.root.findByProps({ testID: 'number-base-progress' }).props.children).toBe(
+    '37 Base64 characters complete \u00B7 2 of 2 coin flips entered \u00B7 ready to derive',
+  );
+});
+
 test('keeps native workflow trees mounted while changing methods', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {

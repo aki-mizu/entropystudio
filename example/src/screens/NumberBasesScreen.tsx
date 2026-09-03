@@ -55,29 +55,78 @@ function entropyHex(entropy: ArrayBuffer): string {
   return Array.from(new Uint8Array(entropy), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
+function formatCopy(template: string, values: Record<string, number | string>): string {
+  return Object.entries(values).reduce(
+    (copy, [key, value]) => copy.replaceAll(`{${key}}`, String(value)),
+    template,
+  );
+}
+
 function inputStatus(
   analysis: ReturnType<typeof analyzeNumberBaseInput>,
+  previewWordCount: number,
+  wordCount: WordCount,
 ): string {
   const { config } = analysis;
-  if (analysis.invalidCharacterCount > 0) {
-    return `${analysis.invalidCharacterCount} invalid character${
-      analysis.invalidCharacterCount === 1 ? '' : 's'
-    }.`;
+  const coinPhase = Boolean(
+    config.binaryRemainder &&
+      config.remainderBits &&
+      analysis.digitCount >= config.fullDigits,
+  );
+  const coinFlipsEntered = coinPhase
+    ? Math.min(
+        config.remainderBits,
+        Math.max(0, analysis.digitCount - config.fullDigits),
+      )
+    : 0;
+  let status = coinPhase
+    ? analysis.isReady
+      ? formatCopy(entropyLabEnglish['hex.meta.coinReady'], {
+          digits: config.fullDigits,
+          have: coinFlipsEntered,
+          n: config.remainderBits,
+          shortLabel: config.shortLabel,
+        })
+      : formatCopy(entropyLabEnglish['hex.meta.coinNext'], {
+          digits: config.fullDigits,
+          have: Math.min(config.remainderBits, coinFlipsEntered + 1),
+          n: config.remainderBits,
+          shortLabel: config.shortLabel,
+        })
+    : formatCopy(entropyLabEnglish['hex.meta.progress'], {
+        filled: previewWordCount,
+        have: analysis.digitCount,
+        limit: config.digits,
+        unit: config.unit,
+        words: wordCount,
+      });
+
+  if (analysis.invalidCharacterCount) {
+    const invalidTemplate = entropyLabEnglish['hex.meta.invalid'].replace(
+      '(s)',
+      analysis.invalidCharacterCount === 1 ? '' : 's',
+    );
+    status += formatCopy(invalidTemplate, { n: analysis.invalidCharacterCount });
   }
   if (analysis.finalInvalid) {
-    return config.binaryRemainder
-      ? `The final ${config.remainderBits} character${config.remainderBits === 1 ? '' : 's'} must be 0 or 1.`
-      : `The final character must be one of ${config.finalCharacters}.`;
+    status += config.binaryRemainder
+      ? formatCopy(entropyLabEnglish['hex.meta.finalBits'], {
+          n: config.remainderBits,
+        })
+      : formatCopy(entropyLabEnglish['hex.meta.finalChar'], {
+          chars: [...config.finalCharacters].join(', '),
+          n: config.remainderBits,
+        });
   }
-  if (analysis.excessDigitCount > 0) {
-    return `${analysis.excessDigitCount} extra character${
-      analysis.excessDigitCount === 1 ? '' : 's'
-    }; remove ${analysis.excessDigitCount === 1 ? 'it' : 'them'} to continue.`;
+  if (analysis.excessDigitCount) {
+    status += formatCopy(entropyLabEnglish['hex.meta.excess'], {
+      n: analysis.excessDigitCount,
+    });
   }
   if (analysis.isReady) {
-    return `${config.digits} ${config.unit} complete; ready to derive.`;
+    status += entropyLabEnglish['hex.meta.ready'];
   }
-  return `${analysis.digitCount} of ${config.digits} ${config.unit}.`;
+  return status;
 }
 
 function normalizedInputSelection(
@@ -372,7 +421,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
               ]}
               testID="number-base-progress"
             >
-              {inputStatus(analysis)}
+              {inputStatus(analysis, words.length, wordCount)}
             </Text>
           </View>
 
