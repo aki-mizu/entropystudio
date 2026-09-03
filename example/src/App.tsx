@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { EntropyTool } from './components/EntropyMethodList';
 import { CardsScreen } from './screens/CardsScreen';
 import { DiceRollsScreen } from './screens/DiceRollsScreen';
+import { NumberBasesScreen } from './screens/NumberBasesScreen';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -21,6 +22,12 @@ function App() {
       <CardsScreen
         activeTool={activeTool}
         isActive={activeTool === 'cards'}
+        isDarkMode={isDarkMode}
+        onSelectTool={setActiveTool}
+      />
+      <NumberBasesScreen
+        activeTool={activeTool}
+        isActive={activeTool === 'hex'}
         isDarkMode={isDarkMode}
         onSelectTool={setActiveTool}
       />
