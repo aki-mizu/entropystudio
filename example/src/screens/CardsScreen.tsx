@@ -1,16 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  BackHandler,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MethodPicker } from '../components/MethodPicker';
-import type { EntropyTool } from '../components/MethodPicker';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { EntropyMethodList } from '../components/EntropyMethodList';
+import type { EntropyTool } from '../components/EntropyMethodList';
 import {
   CARD_METHODS,
   CARD_RANKS,
@@ -31,18 +30,19 @@ import { WordCountSelector } from '../features/dice/components/WordCountSelector
 import { diceColors } from '../features/dice/diceTheme';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
-type SheetName = 'result' | 'settings' | null;
+type CardView = 'entry' | 'setup';
+type SheetName = 'result' | null;
 
 type Props = {
   readonly activeTool: EntropyTool;
+  readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onSelectTool: (tool: EntropyTool) => void;
 };
 
-export function CardsScreen({ activeTool, isDarkMode, onSelectTool }: Props) {
-  const safeAreaInsets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: Props) {
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
+  const [activeView, setActiveView] = useState<CardView>('setup');
   const [selectedRank, setSelectedRank] = useState<CardRank | null>(null);
   const [selectedSuit, setSelectedSuit] = useState<CardSuit | null>(null);
   const {
@@ -77,6 +77,18 @@ export function CardsScreen({ activeTool, isDarkMode, onSelectTool }: Props) {
     : result?.mnemonic
       ? result.mnemonic.split(' ')
       : [];
+
+  useEffect(() => {
+    if (!isActive || activeView === 'setup') {
+      return undefined;
+    }
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setActiveView('setup');
+      return true;
+    });
+    return () => subscription.remove();
+  }, [activeView, isActive]);
 
   function showResult() {
     derivePhrase();
@@ -128,18 +140,52 @@ export function CardsScreen({ activeTool, isDarkMode, onSelectTool }: Props) {
     setSelectedSuit(suit);
   }
 
+  function renderCardMethodSelector() {
+    return (
+      <View style={styles.methodList}>
+        {CARD_METHODS.map(methodOption => {
+          const selected = methodOption === method;
+          const methodCopy = cardMethodCopy(methodOption, wordCount);
+          return (
+            <Pressable
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              key={methodOption}
+              onPress={() => changeMethod(methodOption)}
+              style={[
+                styles.methodOption,
+                { borderColor: colors.border },
+                selected && { backgroundColor: colors.surface, borderColor: colors.accent },
+              ]}
+              testID={`card-method-${methodOption}`}
+            >
+              <Text style={[styles.methodTitle, { color: colors.text }]}>
+                {methodCopy.title}
+              </Text>
+              <Text style={[styles.methodDescription, { color: colors.muted }]}>
+                {methodCopy.description}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingBottom: Math.max(20, safeAreaInsets.bottom + 12),
-            paddingTop: Math.max(12, safeAreaInsets.top + 8),
-          },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
+    <SafeAreaView
+      edges={['top', 'bottom']}
+      importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
+      pointerEvents={isActive ? 'auto' : 'none'}
+      style={[
+        styles.screen,
+        { backgroundColor: colors.background },
+        !isActive && styles.hidden,
+      ]}
+      testID="cards-screen-safe-area"
+    >
+      {activeView === 'setup' ? (
+        <View style={styles.setupContent} testID="cards-setup-view">
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <Text style={[styles.title, { color: colors.text }]} testID="cards-screen-title">
@@ -149,190 +195,181 @@ export function CardsScreen({ activeTool, isDarkMode, onSelectTool }: Props) {
               {copy.how}
             </Text>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setActiveSheet('settings')}
-            style={styles.optionsButton}
-            testID="open-card-settings"
-          >
-            <Text style={[styles.optionsText, { color: colors.accent }]}>Options</Text>
-          </Pressable>
         </View>
 
-        <MethodPicker activeTool={activeTool} colors={colors} onSelect={onSelectTool} />
+        <EntropyMethodList
+          activeTool={activeTool}
+          colors={colors}
+          isActive={isActive}
+          onSelect={onSelectTool}
+        />
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={copy.seedLengthLabel}
-          onPress={() => setActiveSheet('settings')}
-          style={[styles.workflowSummary, { borderColor: colors.border }]}
-          testID="cards-workflow-summary"
-        >
-          <Text numberOfLines={1} style={[styles.workflowTitle, { color: colors.text }]}>
-            {cardMethodCopy(method, wordCount).title}
-          </Text>
-          <Text style={[styles.workflowValue, { color: colors.accent }]} testID="card-seed-length-value">
-            {copy.seedLengthValue}
-          </Text>
-        </Pressable>
-
-        <Text style={[styles.methodHelp, { color: colors.muted }]} testID="cards-method-help">
-          {copy.inputHelp}
-        </Text>
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.label, { color: colors.muted }]} testID="card-input-label">
-            {copy.inputLabel}
-          </Text>
-          <Pressable
-            accessibilityLabel={isDirect ? 'Undo last rank draw' : 'Undo last card'}
-            accessibilityRole="button"
-            disabled={!transcript}
-            onPress={undoLastEntry}
-            style={({ pressed }) => [
-              styles.undoButton,
-              { opacity: transcript ? (pressed ? 0.72 : 1) : 0.38 },
-            ]}
-            testID="undo-card-entry"
-          >
-            <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
-          </Pressable>
-        </View>
-
-        <View style={[styles.inputSurface, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <TextInput
-            accessibilityLabel={copy.inputLabel}
-            autoCapitalize="characters"
-            autoComplete="off"
-            autoCorrect={false}
-            importantForAutofill="no"
-            multiline
-            numberOfLines={3}
-            onChangeText={updateTranscript}
-            onKeyPress={event => {
-              if (!isCardKeyAllowed(event.nativeEvent.key, method, directState?.activeMax)) {
-                event.preventDefault();
-              }
-            }}
-            placeholder={copy.inputPlaceholder}
-            placeholderTextColor={colors.placeholder}
-            selectionColor={colors.accent}
-            spellCheck={false}
-            style={[styles.transcriptInput, { color: colors.text }]}
-            testID="card-transcript-input"
-            textContentType="none"
-            value={displayedTranscript}
-          />
-          <View style={[styles.progressTrack, { backgroundColor: colors.segment }]}>
-            <View
-              style={[styles.progressFill, { backgroundColor: colors.accent, width: `${progress * 100}%` }]}
+          <View style={styles.setupSettings} testID="cards-setup-settings">
+            {renderCardMethodSelector()}
+            <WordCountSelector
+              colors={colors}
+              label={copy.seedLengthLabel}
+              onSelect={changeWordCount}
+              valueLabel={copy.seedLengthValue}
+              wordCount={wordCount}
             />
           </View>
-          <Text style={[styles.progressText, { color: colors.muted }]} testID="card-progress">
-            {progressText}
-          </Text>
+
+          <View style={styles.setupActionArea}>
+            <Pressable
+              accessibilityLabel="Enter card draws"
+              accessibilityRole="button"
+              onPress={() => setActiveView('entry')}
+              style={({ pressed }) => [
+                styles.startButton,
+                {
+                  backgroundColor: colors.accent,
+                  opacity: pressed ? 0.82 : 1,
+                },
+              ]}
+              testID="open-cards-entry"
+            >
+              <Text style={[styles.buttonText, { color: colors.onAccent }]}>Enter cards</Text>
+            </Pressable>
+          </View>
         </View>
+      ) : (
+        <View style={styles.entryContent} testID="cards-entry-view">
+          <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
+            <Pressable
+              accessibilityLabel="Back to card setup"
+              accessibilityRole="button"
+              onPress={() => setActiveView('setup')}
+              style={styles.backButton}
+              testID="close-cards-entry"
+            >
+              <Text style={[styles.backButtonText, { color: colors.accent }]}>Back</Text>
+            </Pressable>
+            <View style={styles.entryHeaderCopy}>
+              <Text style={[styles.entryTitle, { color: colors.text }]}>Seed</Text>
+              <Text style={[styles.entrySubtitle, { color: colors.muted }]}>
+                {copy.seedLengthValue}
+              </Text>
+            </View>
+          </View>
 
-        <View style={styles.cardArea}>
-          <DiceWordList
-            compact={windowHeight < 700}
-            colors={colors}
-            finalWord={directState?.finalWord}
-            slotCount={wordCount}
-            testID="live-card-words"
-            words={words}
-            wordSlotsAria={copy.wordSlotsAria}
-          />
+          <View style={styles.seedPreviewArea}>
+            <DiceWordList
+              compact
+              colors={colors}
+              finalWord={directState?.finalWord}
+              slotCount={wordCount}
+              testID="live-card-words"
+              words={words}
+              wordSlotsAria={copy.wordSlotsAria}
+            />
+          </View>
 
-          {instruction ? (
-            <Text style={[styles.instruction, { color: colors.accent }]} testID="card-instruction">
-              {instruction}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.label, { color: colors.muted }]} testID="card-input-label">
+              {copy.inputLabel}
             </Text>
-          ) : null}
+            <Pressable
+              accessibilityLabel={isDirect ? 'Undo last rank draw' : 'Undo last card'}
+              accessibilityRole="button"
+              disabled={!transcript}
+              onPress={undoLastEntry}
+              style={({ pressed }) => [
+                styles.undoButton,
+                { opacity: transcript ? (pressed ? 0.72 : 1) : 0.38 },
+              ]}
+              testID="undo-card-entry"
+            >
+              <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
+            </Pressable>
+          </View>
 
-          {isDirect ? (
-            <DirectCardPicker
-              activeMax={directState?.activeMax ?? 0}
-              colors={colors}
-              disabled={directState?.step === undefined || directState.activeMax === 0}
-              onSelect={appendDirectRank}
+          <View style={[styles.inputSurface, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TextInput
+              accessibilityLabel={copy.inputLabel}
+              autoCapitalize="characters"
+              autoComplete="off"
+              autoCorrect={false}
+              importantForAutofill="no"
+              multiline
+              numberOfLines={3}
+              onChangeText={updateTranscript}
+              onKeyPress={event => {
+                if (!isCardKeyAllowed(event.nativeEvent.key, method, directState?.activeMax)) {
+                  event.preventDefault();
+                }
+              }}
+              placeholder={copy.inputPlaceholder}
+              placeholderTextColor={colors.placeholder}
+              selectionColor={colors.accent}
+              spellCheck={false}
+              style={[styles.transcriptInput, { color: colors.text }]}
+              testID="card-transcript-input"
+              textContentType="none"
+              value={displayedTranscript}
             />
-          ) : (
-            <HashedCardPicker
-              availableRanks={selection.availableRanks}
-              availableSuits={selection.availableSuits}
-              compatibleRanks={selection.compatibleRanks}
-              compatibleSuits={selection.compatibleSuits}
-              colors={colors}
-              onSelectRank={selectCardRank}
-              onSelectSuit={selectCardSuit}
-              selectedRank={selectedRank}
-              selectedSuit={selectedSuit}
-            />
-          )}
-        </View>
+            <View style={[styles.progressTrack, { backgroundColor: colors.segment }]}>
+              <View
+                style={[styles.progressFill, { backgroundColor: colors.accent, width: `${progress * 100}%` }]}
+              />
+            </View>
+            <Text style={[styles.progressText, { color: colors.muted }]} testID="card-progress">
+              {progressText}
+            </Text>
+          </View>
 
-        <Pressable
-          accessibilityRole="button"
-          disabled={!canDerive}
-          onPress={showResult}
-          style={({ pressed }) => [
-            styles.button,
-            {
-              backgroundColor: colors.accent,
-              opacity: !canDerive ? 0.45 : pressed ? 0.82 : 1,
-            },
-          ]}
-          testID="derive-card-phrase"
-        >
-          <Text style={[styles.buttonText, { color: colors.onAccent }]} testID="derive-card-phrase-label">
-            {copy.deriveAction}
+          <Text style={[styles.methodHelp, { color: colors.muted }]} testID="cards-method-help">
+            {copy.inputHelp}
           </Text>
-        </Pressable>
-      </ScrollView>
 
-      <NativeSheet
-        colors={colors}
-        onDismiss={() => setActiveSheet(null)}
-        testID="card-settings-sheet"
-        title={copy.mode}
-        visible={activeSheet === 'settings'}
-      >
-        <View style={styles.methodList}>
-          {CARD_METHODS.map(methodOption => {
-            const selected = methodOption === method;
-            const methodCopy = cardMethodCopy(methodOption, wordCount);
-            return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                key={methodOption}
-                onPress={() => changeMethod(methodOption)}
-                style={[
-                  styles.methodOption,
-                  { borderColor: colors.border },
-                  selected && { backgroundColor: colors.segment, borderColor: colors.accent },
-                ]}
-                testID={`card-method-${methodOption}`}
-              >
-                <Text style={[styles.methodTitle, { color: colors.text }]}>
-                  {methodCopy.title}
-                </Text>
-                <Text style={[styles.methodDescription, { color: colors.muted }]}>
-                  {methodCopy.description}
-                </Text>
-              </Pressable>
-            );
-          })}
+          <View style={styles.cardArea}>
+            {instruction ? (
+              <Text style={[styles.instruction, { color: colors.accent }]} testID="card-instruction">
+                {instruction}
+              </Text>
+            ) : null}
+
+            {isDirect ? (
+              <DirectCardPicker
+                activeMax={directState?.activeMax ?? 0}
+                colors={colors}
+                disabled={directState?.step === undefined || directState.activeMax === 0}
+                onSelect={appendDirectRank}
+              />
+            ) : (
+              <HashedCardPicker
+                availableRanks={selection.availableRanks}
+                availableSuits={selection.availableSuits}
+                compatibleRanks={selection.compatibleRanks}
+                compatibleSuits={selection.compatibleSuits}
+                colors={colors}
+                onSelectRank={selectCardRank}
+                onSelectSuit={selectCardSuit}
+                selectedRank={selectedRank}
+                selectedSuit={selectedSuit}
+              />
+            )}
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={!canDerive}
+            onPress={showResult}
+            style={({ pressed }) => [
+              styles.button,
+              {
+                backgroundColor: colors.accent,
+                opacity: !canDerive ? 0.45 : pressed ? 0.82 : 1,
+              },
+            ]}
+            testID="derive-card-phrase"
+          >
+            <Text style={[styles.buttonText, { color: colors.onAccent }]} testID="derive-card-phrase-label">
+              {copy.deriveAction}
+            </Text>
+          </Pressable>
         </View>
-        <WordCountSelector
-          colors={colors}
-          label={copy.seedLengthLabel}
-          onSelect={changeWordCount}
-          valueLabel={copy.seedLengthValue}
-          wordCount={wordCount}
-        />
-      </NativeSheet>
+      )}
 
       <NativeSheet
         colors={colors}
@@ -343,7 +380,7 @@ export function CardsScreen({ activeTool, isDarkMode, onSelectTool }: Props) {
       >
         <CardResultPanel colors={colors} entropyLabel={copy.resultEntropy} result={result} />
       </NativeSheet>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -502,6 +539,15 @@ function CardResultPanel({ colors, entropyLabel, result }: CardResultPanelProps)
 }
 
 const styles = StyleSheet.create({
+  backButton: {
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingRight: 14,
+  },
+  backButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
   button: {
     alignItems: 'center',
     borderRadius: 6,
@@ -516,9 +562,29 @@ const styles = StyleSheet.create({
   cardArea: {
     marginTop: 12,
   },
-  content: {
-    flexGrow: 1,
+  entryContent: {
+    flex: 1,
+    paddingBottom: 12,
     paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
+  },
+  entryHeader: {
+    alignItems: 'center',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    minHeight: 58,
+  },
+  entryHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  entrySubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  entryTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 26,
   },
   disabledChoice: {
     opacity: 0.38,
@@ -553,6 +619,9 @@ const styles = StyleSheet.create({
   headerCopy: {
     flex: 1,
     minWidth: 0,
+  },
+  hidden: {
+    display: 'none',
   },
   inputSurface: {
     borderRadius: 6,
@@ -646,6 +715,11 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
+  seedPreviewArea: {
+    flex: 1,
+    minHeight: 0,
+    paddingTop: 12,
+  },
   sectionHeader: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -696,23 +770,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  workflowSummary: {
-    alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    marginTop: 10,
-    minHeight: 52,
-  },
-  workflowTitle: {
+  setupActionArea: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 18,
-    paddingRight: 12,
+    justifyContent: 'flex-end',
   },
-  workflowValue: {
-    fontSize: 14,
-    fontWeight: '700',
+  setupContent: {
+    flex: 1,
+    paddingBottom: 12,
+    paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
+    paddingTop: 12,
+  },
+  setupSettings: {
+    marginTop: 16,
+  },
+  startButton: {
+    alignItems: 'center',
+    borderRadius: 6,
+    justifyContent: 'center',
+    minHeight: 52,
   },
 });

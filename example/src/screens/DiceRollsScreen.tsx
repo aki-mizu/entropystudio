@@ -1,15 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  BackHandler,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MethodPicker } from '../components/MethodPicker';
-import type { EntropyTool } from '../components/MethodPicker';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { EntropyMethodList } from '../components/EntropyMethodList';
+import type { EntropyTool } from '../components/EntropyMethodList';
 import { DirectDiceFinalWordPicker } from '../features/dice/components/DirectDiceFinalWordPicker';
 import { DiceGrid } from '../features/dice/components/DiceGrid';
 import { DiceWordList, DirectDicePreview } from '../features/dice/components/DirectDicePreview';
@@ -19,28 +19,26 @@ import { DiceTranscriptInput } from '../features/dice/components/DiceTranscriptI
 import type { DiceTranscriptSelection } from '../features/dice/components/DiceTranscriptInput';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { WordCountSelector } from '../features/dice/components/WordCountSelector';
-import {
-  D8_D16_FACES,
-  enabledDiceFaces,
-  isHashedDiceMethod,
-} from '../features/dice/dice';
+import { D8_D16_FACES, enabledDiceFaces } from '../features/dice/dice';
 import type { DiceInputFace } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
 import { useDiceRolls } from '../features/dice/useDiceRolls';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
-type SheetName = 'final-word' | 'result' | 'settings' | null;
+type DiceView = 'entry' | 'setup';
+type SheetName = 'final-word' | 'result' | null;
 
 type Props = {
   readonly activeTool: EntropyTool;
+  readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onSelectTool: (tool: EntropyTool) => void;
 };
 
-export function DiceRollsScreen({ activeTool, isDarkMode, onSelectTool }: Props) {
-  const safeAreaInsets = useSafeAreaInsets();
+export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: Props) {
   const { height: windowHeight } = useWindowDimensions();
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
+  const [activeView, setActiveView] = useState<DiceView>('setup');
   const [transcriptSelection, setTranscriptSelection] =
     useState<DiceTranscriptSelection | null>(null);
   const [selectionRequestId, setSelectionRequestId] = useState(0);
@@ -68,19 +66,9 @@ export function DiceRollsScreen({ activeTool, isDarkMode, onSelectTool }: Props)
     wordCount,
   } = useDiceRolls();
   const colors = diceColors(isDarkMode);
-  const selectedMethodCopy =
-    method === 'bitbox'
-      ? bitboxCopy
-      : method === 'coleman'
-        ? colemanCopy
-        : method === 'd8d16'
-          ? d8D16Copy
-          : coldcardCopy;
   const isCompactHeight = windowHeight < 700;
   const maxTileSize =
     method === 'd8d16' ? (isCompactHeight ? 48 : 56) : isCompactHeight ? 68 : 84;
-  const usesCompactSeedGrid =
-    isCompactHeight || method === 'd8d16' || (wordCount === 24 && isHashedDiceMethod(method));
   const enabledFaces = enabledDiceFaces(method, directState);
   const liveHashedWords =
     !directState && result && typeof result.mnemonic === 'string'
@@ -88,6 +76,18 @@ export function DiceRollsScreen({ activeTool, isDarkMode, onSelectTool }: Props)
       : [];
   const canChooseFinalWord =
     method === 'bitbox' && Boolean(directState && directCopy && directState.candidates.length > 0);
+
+  useEffect(() => {
+    if (!isActive || activeView === 'setup') {
+      return undefined;
+    }
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setActiveView('setup');
+      return true;
+    });
+    return () => subscription.remove();
+  }, [activeView, isActive]);
 
   function showResult() {
     derivePhrase();
@@ -118,180 +118,198 @@ export function DiceRollsScreen({ activeTool, isDarkMode, onSelectTool }: Props)
     setProgrammaticTranscriptSelection({ end: cursor, start: cursor });
   }
 
-  return (
-    <SafeAreaView
-      edges={['top']}
-      style={[styles.screen, { backgroundColor: colors.background }]}
-      testID="dice-screen-safe-area"
-    >
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
+  function renderDeriveButton() {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        disabled={!canDerive}
+        onPress={showResult}
+        style={({ pressed }) => [
+          styles.button,
           {
-            paddingBottom: Math.max(12, safeAreaInsets.bottom + 8),
+            backgroundColor: colors.accent,
+            opacity: !canDerive ? 0.45 : pressed ? 0.82 : 1,
           },
         ]}
-        keyboardShouldPersistTaps="handled"
+        testID="derive-dice-phrase"
       >
-        <View style={styles.header}>
-          <View style={styles.headerCopy}>
-            <Text style={[styles.title, { color: colors.text }]} testID="dice-screen-title">
-              {copy.mode}
-            </Text>
-            <Text
-              numberOfLines={1}
-              style={[styles.subtitle, { color: colors.muted }]}
-              testID="dice-screen-how"
-            >
-              {copy.how}
-            </Text>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setActiveSheet('settings')}
-            style={styles.optionsButton}
-            testID="open-dice-settings"
-          >
-            <Text style={[styles.optionsText, { color: colors.accent }]}>Options</Text>
-          </Pressable>
-        </View>
-
-        <MethodPicker activeTool={activeTool} colors={colors} onSelect={onSelectTool} />
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={copy.seedLengthLabel}
-          onPress={() => setActiveSheet('settings')}
-          style={[styles.workflowSummary, { borderColor: colors.border }]}
-          testID="dice-workflow-summary"
-        >
-          <Text
-            numberOfLines={1}
-            style={[styles.workflowTitle, { color: colors.text }]}
-            testID="dice-method-summary"
-          >
-            {selectedMethodCopy.title}
-          </Text>
-          <Text style={[styles.workflowValue, { color: colors.accent }]} testID="seed-length-value">
-            {copy.seedLengthValue}
-          </Text>
-        </Pressable>
-
         <Text
-          style={[styles.methodHelp, { color: colors.muted }]}
-          testID="dice-method-help"
+          style={[styles.buttonText, { color: colors.onAccent }]}
+          testID="derive-dice-phrase-label"
         >
-          {copy.inputHelp}
+          {copy.deriveAction}
         </Text>
+      </Pressable>
+    );
+  }
 
-        <DiceTranscriptInput
-          colors={colors}
-          inputLabel={copy.inputLabel}
-          inputPlaceholder={copy.inputPlaceholder}
-          method={method}
-          onChange={updateRolls}
-          onProgrammaticSelectionChange={setProgrammaticTranscriptSelection}
-          onSelectionChange={setTranscriptSelection}
-          progress={progress}
-          progressText={progressText}
-          rolls={rolls}
-          selection={transcriptSelection}
-          selectionRequestId={selectionRequestId}
-          wordCount={wordCount}
-        />
-
-        <View style={styles.rollArea}>
-          {directState ? (
-            <DirectDicePreview
-              compact={usesCompactSeedGrid}
-              colors={colors}
-              selectedFinalWord={selectedFinalWord}
-              slotCount={wordCount}
-              state={directState}
-              wordSlotsAria={copy.wordSlotsAria}
-            />
-          ) : (
-            <DiceWordList
-              compact={usesCompactSeedGrid}
-              colors={colors}
-              slotCount={wordCount}
-              testID="live-dice-words"
-              words={liveHashedWords}
-              wordSlotsAria={copy.wordSlotsAria}
-            />
-          )}
-          {canChooseFinalWord && directCopy ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setActiveSheet('final-word')}
-              style={styles.finalWordButton}
-              testID="open-direct-final-word"
-            >
-              <Text style={[styles.finalWordText, { color: colors.accent }]}>
-                {directCopy.finalWordLabel}
+  return (
+    <SafeAreaView
+      edges={['top', 'bottom']}
+      importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
+      pointerEvents={isActive ? 'auto' : 'none'}
+      style={[
+        styles.screen,
+        { backgroundColor: colors.background },
+        !isActive && styles.hidden,
+      ]}
+      testID="dice-screen-safe-area"
+    >
+      {activeView === 'setup' ? (
+        <View style={styles.setupContent} testID="dice-setup-view">
+          <View style={styles.header}>
+            <View style={styles.headerCopy}>
+              <Text style={[styles.title, { color: colors.text }]} testID="dice-screen-title">
+                {copy.mode}
               </Text>
-            </Pressable>
-          ) : null}
+              <Text
+                numberOfLines={1}
+                style={[styles.subtitle, { color: colors.muted }]}
+                testID="dice-screen-how"
+              >
+                {copy.how}
+              </Text>
+            </View>
+          </View>
 
-          <DiceGrid
-            columns={method === 'd8d16' ? 8 : 6}
+          <EntropyMethodList
+            activeTool={activeTool}
             colors={colors}
-            enabledFaces={enabledFaces}
-            faces={method === 'd8d16' ? D8_D16_FACES : undefined}
-            inputLabel={copy.inputLabel}
-            maxTileSize={maxTileSize}
-            onSelect={insertDiceFace}
+            isActive={isActive}
+            onSelect={onSelectTool}
           />
+
+          <View style={styles.setupSettings} testID="dice-setup-settings">
+            <DiceMethodSelector
+              copies={{
+                bitbox: bitboxCopy,
+                coldcard: coldcardCopy,
+                coleman: colemanCopy,
+                d8d16: d8D16Copy,
+              }}
+              colors={colors}
+              method={method}
+              onSelect={changeMethod}
+            />
+            <WordCountSelector
+              colors={colors}
+              label={copy.seedLengthLabel}
+              onSelect={selectWordCount}
+              valueLabel={copy.seedLengthValue}
+              wordCount={wordCount}
+            />
+          </View>
+
+          <View style={styles.setupActionArea}>
+            <Pressable
+              accessibilityLabel="Enter dice rolls"
+              accessibilityRole="button"
+              onPress={() => setActiveView('entry')}
+              style={({ pressed }) => [
+                styles.startButton,
+                {
+                  backgroundColor: colors.accent,
+                  opacity: pressed ? 0.82 : 1,
+                },
+              ]}
+              testID="open-dice-entry"
+            >
+              <Text style={[styles.buttonText, { color: colors.onAccent }]}>Enter rolls</Text>
+            </Pressable>
+          </View>
         </View>
+      ) : (
+        <View style={styles.entryContent} testID="dice-rolls-view">
+          <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
+            <Pressable
+              accessibilityLabel="Back to dice settings"
+              accessibilityRole="button"
+              onPress={() => setActiveView('setup')}
+              style={styles.backButton}
+              testID="close-dice-entry"
+            >
+              <Text style={[styles.backButtonText, { color: colors.accent }]}>Back</Text>
+            </Pressable>
+            <View style={styles.entryHeaderCopy}>
+              <Text style={[styles.entryTitle, { color: colors.text }]}>Seed</Text>
+              <Text style={[styles.entrySubtitle, { color: colors.muted }]}>
+                {copy.seedLengthValue}
+              </Text>
+            </View>
+          </View>
 
-        <Pressable
-          accessibilityRole="button"
-          disabled={!canDerive}
-          onPress={showResult}
-          style={({ pressed }) => [
-            styles.button,
-            {
-              backgroundColor: colors.accent,
-              opacity: !canDerive ? 0.45 : pressed ? 0.82 : 1,
-            },
-          ]}
-          testID="derive-dice-phrase"
-        >
+          <View style={styles.seedPreviewArea}>
+            {directState ? (
+              <DirectDicePreview
+                compact
+                colors={colors}
+                selectedFinalWord={selectedFinalWord}
+                slotCount={wordCount}
+                state={directState}
+                wordSlotsAria={copy.wordSlotsAria}
+              />
+            ) : (
+              <DiceWordList
+                compact
+                colors={colors}
+                slotCount={wordCount}
+                testID="live-dice-words"
+                words={liveHashedWords}
+                wordSlotsAria={copy.wordSlotsAria}
+              />
+            )}
+            {canChooseFinalWord && directCopy ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setActiveSheet('final-word')}
+                style={styles.finalWordButton}
+                testID="open-direct-final-word"
+              >
+                <Text style={[styles.finalWordText, { color: colors.accent }]}>
+                  {directCopy.finalWordLabel}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          <DiceTranscriptInput
+            colors={colors}
+            inputLabel={copy.inputLabel}
+            inputPlaceholder={copy.inputPlaceholder}
+            method={method}
+            onChange={updateRolls}
+            onProgrammaticSelectionChange={setProgrammaticTranscriptSelection}
+            onSelectionChange={setTranscriptSelection}
+            progress={progress}
+            progressText={progressText}
+            rolls={rolls}
+            selection={transcriptSelection}
+            selectionRequestId={selectionRequestId}
+            wordCount={wordCount}
+          />
+
           <Text
-            style={[styles.buttonText, { color: colors.onAccent }]}
-            testID="derive-dice-phrase-label"
+            style={[styles.methodHelp, { color: colors.muted }]}
+            testID="dice-method-help"
           >
-            {copy.deriveAction}
+            {copy.inputHelp}
           </Text>
-        </Pressable>
-      </ScrollView>
 
-      <NativeSheet
-        colors={colors}
-        onDismiss={() => setActiveSheet(null)}
-        testID="dice-settings-sheet"
-        title={copy.mode}
-        visible={activeSheet === 'settings'}
-      >
-        <DiceMethodSelector
-          copies={{
-            bitbox: bitboxCopy,
-            coldcard: coldcardCopy,
-            coleman: colemanCopy,
-            d8d16: d8D16Copy,
-          }}
-          colors={colors}
-          method={method}
-          onSelect={changeMethod}
-        />
-        <WordCountSelector
-          colors={colors}
-          label={copy.seedLengthLabel}
-          onSelect={selectWordCount}
-          valueLabel={copy.seedLengthValue}
-          wordCount={wordCount}
-        />
-      </NativeSheet>
+          <View style={styles.rollArea}>
+            <DiceGrid
+              columns={method === 'd8d16' ? 8 : 6}
+              colors={colors}
+              enabledFaces={enabledFaces}
+              faces={method === 'd8d16' ? D8_D16_FACES : undefined}
+              inputLabel={copy.inputLabel}
+              maxTileSize={maxTileSize}
+              onSelect={insertDiceFace}
+            />
+          </View>
+
+          <View style={styles.actionBar}>{renderDeriveButton()}</View>
+        </View>
+      )}
 
       <NativeSheet
         colors={colors}
@@ -332,20 +350,53 @@ export function DiceRollsScreen({ activeTool, isDarkMode, onSelectTool }: Props)
 }
 
 const styles = StyleSheet.create({
+  actionBar: {
+    flexDirection: 'row',
+    marginTop: 12,
+  },
+  backButton: {
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingRight: 14,
+  },
+  backButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
   button: {
     alignItems: 'center',
     borderRadius: 6,
+    flex: 1,
     justifyContent: 'center',
-    marginTop: 12,
     minHeight: 50,
   },
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
   },
-  content: {
+  entryContent: {
+    flex: 1,
+    paddingBottom: 12,
     paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
-    paddingTop: 12,
+  },
+  entryHeader: {
+    alignItems: 'center',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    minHeight: 58,
+  },
+  entryHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  entrySubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  entryTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 26,
   },
   finalWordButton: {
     justifyContent: 'center',
@@ -364,26 +415,43 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  hidden: {
+    display: 'none',
+  },
   methodHelp: {
     fontSize: 12,
     lineHeight: 17,
     marginTop: 10,
-  },
-  optionsButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    paddingLeft: 16,
-  },
-  optionsText: {
-    fontSize: 15,
-    fontWeight: '700',
   },
   rollArea: {
     marginTop: 12,
   },
   screen: {
     flex: 1,
+  },
+  seedPreviewArea: {
+    flex: 1,
+    minHeight: 0,
+    paddingTop: 12,
+  },
+  setupActionArea: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  setupContent: {
+    flex: 1,
+    paddingBottom: 12,
+    paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
+    paddingTop: 12,
+  },
+  setupSettings: {
+    marginTop: 16,
+  },
+  startButton: {
+    alignItems: 'center',
+    borderRadius: 6,
+    justifyContent: 'center',
+    minHeight: 52,
   },
   subtitle: {
     fontSize: 13,
@@ -394,24 +462,5 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     lineHeight: 34,
-  },
-  workflowSummary: {
-    alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    marginTop: 10,
-    minHeight: 52,
-  },
-  workflowTitle: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 18,
-    paddingRight: 12,
-  },
-  workflowValue: {
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

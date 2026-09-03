@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StatusBar, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import type { EntropyTool } from './components/MethodPicker';
+import type { EntropyTool } from './components/EntropyMethodList';
 import { CardsScreen } from './screens/CardsScreen';
 import { DiceRollsScreen } from './screens/DiceRollsScreen';
 
@@ -12,19 +12,18 @@ function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      {activeTool === 'dice' ? (
-        <DiceRollsScreen
-          activeTool={activeTool}
-          isDarkMode={isDarkMode}
-          onSelectTool={setActiveTool}
-        />
-      ) : (
-        <CardsScreen
-          activeTool={activeTool}
-          isDarkMode={isDarkMode}
-          onSelectTool={setActiveTool}
-        />
-      )}
+      <DiceRollsScreen
+        activeTool={activeTool}
+        isActive={activeTool === 'dice'}
+        isDarkMode={isDarkMode}
+        onSelectTool={setActiveTool}
+      />
+      <CardsScreen
+        activeTool={activeTool}
+        isActive={activeTool === 'cards'}
+        isDarkMode={isDarkMode}
+        onSelectTool={setActiveTool}
+      />
     </SafeAreaProvider>
   );
 }

@@ -75,7 +75,6 @@ function expectPlaceholderSeedGrid(
   wordCount: number,
 ) {
   const rows = wordCount / 3;
-
   for (const column of [1, 2, 3]) {
     expect(
       app.root.findByProps({ testID: `${testID}-column-${column}` }).props.children,
@@ -99,12 +98,66 @@ function expectEnabledDiceFaces(
   }
 }
 
+function activeMethodList(app: ReactTestRenderer.ReactTestRenderer) {
+  const methodList = app.root
+    .findAllByProps({ testID: 'key-method-list' })
+    .find(list => list.props.accessibilityElementsHidden === false);
+
+  if (!methodList) {
+    throw new Error('Expected an accessibility-visible Method list.');
+  }
+
+  return methodList;
+}
+
 async function selectEntropyTool(
   app: ReactTestRenderer.ReactTestRenderer,
   tool: 'cards' | 'dice',
 ) {
   await ReactTestRenderer.act(async () => {
-    app.root.findByProps({ testID: 'key-method-select' }).props.onValueChange(tool);
+    activeMethodList(app).findByProps({ testID: `key-method-${tool}` }).props.onPress();
+  });
+}
+
+async function openDiceEntry(app: ReactTestRenderer.ReactTestRenderer) {
+  const entryButton = app.root.findAllByProps({ testID: 'open-dice-entry' })[0];
+  if (!entryButton) {
+    return;
+  }
+
+  await ReactTestRenderer.act(async () => {
+    entryButton.props.onPress();
+  });
+}
+
+async function closeDiceEntry(app: ReactTestRenderer.ReactTestRenderer) {
+  const backButton = app.root.findAllByProps({ testID: 'close-dice-entry' })[0];
+  if (!backButton) {
+    return;
+  }
+
+  await ReactTestRenderer.act(async () => {
+    backButton.props.onPress();
+  });
+}
+
+async function openCardsEntry(app: ReactTestRenderer.ReactTestRenderer) {
+  const entryButton = app.root.findAllByProps({ testID: 'open-cards-entry' })[0];
+  if (!entryButton) {
+    return;
+  }
+
+  await ReactTestRenderer.act(async () => {
+    entryButton.props.onPress();
+  });
+}
+
+async function selectDiceMethod(
+  app: ReactTestRenderer.ReactTestRenderer,
+  testID: string,
+) {
+  await ReactTestRenderer.act(async () => {
+    app.root.findByProps({ testID }).props.onPress();
   });
 }
 
@@ -126,29 +179,93 @@ test('uses EntropyLab help copy for every dice method', () => {
   );
 });
 
-test('uses an upstream-style dropdown for the top-level method', async () => {
+test('shows Dice and Cards workflows on the shared setup screen', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
     app = ReactTestRenderer.create(<App />);
   });
 
-  const picker = app!.root.findByProps({ testID: 'key-method-select' });
-  expect(app!.root.findByProps({ testID: 'key-method-label' }).props.children).toBe(
+  expect(app!.root.findByProps({ testID: 'dice-setup-view' })).toBeDefined();
+  const diceMethodList = activeMethodList(app!);
+  expect(diceMethodList.findByProps({ testID: 'key-method-label' }).props.children).toBe(
     entropyLabEnglish['keys.methodLabel'],
   );
-  expect(picker.props.mode).toBe('dropdown');
-  expect(picker.props.selectedValue).toBe('dice');
+  expect(diceMethodList).toBeDefined();
+  expect(diceMethodList.findByProps({ testID: 'key-method-dice' }).props.accessibilityState).toEqual({
+    selected: true,
+  });
+  expect(diceMethodList.findByProps({ testID: 'key-method-cards' }).props.accessibilityState).toEqual({
+    selected: false,
+  });
+
+  await selectDiceMethod(app!, 'dice-method-coleman');
+  await selectEntropyTool(app!, 'cards');
+  expect(app!.root.findByProps({ testID: 'cards-screen-title' })).toBeDefined();
+  expect(app!.root.findByProps({ testID: 'cards-setup-view' })).toBeDefined();
+  expect(app!.root.findAllByProps({ testID: 'cards-entry-view' })).toHaveLength(0);
+  expect(
+    activeMethodList(app!).findByProps({ testID: 'key-method-cards' }).props.accessibilityState,
+  ).toEqual({
+    selected: true,
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'card-method-direct' }).props.onPress();
+  });
+
+  await selectEntropyTool(app!, 'dice');
+
+  expect(app!.root.findByProps({ testID: 'dice-setup-view' })).toBeDefined();
+  expect(app!.root.findByProps({ testID: 'dice-method-coleman' }).props.accessibilityState).toEqual({
+    selected: true,
+  });
 
   await selectEntropyTool(app!, 'cards');
-  expect(app!.root.findByProps({ testID: 'key-method-select' }).props.selectedValue).toBe('cards');
+
+  expect(app!.root.findByProps({ testID: 'card-method-direct' }).props.accessibilityState).toEqual({
+    selected: true,
+  });
+});
+
+test('keeps native workflow trees mounted while changing methods', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  const diceScreen = app!.root.findByProps({ testID: 'dice-screen-safe-area' });
+  const cardsScreen = app!.root.findByProps({ testID: 'cards-screen-safe-area' });
+  expect(diceScreen.props.pointerEvents).toBe('auto');
+  expect(cardsScreen.props.pointerEvents).toBe('none');
+  expect(cardsScreen.props.style).toContainEqual({ display: 'none' });
+
+  await selectEntropyTool(app!, 'cards');
+
+  expect(app!.root.findByProps({ testID: 'dice-screen-safe-area' }).props.pointerEvents).toBe(
+    'none',
+  );
+  expect(
+    app!.root.findByProps({ testID: 'dice-screen-safe-area' }).props.style,
+  ).toContainEqual({ display: 'none' });
+  expect(app!.root.findByProps({ testID: 'cards-screen-safe-area' }).props.pointerEvents).toBe(
+    'auto',
+  );
+
+  await selectEntropyTool(app!, 'dice');
+
+  expect(app!.root.findByProps({ testID: 'dice-screen-safe-area' }).props.pointerEvents).toBe(
+    'auto',
+  );
+  expect(app!.root.findByProps({ testID: 'cards-screen-safe-area' }).props.pointerEvents).toBe(
+    'none',
+  );
 });
 
 test('shows a live BIP39 phrase from hashed dice through the EntropyStudio binding', async () => {
   const entropy = new Uint8Array(16).buffer;
+  const liveMnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
   mockDiceRollsToEntropy.mockReturnValue(entropy);
-  mockEntropyToMnemonic.mockReturnValue(
-    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
-  );
+  mockEntropyToMnemonic.mockReturnValue(liveMnemonic);
 
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
@@ -161,26 +278,33 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
   expect(app!.root.findByProps({ testID: 'dice-screen-how' }).props.children).toBe(
     entropyLabEnglish['dice.how'].replace('{words}', '24'),
   );
-  const diceScrollView = app!.root.findByType(ScrollView);
-  expect(diceScrollView.props.keyboardShouldPersistTaps).toBe('handled');
+  expect(app!.root.findAllByType(ScrollView)).toHaveLength(0);
   expect(app!.root.findByProps({ testID: 'dice-screen-safe-area' }).props.edges).toEqual([
     'top',
+    'bottom',
   ]);
-  expect(app!.root.findByType(DiceGrid).props.columns).toBe(6);
-  expect(app!.root.findByType(DiceWordList).props.compact).toBe(true);
-  expect(app!.root.findByProps({ testID: 'dice-method-summary' }).props.children).toBe(
+  expect(app!.root.findByProps({ testID: 'dice-setup-view' })).toBeDefined();
+  expect(app!.root.findAllByType(DiceGrid)).toHaveLength(0);
+  expect(app!.root.findAllByType(DiceWordList)).toHaveLength(0);
+  expect(app!.root.findByProps({ testID: 'dice-setup-settings' })).toBeDefined();
+  expect(app!.root.findAllByProps({ testID: 'dice-settings-sheet' })).toHaveLength(0);
+  expect(app!.root.findByProps({ testID: 'dice-method-coldcard-title' }).props.children).toBe(
     entropyLabEnglish['dice.coldcard.title'],
   );
-  expect(app!.root.findByProps({ testID: 'seed-length-value' }).props.children).toBe(
+  expect(
+    app!.root
+      .findByProps({ testID: 'dice-setup-view' })
+      .findByProps({ testID: 'seed-length-value' }).props.children,
+  ).toBe(
     entropyLabEnglish['seedLength.words'].replace('{n}', '24'),
   );
+  await openDiceEntry(app!);
+  expect(app!.root.findByProps({ testID: 'dice-rolls-view' })).toBeDefined();
+  expect(app!.root.findByType(DiceGrid).props.columns).toBe(6);
   expectPlaceholderSeedGrid(app!, 'live-dice-words', 24);
+  await closeDiceEntry(app!);
+  expect(app!.root.findByProps({ testID: 'dice-setup-view' })).toBeDefined();
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
-
-  expect(app!.root.findByProps({ testID: 'dice-settings-sheet' })).toBeDefined();
   expect(
     app!.root.findByProps({ testID: 'dice-method-coldcard-title' }).props
       .children,
@@ -198,19 +322,19 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
     app!.root.findByProps({ testID: 'dice-method-coleman-title' }).props
       .children,
   ).toBe(entropyLabEnglish['dice.coleman.title']);
-  expect(app!.root.findByProps({ testID: 'seed-length-label' }).props.children).toBe(
+  expect(
+    app!.root
+      .findByProps({ testID: 'dice-setup-view' })
+      .findByProps({ testID: 'seed-length-label' }).props.children,
+  ).toBe(
     entropyLabEnglish['seedLength.label'],
   );
-
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-  });
-
-  expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
-    entropyLabEnglish['dice.label.hashed'],
-  );
+  await openDiceEntry(app!);
   expect(app!.root.findByProps({ testID: 'dice-method-help' }).props.children).toBe(
     entropyLabEnglish['dice.help.coldcard'].replace('{hashRolls}', '99'),
+  );
+  expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
+    entropyLabEnglish['dice.label.hashed'],
   );
   expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.placeholder).toBe(
     '415263415263…',
@@ -233,8 +357,7 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
 
   expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(false);
   expect(mockDiceRollsToEntropy).toHaveBeenCalledWith('1', 0, 24);
-  const liveMnemonic =
-    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  await openDiceEntry(app!);
   const liveDiceWords = app!.root.findByProps({
     accessibilityLabel: liveMnemonic,
     testID: 'live-dice-words',
@@ -274,18 +397,10 @@ test('shows a live BIP39 phrase from hashed dice through the EntropyStudio bindi
     app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText(completeRolls);
   });
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
+  await closeDiceEntry(app!);
+  await selectDiceMethod(app!, 'dice-method-coleman');
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-method-coleman' }).props.onPress();
-  });
-
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-  });
-
+  await openDiceEntry(app!);
   expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(false);
 
   await ReactTestRenderer.act(async () => {
@@ -319,6 +434,8 @@ test('uses the upstream dice validation text', async () => {
     app = ReactTestRenderer.create(<App />);
   });
 
+  await openDiceEntry(app!);
+
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText(
       `${'1'.repeat(99)}x`,
@@ -339,6 +456,8 @@ test('adds and removes dice faces through the modular controls', async () => {
   await ReactTestRenderer.act(async () => {
     app = ReactTestRenderer.create(<App />);
   });
+
+  await openDiceEntry(app!);
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-face-6' }).props.onPress();
@@ -364,16 +483,12 @@ test('shares hashed rolls and restores independent direct-dice transcripts', asy
     app = ReactTestRenderer.create(<App />);
   });
 
+  await openDiceEntry(app!);
+
   async function selectMethod(testID: string) {
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-    });
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID }).props.onPress();
-    });
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-    });
+    await closeDiceEntry(app!);
+    await selectDiceMethod(app!, testID);
+    await openDiceEntry(app!);
   }
 
   await ReactTestRenderer.act(async () => {
@@ -436,33 +551,24 @@ test('shows placeholders for every dice method and selected seed length', async 
     app = ReactTestRenderer.create(<App />);
   });
 
+  await openDiceEntry(app!);
   expectPlaceholderSeedGrid(app!, 'live-dice-words', 24);
+  await closeDiceEntry(app!);
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-method-coleman' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-  });
+  await selectDiceMethod(app!, 'dice-method-coleman');
 
+  await openDiceEntry(app!);
   expectPlaceholderSeedGrid(app!, 'live-dice-words', 24);
+  await closeDiceEntry(app!);
 
+  await selectDiceMethod(app!, 'dice-method-bitbox');
   await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-method-bitbox' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'word-count-12' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
+    app!.root
+      .findByProps({ testID: 'dice-setup-view' })
+      .findByProps({ testID: 'word-count-12' }).props.onPress();
   });
 
+  await openDiceEntry(app!);
   expectPlaceholderSeedGrid(app!, 'direct-dice-words', 12);
 });
 
@@ -487,15 +593,8 @@ test('formats direct-dice transcript groups without storing separators', async (
     app = ReactTestRenderer.create(<App />);
   });
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-method-bitbox' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-  });
+  await selectDiceMethod(app!, 'dice-method-bitbox');
+  await openDiceEntry(app!);
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1111111');
   });
@@ -543,15 +642,9 @@ test('formats direct-dice transcript groups without storing separators', async (
   );
   expect(mockDirectDiceState).toHaveBeenCalledWith('11111122222333333', 0, 24);
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-method-d8d16' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-  });
+  await closeDiceEntry(app!);
+  await selectDiceMethod(app!, 'dice-method-d8d16');
+  await openDiceEntry(app!);
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('123 4');
   });
@@ -605,15 +698,8 @@ test('removes a selected dice range through Undo', async () => {
     app = ReactTestRenderer.create(<App />);
   });
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-method-bitbox' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-  });
+  await selectDiceMethod(app!, 'dice-method-bitbox');
+  await openDiceEntry(app!);
   await ReactTestRenderer.act(async () => {
     app!.root
       .findByProps({ testID: 'dice-rolls-input' })
@@ -660,15 +746,8 @@ test('inserts keypad faces at the transcript cursor', async () => {
     app = ReactTestRenderer.create(<App />);
   });
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-method-bitbox' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-  });
+  await selectDiceMethod(app!, 'dice-method-bitbox');
+  await openDiceEntry(app!);
   await ReactTestRenderer.act(async () => {
     app!.root
       .findByProps({ testID: 'dice-rolls-input' })
@@ -728,15 +807,9 @@ test('enables only dice faces valid for the current direct-dice step', async () 
     app = ReactTestRenderer.create(<App />);
   });
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-method-bitbox' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-  });
+  await selectDiceMethod(app!, 'dice-method-bitbox');
+
+  await openDiceEntry(app!);
 
   expectEnabledDiceFaces(app!, ['1', '2', '3', '4', '5', '6'], ['1', '2', '3', '4']);
 
@@ -750,15 +823,10 @@ test('enables only dice faces valid for the current direct-dice step', async () 
   });
   expectEnabledDiceFaces(app!, ['1', '2', '3', '4', '5', '6'], []);
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-method-d8d16' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-  });
+  await closeDiceEntry(app!);
+  await selectDiceMethod(app!, 'dice-method-d8d16');
+
+  await openDiceEntry(app!);
 
   const d8D16Faces = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
   expectEnabledDiceFaces(app!, d8D16Faces, ['1', '2', '3', '4', '5', '6', '7', '8']);
@@ -800,16 +868,9 @@ test('reveals each D8/D16 word as its three-roll group completes', async () => {
     app = ReactTestRenderer.create(<App />);
   });
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-method-d8d16' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-  });
+  await selectDiceMethod(app!, 'dice-method-d8d16');
 
+  await openDiceEntry(app!);
   expectPlaceholderSeedGrid(app!, 'direct-dice-words', 24);
 
   await ReactTestRenderer.act(async () => {
@@ -850,16 +911,12 @@ test('derives a BitBox direct-dice phrase from a selected checksum word', async 
     app = ReactTestRenderer.create(<App />);
   });
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
+  await selectDiceMethod(app!, 'dice-method-bitbox');
 
   await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-method-bitbox' }).props.onPress();
-  });
-
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'word-count-12' }).props.onPress();
+    app!.root
+      .findByProps({ testID: 'dice-setup-view' })
+      .findByProps({ testID: 'word-count-12' }).props.onPress();
   });
 
   expect(app!.root.findByProps({ testID: 'dice-method-bitbox-title' }).props.children).toBe(
@@ -871,10 +928,7 @@ test('derives a BitBox direct-dice phrase from a selected checksum word', async 
       .replace('{candidates}', '128'),
   );
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-  });
-
+  await openDiceEntry(app!);
   expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
     entropyLabEnglish['dice.label.bitbox'],
   );
@@ -929,16 +983,12 @@ test('derives a D8/D16 direct-dice phrase from its final roll selection', async 
     app = ReactTestRenderer.create(<App />);
   });
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-dice-settings' }).props.onPress();
-  });
+  await selectDiceMethod(app!, 'dice-method-d8d16');
 
   await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-method-d8d16' }).props.onPress();
-  });
-
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'word-count-12' }).props.onPress();
+    app!.root
+      .findByProps({ testID: 'dice-setup-view' })
+      .findByProps({ testID: 'word-count-12' }).props.onPress();
   });
 
   expect(app!.root.findByProps({ testID: 'dice-method-d8d16-title' }).props.children).toBe(
@@ -950,10 +1000,7 @@ test('derives a D8/D16 direct-dice phrase from its final roll selection', async 
       .replace('{final}', 'roll a final D8 and D16'),
   );
 
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-settings-sheet-close' }).props.onPress();
-  });
-
+  await openDiceEntry(app!);
   expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
     entropyLabEnglish['dice.label.dplus'].replace(
       '{final}',
@@ -995,10 +1042,11 @@ test('switches to cards and derives a hashed card transcript through the native 
   });
 
   await selectEntropyTool(app!, 'cards');
-
   expect(app!.root.findByProps({ testID: 'cards-screen-title' }).props.children).toBe(
     entropyLabEnglish['mode.cards'],
   );
+  await openCardsEntry(app!);
+  expect(app!.root.findByProps({ testID: 'cards-entry-view' })).toBeDefined();
   expect(app!.root.findByProps({ testID: 'card-input-label' }).props.children).toBe(
     entropyLabEnglish['cards.transcript'],
   );
@@ -1032,6 +1080,7 @@ test('blocks invalid card key presses before they enter the transcript', async (
     app = ReactTestRenderer.create(<App />);
   });
   await selectEntropyTool(app!, 'cards');
+  await openCardsEntry(app!);
 
   const input = app!.root.findByProps({ testID: 'card-transcript-input' });
   const preventInvalid = jest.fn();
@@ -1049,6 +1098,7 @@ test('locks other ranks after selecting a hashed card rank', async () => {
     app = ReactTestRenderer.create(<App />);
   });
   await selectEntropyTool(app!, 'cards');
+  await openCardsEntry(app!);
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'card-rank-4' }).props.onPress();
   });
@@ -1065,6 +1115,7 @@ test('commits a hashed card after the rank and suit are selected', async () => {
     app = ReactTestRenderer.create(<App />);
   });
   await selectEntropyTool(app!, 'cards');
+  await openCardsEntry(app!);
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'card-rank-5' }).props.onPress();
   });
@@ -1101,14 +1152,9 @@ test('uses rank-only controls for direct card selection', async () => {
 
   await selectEntropyTool(app!, 'cards');
   await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'open-card-settings' }).props.onPress();
-  });
-  await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'card-method-direct' }).props.onPress();
   });
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'card-settings-sheet-close' }).props.onPress();
-  });
+  await openCardsEntry(app!);
 
   expect(app!.root.findByProps({ testID: 'direct-card-rank-8' }).props.disabled).toBe(false);
   await ReactTestRenderer.act(async () => {
