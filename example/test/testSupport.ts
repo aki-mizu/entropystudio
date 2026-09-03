@@ -2,22 +2,74 @@ import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 import { ScrollView } from 'react-native';
 import entropyLabEnglish from '../../entropylab/src/locales/en.json';
+import type { HashedCardState, NumberBaseAnalysis } from '../src/native/entropyStudio';
+import { installCardUiFixtures } from './cardUiFixtures';
+import { installDiceUiFixtures } from './diceUiFixtures';
+import { installNumberBaseUiFixtures } from './numberBaseUiFixtures';
+import { installSeedPhraseUiFixtures } from './seedPhraseUiFixtures';
 
 export const mockDiceRollsToEntropy = jest.fn<ArrayBuffer, [string, number, number]>();
 export const mockDirectDiceState = jest.fn();
+export const mockDiceMethodInfo = jest.fn();
+export const mockDirectDiceInputState = jest.fn();
+export const mockFormatDiceTranscript = jest.fn();
+export const mockHashedDiceState = jest.fn();
+export const mockSeedPhraseAutocomplete = jest.fn();
+export const mockSeedPhraseKeyAllowed = jest.fn();
+export const mockSeedPhraseNumbersToWords = jest.fn();
+export const mockSeedPhraseSpaceAllowed = jest.fn();
+export const mockSeedPhraseState = jest.fn();
+export const mockSeedPhraseWordsToNumbers = jest.fn();
+export const mockTranslateSeedNumberIndices = jest.fn();
 export const mockCardTranscriptToEntropy = jest.fn<ArrayBuffer, [string, number, number]>();
+export const mockCardKeyAllowed = jest.fn<boolean, [string, number, number]>();
 export const mockDirectCardState = jest.fn();
 export const mockEntropyToMnemonic = jest.fn<string, [ArrayBuffer]>();
+export const mockHashedCardState = jest.fn<HashedCardState, [string, number]>();
 export const mockMnemonicToEntropy = jest.fn<ArrayBuffer, [string]>();
+export const mockNormalizeCardToken = jest.fn<string, [string]>();
+export const mockNormalizeDirectCardTranscript = jest.fn<string, [string]>();
+export const mockAnalyzeNumberBaseInput = jest.fn<NumberBaseAnalysis, [string, number, number]>();
+export const mockNumberBaseEntropy = jest.fn<ArrayBuffer, [string, number, number]>();
 
 jest.mock('entropystudio', () => ({
   CardHashMethod: {
     Ascii: 0,
     Coleman: 1,
   },
+  CardInputMethod: {
+    Hashed: 0,
+    Direct: 1,
+  },
   DiceRollMethod: {
     Coldcard: 0,
     Coleman: 1,
+  },
+  DiceInputMethod: {
+    Coldcard: 0,
+    Coleman: 1,
+    Bitbox: 2,
+    D8d16: 3,
+  },
+  DiceFinalStep: {
+    D8: 0,
+    D16: 1,
+    Coin: 2,
+  },
+  SeedPhraseInputMethod: {
+    Words: 0,
+    Numbers: 1,
+  },
+  SeedPhraseStatus: {
+    Remaining: 0,
+    Extra: 1,
+    ChooseFinal: 2,
+    Ready: 3,
+    FinalPrefix: 4,
+    NoFinalPrefix: 5,
+    InvalidWord: 6,
+    InvalidNumber: 7,
+    ChecksumInvalid: 8,
   },
   DirectDiceMethod: {
     Bitbox: 0,
@@ -42,6 +94,14 @@ jest.mock('entropystudio', () => ({
     Correction: 2,
     Complete: 3,
   },
+  NumberBaseFormat: {
+    Bin: 0,
+    Base4: 1,
+    Base8: 2,
+    Hex: 3,
+    Base32: 4,
+    Base64: 5,
+  },
   EntropyStudioError_Tags: {
     InvalidMnemonic: 'InvalidMnemonic',
     InvalidEntropy: 'InvalidEntropy',
@@ -52,13 +112,73 @@ jest.mock('entropystudio', () => ({
     NoCards: 'NoCards',
     DuplicateCard: 'DuplicateCard',
   },
+  HashedCardInstruction: {
+    Empty: 0,
+    FirstShuffle: 1,
+    ShuffleAgain: 2,
+    SecondShuffle: 3,
+    Complete: 4,
+  },
   cardTranscriptToEntropy: mockCardTranscriptToEntropy,
+  cardKeyAllowed: mockCardKeyAllowed,
+  analyzeNumberBaseInput: mockAnalyzeNumberBaseInput,
+  diceMethodInfo: mockDiceMethodInfo,
   directCardState: mockDirectCardState,
+  directDiceInputState: mockDirectDiceInputState,
   directDiceState: mockDirectDiceState,
   diceRollsToEntropy: mockDiceRollsToEntropy,
   entropyToMnemonic: mockEntropyToMnemonic,
+  formatDiceTranscript: mockFormatDiceTranscript,
+  hashedCardState: mockHashedCardState,
+  hashedDiceState: mockHashedDiceState,
   mnemonicToEntropy: mockMnemonicToEntropy,
+  normalizeCardToken: mockNormalizeCardToken,
+  normalizeDirectCardTranscript: mockNormalizeDirectCardTranscript,
+  numberBaseEntropy: mockNumberBaseEntropy,
+  seedPhraseAutocomplete: mockSeedPhraseAutocomplete,
+  seedPhraseKeyAllowed: mockSeedPhraseKeyAllowed,
+  seedPhraseNumbersToWords: mockSeedPhraseNumbersToWords,
+  seedPhraseSpaceAllowed: mockSeedPhraseSpaceAllowed,
+  seedPhraseState: mockSeedPhraseState,
+  seedPhraseWordsToNumbers: mockSeedPhraseWordsToNumbers,
+  translateSeedNumberIndices: mockTranslateSeedNumberIndices,
 }));
+
+installCardUiFixtures({
+  setCardKeyAllowed: implementation => mockCardKeyAllowed.mockImplementation(implementation),
+  setHashedCardState: implementation => mockHashedCardState.mockImplementation(implementation),
+  setNormalizeCardToken: implementation => mockNormalizeCardToken.mockImplementation(implementation),
+  setNormalizeDirectCardTranscript: implementation =>
+    mockNormalizeDirectCardTranscript.mockImplementation(implementation),
+});
+installNumberBaseUiFixtures({
+  setAnalyzeNumberBaseInput: implementation =>
+    mockAnalyzeNumberBaseInput.mockImplementation(implementation),
+  setNumberBaseEntropy: implementation => mockNumberBaseEntropy.mockImplementation(implementation),
+});
+installDiceUiFixtures({
+  getDirectDiceState: (rolls, method, targetWords) =>
+    mockDirectDiceState(rolls, method, targetWords) as Record<string, unknown> | undefined,
+  setDiceMethodInfo: implementation => mockDiceMethodInfo.mockImplementation(implementation),
+  setDirectDiceInputState: implementation =>
+    mockDirectDiceInputState.mockImplementation(implementation),
+  setFormatDiceTranscript: implementation => mockFormatDiceTranscript.mockImplementation(implementation),
+  setHashedDiceState: implementation => mockHashedDiceState.mockImplementation(implementation),
+});
+installSeedPhraseUiFixtures({
+  setSeedPhraseAutocomplete: implementation =>
+    mockSeedPhraseAutocomplete.mockImplementation(implementation),
+  setSeedPhraseKeyAllowed: implementation => mockSeedPhraseKeyAllowed.mockImplementation(implementation),
+  setSeedPhraseNumbersToWords: implementation =>
+    mockSeedPhraseNumbersToWords.mockImplementation(implementation),
+  setSeedPhraseSpaceAllowed: implementation =>
+    mockSeedPhraseSpaceAllowed.mockImplementation(implementation),
+  setSeedPhraseState: implementation => mockSeedPhraseState.mockImplementation(implementation),
+  setSeedPhraseWordsToNumbers: implementation =>
+    mockSeedPhraseWordsToNumbers.mockImplementation(implementation),
+  setTranslateSeedNumberIndices: implementation =>
+    mockTranslateSeedNumberIndices.mockImplementation(implementation),
+});
 
 export const App = require('../src/App').default;
 export const { DiceGrid } = require('../src/features/dice/components/DiceGrid');

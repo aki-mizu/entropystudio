@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BackHandler,
   Pressable,
@@ -20,38 +20,23 @@ import type { DiceResult, WordCount } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
 import { SeedPhraseKeypad } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import type { SeedPhraseEntryMethod } from '../features/seedPhrase/components/SeedPhraseKeypad';
-import { entropyToMnemonic, mnemonicToEntropy } from '../native/entropyStudio';
-import { wordlist as bip39English } from '../../../entropylab/src/js/bip39-english';
+import {
+  analyzeSeedPhrase,
+  seedPhraseAutocomplete,
+  seedPhraseKeyAllowed,
+  seedPhraseNumbersToWords,
+  seedPhraseSpaceAllowed,
+  seedPhraseStatusCopy,
+  seedPhraseWordsToNumbers,
+  translateSeedNumberIndices,
+} from '../features/seedPhrase/seedPhrase';
+import { mnemonicToEntropy } from '../native/entropyStudio';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
-const BIP39_WORD_SET = new Set(bip39English);
-const SEED_FINAL_WORD_CANDIDATE_CACHE = new Map<string, readonly string[]>();
 
 type SeedPhraseView = 'entry' | 'setup';
 type SheetName = 'result' | null;
 type InputSelection = { readonly end: number; readonly start: number };
-type SeedAutocompleteResult = { readonly cursor: number; readonly value: string };
-
-type SeedWordToken = {
-  readonly end: number;
-  readonly start: number;
-  readonly word: string;
-};
-
-type SeedNumberEntry = {
-  readonly index: number;
-  readonly position: number;
-  readonly token: string;
-  readonly valid: boolean;
-};
-
-type SeedNumberAnalysis = {
-  readonly entries: readonly SeedNumberEntry[];
-  readonly extraEntries: readonly SeedNumberEntry[];
-  readonly invalidEntries: readonly SeedNumberEntry[];
-  readonly phrase: string;
-  readonly words: readonly string[];
-};
 
 type Props = {
   readonly activeTool: EntropyTool;
@@ -71,198 +56,6 @@ function entropyHex(entropy: ArrayBuffer): string {
   return Array.from(new Uint8Array(entropy), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function normalizeSeedInput(value: string): string {
-  return value.toLowerCase().replace(/[^a-z\s]/gu, '').replace(/\s+/gu, ' ');
-}
-
-function seedWords(value: string): string[] {
-  const phrase = value.trim();
-  return phrase ? phrase.split(/\s+/u) : [];
-}
-
-function seedWordTokens(value: string): readonly SeedWordToken[] {
-  return Array.from(value.matchAll(/[a-z]+/gu)).map(match => {
-    const word = match[0];
-    const start = match.index ?? 0;
-    return { end: start + word.length, start, word };
-  });
-}
-
-function seedFinalPrefixWords(value: string, wordCount: WordCount): readonly string[] | null {
-  const prefixWords = seedWordTokens(value)
-    .slice(0, wordCount - 1)
-    .map(token => token.word);
-  return prefixWords.length === wordCount - 1 && prefixWords.every(word => BIP39_WORD_SET.has(word))
-    ? prefixWords
-    : null;
-}
-
-function entropyFromSeedWordPrefix(
-  prefixWords: readonly string[],
-  wordCount: WordCount,
-  suffix: number,
-): ArrayBuffer {
-  const entropyBitLength = (wordCount / 3) * 32;
-  const prefixBits = prefixWords
-    .map(word => bip39English.indexOf(word).toString(2).padStart(11, '0'))
-    .join('');
-  const suffixBitLength = entropyBitLength - prefixBits.length;
-  const bits = `${prefixBits}${suffix.toString(2).padStart(suffixBitLength, '0')}`;
-  const entropy = new ArrayBuffer(entropyBitLength / 8);
-  const bytes = new Uint8Array(entropy);
-
-  for (let index = 0; index < bytes.length; index += 1) {
-    bytes[index] = Number.parseInt(bits.slice(index * 8, index * 8 + 8), 2);
-  }
-  return entropy;
-}
-
-function seedFinalWordCandidates(value: string, wordCount: WordCount): readonly string[] {
-  const prefixWords = seedFinalPrefixWords(value, wordCount);
-  if (!prefixWords) {
-    return [];
-  }
-
-  const cacheKey = `${wordCount}:${prefixWords.join(' ')}`;
-  const cached = SEED_FINAL_WORD_CANDIDATE_CACHE.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  const entropyBitLength = (wordCount / 3) * 32;
-  const suffixBitLength = entropyBitLength - prefixWords.length * 11;
-  const candidates = new Set<string>();
-  for (let suffix = 0; suffix < 2 ** suffixBitLength; suffix += 1) {
-    try {
-      const mnemonic = entropyToMnemonic(entropyFromSeedWordPrefix(prefixWords, wordCount, suffix));
-      const mnemonicWords = typeof mnemonic === 'string' ? seedWords(mnemonic) : [];
-      const candidate = mnemonicWords[mnemonicWords.length - 1];
-      if (candidate) {
-        candidates.add(candidate);
-      }
-    } catch {
-      // The normal derive path remains the authority if the preview bridge is unavailable.
-    }
-  }
-
-  const result = [...candidates];
-  if (result.length) {
-    if (SEED_FINAL_WORD_CANDIDATE_CACHE.size >= 32) {
-      const firstKey = SEED_FINAL_WORD_CANDIDATE_CACHE.keys().next().value;
-      if (firstKey) {
-        SEED_FINAL_WORD_CANDIDATE_CACHE.delete(firstKey);
-      }
-    }
-    SEED_FINAL_WORD_CANDIDATE_CACHE.set(cacheKey, result);
-  }
-  return result;
-}
-
-function seedKeyboardCanEnterCharacter(
-  value: string,
-  selection: InputSelection,
-  character: string,
-  wordCount: WordCount,
-): boolean {
-  if (!/^[a-z]$/u.test(character)) {
-    return false;
-  }
-
-  const candidateValue = replaceInputSelection(value, selection, character);
-  const caret = selection.start + character.length;
-  const tokens = seedWordTokens(candidateValue);
-  if (tokens.length > wordCount) {
-    return false;
-  }
-
-  const tokenIndex = tokens.findIndex(token => token.start < caret && caret <= token.end);
-  if (
-    tokenIndex < 0 ||
-    tokenIndex >= wordCount ||
-    tokens.slice(0, tokenIndex).some(token => !BIP39_WORD_SET.has(token.word))
-  ) {
-    return false;
-  }
-
-  const options =
-    tokenIndex === wordCount - 1
-      ? seedFinalWordCandidates(candidateValue, wordCount)
-      : bip39English;
-  return options.some(word => word.startsWith(tokens[tokenIndex].word));
-}
-
-function seedKeyboardCanEnterSpace(
-  value: string,
-  selection: InputSelection,
-  wordCount: WordCount,
-): boolean {
-  if (
-    selection.start !== selection.end ||
-    selection.end !== value.length ||
-    !selection.end ||
-    /\s$/u.test(value)
-  ) {
-    return false;
-  }
-
-  const words = seedWords(value);
-  return words.length < wordCount && words.every(word => BIP39_WORD_SET.has(word));
-}
-
-function autocompleteSeedInput(
-  value: string,
-  cursor: number,
-  wordCount: WordCount,
-  enabled: boolean,
-): SeedAutocompleteResult {
-  if (!enabled) {
-    return { cursor, value };
-  }
-
-  const suffix = value.slice(cursor);
-  if (suffix && !/^\s/u.test(suffix)) {
-    return { cursor, value };
-  }
-
-  const match = value.slice(0, cursor).match(/([a-z]+)$/u);
-  if (!match) {
-    return { cursor, value };
-  }
-
-  const prefix = match[1];
-  const start = cursor - prefix.length;
-  const tokens = seedWordTokens(value);
-  const tokenIndex = tokens.findIndex(token => token.start < cursor && cursor <= token.end);
-  if (
-    tokenIndex < 0 ||
-    tokenIndex >= wordCount ||
-    tokens.slice(0, tokenIndex).some(token => !BIP39_WORD_SET.has(token.word))
-  ) {
-    return { cursor, value };
-  }
-
-  const finalWord = tokenIndex === wordCount - 1;
-  if (prefix.length < (finalWord ? 1 : 2)) {
-    return { cursor, value };
-  }
-
-  const options = finalWord ? seedFinalWordCandidates(value, wordCount) : bip39English;
-  const matches = options.filter(word => word.startsWith(prefix));
-  if (matches.length !== 1) {
-    return { cursor, value };
-  }
-
-  const replacement = `${matches[0]}${suffix ? '' : ' '}`;
-  return {
-    cursor: start + replacement.length,
-    value: `${value.slice(0, start)}${replacement}${suffix}`,
-  };
-}
-
-function normalizeSeedNumberInput(value: string): string {
-  return value.replace(/[^0-9\s]/gu, '').replace(/\s+/gu, ' ');
-}
-
 function normalizedInputSelection(
   value: string,
   selection: InputSelection | null,
@@ -274,182 +67,6 @@ function normalizedInputSelection(
 
 function replaceInputSelection(value: string, selection: InputSelection, inserted: string): string {
   return `${value.slice(0, selection.start)}${inserted}${value.slice(selection.end)}`;
-}
-
-function analyzeSeedNumbers(
-  value: string,
-  wordCount: WordCount,
-  zeroIndexed: boolean,
-): SeedNumberAnalysis {
-  const entries = Array.from(value.matchAll(/\d+/gu)).map((match, position) => {
-    const token = match[0];
-    const number = Number(token);
-    const index = zeroIndexed ? number : number - 1;
-    return {
-      index,
-      position,
-      token,
-      valid:
-        !/^0\d+/u.test(token) &&
-        Number.isSafeInteger(number) &&
-        index >= 0 &&
-        index < bip39English.length,
-    };
-  });
-  const extraEntries = entries.slice(wordCount);
-  const invalidEntries = entries.filter(entry => !entry.valid);
-  const words = entries
-    .slice(0, wordCount)
-    .map(entry => (entry.valid ? bip39English[entry.index] ?? '' : ''));
-  const phrase = words.length === wordCount && words.every(Boolean) ? words.join(' ') : '';
-
-  return { entries, extraEntries, invalidEntries, phrase, words };
-}
-
-function seedWordsToNumbers(value: string, zeroIndexed: boolean): string {
-  const words = seedWords(value);
-  const indices = words.map(word => bip39English.indexOf(word));
-  return words.length && indices.every(index => index >= 0)
-    ? indices.map(index => String(index + (zeroIndexed ? 0 : 1))).join(' ')
-    : '';
-}
-
-function seedNumbersToWords(value: string, wordCount: WordCount, zeroIndexed: boolean): string {
-  const analysis = analyzeSeedNumbers(value, wordCount, zeroIndexed);
-  return analysis.entries.length && !analysis.invalidEntries.length && !analysis.extraEntries.length
-    ? analysis.words.join(' ')
-    : '';
-}
-
-function translateSeedNumberIndices(
-  value: string,
-  fromZeroIndexed: boolean,
-  toZeroIndexed: boolean,
-): string {
-  return value.replace(/\d+/gu, token => {
-    const number = Number(token);
-    const index = fromZeroIndexed ? number : number - 1;
-    return Number.isSafeInteger(number) && index >= 0 && index < bip39English.length
-      ? String(index + (toZeroIndexed ? 0 : 1))
-      : token;
-  });
-}
-
-function seedStatus(
-  value: string,
-  wordCount: WordCount,
-  finalCandidates: readonly string[],
-  valid: boolean,
-): string {
-  const words = seedWords(value);
-  const progress = formatCopy(entropyLabEnglish['seed.count'], {
-    entered: words.length,
-    words: wordCount,
-  });
-
-  if (words.length > wordCount) {
-    return formatCopy(entropyLabEnglish['seed.meta.extraWords'], {
-      entered: words.length,
-      n: words.length - wordCount,
-      words: wordCount,
-    });
-  }
-
-  const finalPrefixWords = seedFinalPrefixWords(value, wordCount);
-  if (finalPrefixWords) {
-    const finalWord = words[wordCount - 1] ?? '';
-    if (!finalWord && /\s$/u.test(value)) {
-      return formatCopy(entropyLabEnglish['seed.meta.chooseFinal'], {
-        n: finalCandidates.length,
-        progress,
-      });
-    }
-    if (finalWord) {
-      if (valid) {
-        return formatCopy(entropyLabEnglish['seed.meta.ready'], { progress });
-      }
-      const matchingCandidates = finalCandidates.filter(candidate =>
-        candidate.startsWith(finalWord),
-      );
-      return matchingCandidates.length
-        ? formatCopy(entropyLabEnglish['seed.meta.prefixMatch'], {
-            n: matchingCandidates.length,
-            prefix: finalWord,
-            progress,
-          })
-        : formatCopy(entropyLabEnglish['seed.meta.noPrefix'], { prefix: finalWord, progress });
-    }
-  }
-
-  const activeWordIndex = /\s$/u.test(value) ? -1 : words.length - 1;
-  const invalidWordIndex = words.findIndex(word => !bip39English.includes(word));
-  if (invalidWordIndex !== -1) {
-    const viablePrefix =
-      invalidWordIndex === activeWordIndex &&
-      bip39English.some(candidate => candidate.startsWith(words[invalidWordIndex]));
-    if (viablePrefix) {
-      return formatCopy(entropyLabEnglish['seed.meta.remaining'], {
-        progress,
-        remaining: Math.max(0, wordCount - words.length),
-      });
-    }
-    return formatCopy(entropyLabEnglish['seed.meta.invalidWord'], {
-      n: invalidWordIndex + 1,
-      progress,
-      word: words[invalidWordIndex],
-    });
-  }
-
-  return valid
-    ? formatCopy(entropyLabEnglish['seed.meta.ready'], { progress })
-    : formatCopy(entropyLabEnglish['seed.meta.remaining'], {
-        progress,
-        remaining: Math.max(0, wordCount - words.length),
-      });
-}
-
-function seedNumberStatus(
-  analysis: SeedNumberAnalysis,
-  wordCount: WordCount,
-  zeroIndexed: boolean,
-  valid: boolean,
-): string {
-  const progress = formatCopy(entropyLabEnglish['seed.meta.numberProgress'], {
-    entered: analysis.entries.length,
-    words: wordCount,
-  });
-  const minimum = zeroIndexed ? 0 : 1;
-  const maximum = zeroIndexed ? 2047 : 2048;
-
-  if (analysis.extraEntries.length) {
-    return formatCopy(entropyLabEnglish['seed.meta.extra'], {
-      entered: analysis.entries.length,
-      n: analysis.extraEntries.length,
-      words: wordCount,
-    });
-  }
-  if (analysis.invalidEntries.length) {
-    const invalid = analysis.invalidEntries[0];
-    return formatCopy(entropyLabEnglish['seed.meta.invalidNumber'], {
-      max: maximum,
-      min: minimum,
-      n: invalid.position + 1,
-      progress,
-      token: invalid.token,
-    });
-  }
-  if (analysis.phrase && !valid) {
-    return formatCopy(entropyLabEnglish['seed.meta.checksumInvalid'], { progress });
-  }
-  if (valid) {
-    return formatCopy(entropyLabEnglish['seed.meta.ready'], { progress });
-  }
-  return formatCopy(entropyLabEnglish['seed.meta.remainingRange'], {
-    max: maximum,
-    min: minimum,
-    progress,
-    remaining: Math.max(0, wordCount - analysis.entries.length),
-  });
 }
 
 export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectTool }: Props) {
@@ -466,34 +83,23 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
   const colors = diceColors(isDarkMode);
   const input = seedMethod === 'words' ? wordInput : numberInput;
   const selectedInput = normalizedInputSelection(input, inputSelection);
+  const analysis = useMemo(
+    () => analyzeSeedPhrase(input, seedMethod, wordCount, zeroIndexed),
+    [input, seedMethod, wordCount, zeroIndexed],
+  );
   const canDeleteInput = selectedInput.end > selectedInput.start || selectedInput.start > 0;
-  const wordInputWords = seedWords(wordInput);
-  const finalCandidates =
-    seedMethod === 'words' ? seedFinalWordCandidates(wordInput, wordCount) : [];
-  const numberAnalysis = analyzeSeedNumbers(numberInput, wordCount, zeroIndexed);
-  const hasKnownWords =
-    wordInputWords.length === wordCount && wordInputWords.every(word => BIP39_WORD_SET.has(word));
-  const directPhrase = wordInputWords.join(' ');
-  const numberPhrase = numberAnalysis.phrase;
-  const activePhrase = seedMethod === 'words' ? directPhrase : numberPhrase;
-  const previewWords =
-    seedMethod === 'words' ? wordInputWords.slice(0, wordCount) : numberAnalysis.words;
-  const canInsertInputSpace =
-    seedMethod === 'words'
-      ? seedKeyboardCanEnterSpace(input, selectedInput, wordCount)
-      : input.length > 0 &&
-        !/\s$/u.test(input) &&
-        numberAnalysis.entries.length < wordCount &&
-        !numberAnalysis.invalidEntries.length;
+  const activePhrase = analysis.phrase;
+  const previewWords = analysis.words;
+  const canInsertInputSpace = seedPhraseSpaceAllowed(
+    input,
+    selectedInput,
+    seedMethod,
+    wordCount,
+    zeroIndexed,
+  );
   let entropy: ArrayBuffer | null = null;
 
-  if (
-    (seedMethod === 'words' && hasKnownWords) ||
-    (seedMethod === 'numbers' &&
-      numberPhrase &&
-      !numberAnalysis.extraEntries.length &&
-      !numberAnalysis.invalidEntries.length)
-  ) {
+  if (analysis.canDerive) {
     try {
       entropy = mnemonicToEntropy(activePhrase);
     } catch {
@@ -514,8 +120,12 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
   }, [activeView, isActive]);
 
   function updateInput(value: string): string {
-    const normalized =
-      seedMethod === 'words' ? normalizeSeedInput(value) : normalizeSeedNumberInput(value);
+    const normalized = analyzeSeedPhrase(
+      value,
+      seedMethod,
+      wordCount,
+      zeroIndexed,
+    ).normalizedInput;
     if (seedMethod === 'words') {
       setWordInput(normalized);
     } else {
@@ -536,7 +146,7 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
       return;
     }
 
-    const autocompleted = autocompleteSeedInput(wordInput, selection.end, wordCount, true);
+    const autocompleted = seedPhraseAutocomplete(wordInput, selection.end, wordCount, true);
     if (autocompleted.value === wordInput) {
       return;
     }
@@ -547,16 +157,14 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
   }
 
   function canInsertInputCharacter(character: string): boolean {
-    if (seedMethod === 'words') {
-      return seedKeyboardCanEnterCharacter(input, selectedInput, character, wordCount);
-    }
-
-    if (!/^[0-9]$/u.test(character)) {
-      return false;
-    }
-    const candidate = replaceInputSelection(input, selectedInput, character);
-    const candidateAnalysis = analyzeSeedNumbers(candidate, wordCount, zeroIndexed);
-    return !candidateAnalysis.invalidEntries.length && !candidateAnalysis.extraEntries.length;
+    return seedPhraseKeyAllowed(
+      input,
+      selectedInput,
+      character,
+      seedMethod,
+      wordCount,
+      zeroIndexed,
+    );
   }
 
   function insertInputCharacter(character: string) {
@@ -570,7 +178,7 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
     const insertedCursor = selectedInput.start + character.length;
     const autocompleted =
       seedMethod === 'words'
-        ? autocompleteSeedInput(insertedInput, insertedCursor, wordCount, autocompleteEnabled)
+        ? seedPhraseAutocomplete(insertedInput, insertedCursor, wordCount, autocompleteEnabled)
         : { cursor: insertedCursor, value: insertedInput };
     const nextInput = updateInput(autocompleted.value);
     const cursor = Math.min(autocompleted.cursor, nextInput.length);
@@ -595,12 +203,12 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
     }
 
     if (method === 'numbers') {
-      const converted = seedWordsToNumbers(wordInput, zeroIndexed);
+      const converted = seedPhraseWordsToNumbers(wordInput, zeroIndexed);
       if (converted || !wordInput.trim()) {
         setNumberInput(converted);
       }
     } else {
-      const converted = seedNumbersToWords(numberInput, wordCount, zeroIndexed);
+      const converted = seedPhraseNumbersToWords(numberInput, wordCount, zeroIndexed);
       if (converted || !numberInput.trim()) {
         setWordInput(converted);
       }
@@ -864,17 +472,14 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
                 styles.status,
                 {
                   color:
-                    entropy ||
-                    (seedMethod === 'numbers' && numberAnalysis.phrase && !numberAnalysis.extraEntries.length)
-                      ? colors.accent
-                      : colors.muted,
+                    entropy || analysis.canDerive ? colors.accent : colors.muted,
                 },
               ]}
               testID={seedMethod === 'words' ? 'seed-phrase-status' : 'seed-number-status'}
             >
               {seedMethod === 'words'
-                ? seedStatus(wordInput, wordCount, finalCandidates, Boolean(entropy))
-                : seedNumberStatus(numberAnalysis, wordCount, zeroIndexed, Boolean(entropy))}
+                ? seedPhraseStatusCopy(analysis, seedMethod, wordCount)
+                : seedPhraseStatusCopy(analysis, seedMethod, wordCount)}
             </Text>
           </View>
 

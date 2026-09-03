@@ -17,7 +17,6 @@ type DiceWordListProps = {
 type Props = {
   readonly compact?: boolean;
   readonly colors: DiceColors;
-  readonly selectedFinalWord: string;
   readonly slotCount?: number;
   readonly state: DirectDiceState;
   readonly wordSlotsAria: string;
@@ -63,14 +62,11 @@ export function DiceWordList({
 export function DirectDicePreview({
   compact,
   colors,
-  selectedFinalWord,
   slotCount,
   state,
   wordSlotsAria,
 }: Props) {
-  const selectedWord = selectedFinalWord.trim().toLowerCase();
-  const finalWord =
-    state.finalWord || (state.candidates.includes(selectedWord) ? selectedWord : '');
+  const finalWord = state.finalWord;
   const words = finalWord ? [...state.words, finalWord] : state.words;
 
   return (

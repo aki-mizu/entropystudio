@@ -29,7 +29,7 @@ test('formats BitBox direct-dice transcript groups without storing separators', 
     complete: false,
     completedGroups: 0,
     extraCount: 0,
-    finalWord: '',
+    finalWord: 'about',
     invalidCount: 0,
     partialWords: 23,
     skippedCount: 0,
@@ -202,12 +202,17 @@ test('enables only BitBox faces valid for the current direct-dice step', async (
   };
   mockDirectDiceState.mockImplementation((rolls: string) => {
     if (rolls === '11111') {
-      return { ...directState, activeRoll: 6, step: 1 };
+      return {
+        ...directState,
+        activeRoll: 6,
+        allowedFaces: ['1', '2', '3', '4', '5', '6'],
+        step: 1,
+      };
     }
     if (rolls === 'complete') {
-      return { ...directState, step: 2 };
+      return { ...directState, allowedFaces: [], step: 2 };
     }
-    return directState;
+    return { ...directState, allowedFaces: ['1', '2', '3', '4'] };
   });
 
   let app: ReactTestRenderer.ReactTestRenderer;
@@ -240,8 +245,10 @@ test('derives a BitBox direct-dice phrase from a selected checksum word', async 
     complete: false,
     completedGroups: 11,
     extraCount: 0,
-    finalWord: '',
+    finalWord: 'about',
     invalidCount: 0,
+    canDerive: true,
+    mnemonic: `${Array.from({ length: 11 }, () => 'abandon').join(' ')} about`,
     partialWords: 11,
     skippedCount: 0,
     step: 2,

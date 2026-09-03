@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import {
-  countDiceFaces,
   directDiceCanDerive,
   directDiceProgress,
   directDiceProgressCopy,
@@ -10,9 +9,11 @@ import {
   diceScreenCopy,
   deriveDirectDiceResult,
   deriveDiceResult,
+  getDiceMethodInfo,
   getDirectDiceState,
+  getHashedDiceState,
+  isDirectDiceMethod,
   isHashedDiceMethod,
-  recommendedRolls,
 } from './dice';
 import type { DiceInputFace, DiceMethod, DiceResult, WordCount } from './dice';
 
@@ -29,45 +30,45 @@ export function useDiceRolls() {
     : method === 'bitbox'
       ? bitboxRolls
       : d8D16Rolls;
-  const rollCount = countDiceFaces(rolls);
-  const requiredRolls = recommendedRolls(wordCount);
+  const methodInfo = useMemo(() => getDiceMethodInfo(wordCount), [wordCount]);
+  const hashedState = useMemo(() => {
+    if (!isHashedDiceMethod(method)) {
+      return null;
+    }
+    return getHashedDiceState(rolls, wordCount);
+  }, [method, rolls, wordCount]);
   const directState = useMemo(() => {
     if (isHashedDiceMethod(method)) {
       return null;
     }
-    return getDirectDiceState(rolls, method, wordCount);
-  }, [method, rolls, wordCount]);
+    return getDirectDiceState(rolls, method, wordCount, selectedFinalWord);
+  }, [method, rolls, selectedFinalWord, wordCount]);
   const hashedResult = useMemo(() => {
-    if (!isHashedDiceMethod(method) || rollCount === 0) {
+    if (!isHashedDiceMethod(method) || !hashedState?.canDerive) {
       return null;
     }
-    return deriveDiceResult(rolls, method, wordCount);
-  }, [method, rollCount, rolls, wordCount]);
+    return deriveDiceResult(rolls, method, wordCount, hashedState);
+  }, [hashedState, method, rolls, wordCount]);
   const directCopy = directState ? directDiceSelectionCopy(directState) : null;
   let progress = 0;
   let progressText = '';
   let canDerive = false;
 
-  if (isHashedDiceMethod(method)) {
-    progress = Math.min(rollCount / requiredRolls, 1);
-    progressText = diceProgressCopy(rollCount, method, wordCount);
-    canDerive = rollCount > 0;
-  } else if (directState) {
-    progress = directDiceProgress(directState, method, selectedFinalWord);
-    progressText = directDiceProgressCopy(
-      directState,
-      method,
-      wordCount,
-      selectedFinalWord,
-    );
-    canDerive = directDiceCanDerive(directState, method, selectedFinalWord);
+  if (isHashedDiceMethod(method) && hashedState) {
+    progress = hashedState.progress;
+    progressText = diceProgressCopy(hashedState, method);
+    canDerive = hashedState.canDerive;
+  } else if (directState && isDirectDiceMethod(method)) {
+    progress = directDiceProgress(directState);
+    progressText = directDiceProgressCopy(directState, method, wordCount);
+    canDerive = directDiceCanDerive(directState);
   }
 
-  const coldcardCopy = diceMethodCopy('coldcard', wordCount);
-  const colemanCopy = diceMethodCopy('coleman', wordCount);
-  const bitboxCopy = diceMethodCopy('bitbox', wordCount);
-  const d8D16Copy = diceMethodCopy('d8d16', wordCount);
-  const copy = diceScreenCopy(method, wordCount);
+  const coldcardCopy = diceMethodCopy('coldcard', wordCount, methodInfo);
+  const colemanCopy = diceMethodCopy('coleman', wordCount, methodInfo);
+  const bitboxCopy = diceMethodCopy('bitbox', wordCount, methodInfo);
+  const d8D16Copy = diceMethodCopy('d8d16', wordCount, methodInfo);
+  const copy = diceScreenCopy(method, wordCount, methodInfo);
 
   function updateRolls(value: string) {
     if (isHashedDiceMethod(method)) {
@@ -114,10 +115,10 @@ export function useDiceRolls() {
       return;
     }
 
-    if (isHashedDiceMethod(method)) {
-      setResult(deriveDiceResult(rolls, method, wordCount));
+    if (isHashedDiceMethod(method) && hashedState) {
+      setResult(deriveDiceResult(rolls, method, wordCount, hashedState));
     } else if (directState) {
-      setResult(deriveDirectDiceResult(directState, method, selectedFinalWord));
+      setResult(deriveDirectDiceResult(directState));
     }
   }
 
@@ -132,11 +133,14 @@ export function useDiceRolls() {
     directState,
     derivePhrase,
     d8D16Copy,
+    enabledFaces: isHashedDiceMethod(method)
+      ? (hashedState?.allowedFaces ?? []) as readonly DiceInputFace[]
+      : (directState?.allowedFaces ?? []) as readonly DiceInputFace[],
     method,
     progress,
     progressText,
     result: isHashedDiceMethod(method) ? hashedResult : result,
-    rollCount,
+    rollCount: hashedState?.rollCount ?? 0,
     rolls,
     selectedFinalWord,
     selectFinalWord,

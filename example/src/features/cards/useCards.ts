@@ -7,6 +7,7 @@ import {
   directCardProgress,
   directCardProgressCopy,
   formatCardTranscript,
+  getHashedCardState,
   normalizeDirectCardTranscript,
   getDirectCardState,
   hasHashedCardInput,
@@ -29,28 +30,39 @@ export function useCards() {
     () => (method === 'direct' ? getDirectCardState(directTranscript, wordCount) : null),
     [directTranscript, method, wordCount],
   );
+  const hashedState = useMemo(
+    () =>
+      isHashedCardMethod(method)
+        ? getHashedCardState(hashedTranscript, wordCount)
+        : null,
+    [hashedTranscript, method, wordCount],
+  );
   const hashedResult = useMemo(
     () =>
-      isHashedCardMethod(method) && hasHashedCardInput(hashedTranscript)
-        ? deriveHashedCardResult(hashedTranscript, matchesIanColeman, wordCount)
+      isHashedCardMethod(method) && hashedState && hasHashedCardInput(hashedState)
+        ? deriveHashedCardResult(hashedTranscript, matchesIanColeman, wordCount, hashedState)
         : null,
-    [hashedTranscript, matchesIanColeman, method, wordCount],
+    [hashedState, hashedTranscript, matchesIanColeman, method, wordCount],
   );
   const progress = isHashedCardMethod(method)
-    ? hashedCardProgress(hashedTranscript, wordCount)
+    ? hashedState
+      ? hashedCardProgress(hashedState)
+      : 0
     : directState
-      ? directCardProgress(directState, directTranscript, wordCount)
+      ? directCardProgress(directState)
       : 0;
   const progressText = isHashedCardMethod(method)
-    ? hashedCardProgressCopy(hashedTranscript, wordCount)
+    ? hashedState
+      ? hashedCardProgressCopy(hashedState)
+      : ''
     : directState
-      ? directCardProgressCopy(directState, directTranscript, wordCount)
+      ? directCardProgressCopy(directState, wordCount)
       : '';
   const canDerive = isHashedCardMethod(method)
-    ? hasHashedCardInput(hashedTranscript)
+    ? Boolean(hashedState && hasHashedCardInput(hashedState))
     : Boolean(directState?.complete);
   const copy = cardScreenCopy(method, wordCount, matchesIanColeman);
-  const instruction = cardInstruction(method, transcript, wordCount, directState);
+  const instruction = cardInstruction(method, wordCount, hashedState, directState);
 
   function updateTranscript(value: string) {
     if (method === 'direct') {
@@ -109,8 +121,8 @@ export function useCards() {
     if (!canDerive) {
       return;
     }
-    if (isHashedCardMethod(method)) {
-      setResult(deriveHashedCardResult(hashedTranscript, matchesIanColeman, wordCount));
+    if (isHashedCardMethod(method) && hashedState) {
+      setResult(deriveHashedCardResult(hashedTranscript, matchesIanColeman, wordCount, hashedState));
     } else if (directState) {
       setResult(deriveDirectCardResult(directState));
     }
@@ -123,6 +135,7 @@ export function useCards() {
     copy,
     directState,
     derivePhrase,
+    hashedState,
     instruction,
     matchesIanColeman,
     method,

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { TextInputInstance } from 'react-native';
+import { formatDiceTranscript } from '../dice';
 import type { DiceMethod, WordCount } from '../dice';
 import type { DiceColors } from '../diceTheme';
 
@@ -132,61 +133,6 @@ export function DiceTranscriptInput({
       </View>
     </>
   );
-}
-
-function formatDiceTranscript(
-  rolls: string,
-  method: DiceMethod,
-  wordCount: WordCount,
-): string {
-  if (method === 'bitbox') {
-    return formatBitBoxTranscript(rolls, wordCount);
-  }
-  if (method === 'd8d16') {
-    return formatD8D16Transcript(rolls, wordCount);
-  }
-  return rolls;
-}
-
-function formatBitBoxTranscript(rolls: string, wordCount: WordCount): string {
-  let completedWords = 0;
-  let rollsInWord = 0;
-  let separateNextRoll = false;
-  let transcript = '';
-
-  for (const face of rolls) {
-    if (separateNextRoll) {
-      transcript += ' ';
-      separateNextRoll = false;
-    }
-    transcript += face;
-
-    if (completedWords >= wordCount - 1) {
-      continue;
-    }
-    if (rollsInWord < 5) {
-      if (face >= '1' && face <= '4') {
-        rollsInWord += 1;
-      }
-    } else {
-      completedWords += 1;
-      rollsInWord = 0;
-      separateNextRoll = true;
-    }
-  }
-
-  return transcript;
-}
-
-function formatD8D16Transcript(rolls: string, wordCount: WordCount): string {
-  const wordRollCount = (wordCount - 1) * 3;
-
-  return Array.from(rolls, (face, index) => {
-    const startsNewWord =
-      index > 0 &&
-      (index === wordRollCount || (index < wordRollCount && index % 3 === 0));
-    return `${startsNewWord ? ' ' : ''}${face}`;
-  }).join('');
 }
 
 function rawSelectionFromDisplaySelection(

@@ -23,7 +23,13 @@ import {
   isCardKeyAllowed,
   isHashedCardMethod,
 } from '../features/cards/cards';
-import type { CardMethod, CardRank, CardResult, CardSuit } from '../features/cards/cards';
+import type {
+  CardMethod,
+  CardRank,
+  CardResult,
+  CardSelectionState,
+  CardSuit,
+} from '../features/cards/cards';
 import { useCards } from '../features/cards/useCards';
 import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
@@ -33,6 +39,13 @@ import { diceColors } from '../features/dice/diceTheme';
 const CONTENT_HORIZONTAL_PADDING = 24;
 type CardView = 'entry' | 'setup';
 type SheetName = 'result' | null;
+
+const EMPTY_CARD_SELECTION: CardSelectionState = {
+  availableRanks: [],
+  availableSuits: [],
+  compatibleRanks: [],
+  compatibleSuits: [],
+};
 
 type Props = {
   readonly activeTool: EntropyTool;
@@ -53,6 +66,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
     copy,
     directState,
     derivePhrase,
+    hashedState,
     instruction,
     matchesIanColeman,
     method,
@@ -72,7 +86,9 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
   const displayedTranscript = isHashedCardMethod(method)
     ? formatCardTranscript(transcript, matchesIanColeman)
     : formatDirectCardTranscript(transcript);
-  const selection = cardSelectionState(transcript, wordCount, selectedRank, selectedSuit);
+  const selection = hashedState
+    ? cardSelectionState(hashedState, selectedRank, selectedSuit)
+    : EMPTY_CARD_SELECTION;
   const words = directState
     ? directState.finalWord
       ? [...directState.words, directState.finalWord]
@@ -111,7 +127,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
   }
 
   function commitCard(card: string) {
-    if (!cardIsAvailable(transcript, card, wordCount)) {
+    if (!hashedState || !cardIsAvailable(hashedState, card)) {
       return;
     }
     appendCard(card);

@@ -1,19 +1,26 @@
 import {
+  DiceFinalStep,
+  DiceInputMethod,
   DiceRollMethod,
   DirectDiceMethod,
   DirectDiceStep,
-  directDiceState as nativeDirectDiceState,
+  diceMethodInfo as nativeDiceMethodInfo,
+  directDiceInputState as nativeDirectDiceInputState,
   diceRollsToEntropy,
   entropyToMnemonic,
   EntropyStudioError_Tags,
+  formatDiceTranscript as nativeFormatDiceTranscript,
+  hashedDiceState as nativeHashedDiceState,
   mnemonicToEntropy,
 } from '../../native/entropyStudio';
-import type { DirectDiceState } from '../../native/entropyStudio';
+import type {
+  DiceMethodInfo,
+  DirectDiceState,
+  HashedDiceState,
+} from '../../native/entropyStudio';
 import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
 
 export const DICE_FACES = ['1', '2', '3', '4', '5', '6'] as const;
-const BITBOX_D4_FACES = ['1', '2', '3', '4'] as const;
-const D8_FACES = ['1', '2', '3', '4', '5', '6', '7', '8'] as const;
 export const D8_D16_FACES = [
   '0',
   '1',
@@ -36,38 +43,6 @@ export const HASHED_DICE_METHODS = ['coldcard', 'coleman'] as const;
 export const DIRECT_DICE_METHODS = ['bitbox', 'd8d16'] as const;
 export const DICE_METHODS = [...HASHED_DICE_METHODS, ...DIRECT_DICE_METHODS] as const;
 export const WORD_COUNTS = [12, 15, 18, 21, 24] as const;
-
-const RECOMMENDED_ROLLS = {
-  12: 50,
-  15: 62,
-  18: 75,
-  21: 87,
-  24: 99,
-} as const;
-
-const ENTROPY_BITS = {
-  12: 128,
-  15: 160,
-  18: 192,
-  21: 224,
-  24: 256,
-} as const;
-
-const CHECKSUM_CANDIDATES = {
-  12: 128,
-  15: 64,
-  18: 32,
-  21: 16,
-  24: 8,
-} as const;
-
-const D8_D16_FINAL_STEPS = {
-  12: ['d8', 'd16'],
-  15: ['d8', 'd8'],
-  18: ['d16', 'coin'],
-  21: ['d16'],
-  24: ['d8'],
-} as const;
 
 const UPSTREAM_DICE_PLACEHOLDERS = {
   bitbox: '111111 222224…',
@@ -104,14 +79,6 @@ export type DiceResult =
   | { readonly entropy: string; readonly mnemonic: string; readonly error?: never }
   | { readonly entropy?: never; readonly mnemonic?: never; readonly error: string };
 
-export function countDiceFaces(rolls: string): number {
-  return Array.from(rolls).filter(face => face >= '1' && face <= '6').length;
-}
-
-export function recommendedRolls(wordCount: WordCount): number {
-  return RECOMMENDED_ROLLS[wordCount];
-}
-
 export function isHashedDiceMethod(method: DiceMethod): method is HashedDiceMethod {
   return method === 'coldcard' || method === 'coleman';
 }
@@ -120,46 +87,34 @@ export function isDirectDiceMethod(method: DiceMethod): method is DirectDiceMeth
   return method === 'bitbox' || method === 'd8d16';
 }
 
-export function enabledDiceFaces(
-  method: DiceMethod,
-  directState: DirectDiceState | null,
-): readonly DiceInputFace[] {
-  if (isHashedDiceMethod(method)) {
-    return DICE_FACES;
-  }
-  if (!directState) {
-    return [];
-  }
-  if (method === 'bitbox') {
-    return directState.step === DirectDiceStep.BitboxDie
-      ? BITBOX_D4_FACES
-      : directState.step === DirectDiceStep.BitboxCoin
-        ? DICE_FACES
-        : [];
-  }
-
-  switch (directState.step) {
-    case DirectDiceStep.D8D16WordD8:
-    case DirectDiceStep.D8D16ChecksumD8:
-    case DirectDiceStep.D8D16ChecksumCoin:
-      return D8_FACES;
-    case DirectDiceStep.D8D16WordD16First:
-    case DirectDiceStep.D8D16WordD16Second:
-    case DirectDiceStep.D8D16ChecksumD16:
-      return D8_D16_FACES;
-    default:
-      return [];
-  }
+export function getDiceMethodInfo(wordCount: WordCount): DiceMethodInfo {
+  return nativeDiceMethodInfo(wordCount);
 }
 
-export function diceMethodCopy(method: DiceMethod, wordCount: WordCount) {
+export function getHashedDiceState(rolls: string, wordCount: WordCount): HashedDiceState {
+  return nativeHashedDiceState(rolls, wordCount);
+}
+
+export function formatDiceTranscript(
+  rolls: string,
+  method: DiceMethod,
+  wordCount: WordCount,
+): string {
+  return nativeFormatDiceTranscript(rolls, nativeDiceInputMethod(method), wordCount);
+}
+
+export function diceMethodCopy(
+  method: DiceMethod,
+  wordCount: WordCount,
+  info = getDiceMethodInfo(wordCount),
+) {
   const keys = DICE_METHOD_COPY_KEYS[method];
   const description = formatCopy(entropyLabEnglish[keys.description], {
-    bits: ENTROPY_BITS[wordCount],
-    candidates: CHECKSUM_CANDIDATES[wordCount],
-    final: d8D16FinalDescription(wordCount),
-    hashRolls: RECOMMENDED_ROLLS[wordCount],
-    partialWords: wordCount - 1,
+    bits: info.entropyBits,
+    candidates: info.checksumCandidates,
+    final: d8D16FinalDescription(info.finalSteps),
+    hashRolls: info.recommendedRolls,
+    partialWords: info.partialWords,
     words: wordCount,
   });
 
@@ -170,12 +125,11 @@ export function diceMethodCopy(method: DiceMethod, wordCount: WordCount) {
 }
 
 export function diceProgressCopy(
-  rollCount: number,
+  state: HashedDiceState,
   method: HashedDiceMethod,
-  wordCount: WordCount,
 ): string {
-  const requiredRolls = RECOMMENDED_ROLLS[wordCount];
-  const estimatedBits = (rollCount * Math.log2(6)).toFixed(1);
+  const { recommendedRolls: requiredRolls, rollCount } = state;
+  const estimatedBits = state.estimatedEntropyBits.toFixed(1);
 
   if (rollCount === 0) {
     return formatCopy(entropyLabEnglish['dice.meta.empty'], {
@@ -206,16 +160,8 @@ export function diceProgressCopy(
   })}`;
 }
 
-export function directDiceProgress(
-  state: DirectDiceState,
-  method: DirectDiceMethodId,
-  selectedFinalWord: string,
-): number {
-  const complete = directDiceCanDerive(state, method, selectedFinalWord);
-  return Math.min(
-    (state.completedGroups + Number(complete)) / (state.partialWords + 1),
-    1,
-  );
+export function directDiceProgress(state: DirectDiceState): number {
+  return state.progress;
 }
 
 export function directDiceSelectionCopy(state: DirectDiceState) {
@@ -230,15 +176,13 @@ export function directDiceProgressCopy(
   state: DirectDiceState,
   method: DirectDiceMethodId,
   wordCount: WordCount,
-  selectedFinalWord: string,
 ): string {
   const extra = state.extraCount
     ? formatCopy(entropyLabEnglish['dice.meta.extraIgnored'], { n: state.extraCount })
     : '';
 
   if (method === 'bitbox') {
-    const selected = normalizedCandidate(state, selectedFinalWord);
-    const progress = selected
+    const progress = state.canDerive
       ? formatCopy(entropyLabEnglish['seed.meta.ready'], {
           progress: formatCopy(entropyLabEnglish['seed.count'], {
             entered: wordCount,
@@ -297,27 +241,31 @@ export function directDiceProgressCopy(
   return `${progress}${extra}`;
 }
 
-export function diceScreenCopy(method: DiceMethod, wordCount: WordCount) {
+export function diceScreenCopy(
+  method: DiceMethod,
+  wordCount: WordCount,
+  info = getDiceMethodInfo(wordCount),
+) {
   const inputLabel =
     method === 'bitbox'
       ? entropyLabEnglish['dice.label.bitbox']
       : method === 'd8d16'
         ? formatCopy(entropyLabEnglish['dice.label.dplus'], {
-        final: d8D16FinalDescription(wordCount),
+            final: d8D16FinalDescription(info.finalSteps),
           })
         : entropyLabEnglish['dice.label.hashed'];
-    const inputHelp =
-      method === 'bitbox'
-        ? formatCopy(entropyLabEnglish['dice.help.bitbox'], {
-            partialWords: wordCount - 1,
+  const inputHelp =
+    method === 'bitbox'
+      ? formatCopy(entropyLabEnglish['dice.help.bitbox'], {
+          partialWords: info.partialWords,
+        })
+      : method === 'd8d16'
+        ? formatCopy(entropyLabEnglish['dice.help.dplus'], {
+            finalHelp: d8D16FinalHelp(info.finalSteps),
           })
-        : method === 'd8d16'
-          ? formatCopy(entropyLabEnglish['dice.help.dplus'], {
-              finalHelp: d8D16FinalHelp(wordCount),
-            })
-          : formatCopy(entropyLabEnglish[`dice.help.${method}`], {
-              hashRolls: RECOMMENDED_ROLLS[wordCount],
-            });
+        : formatCopy(entropyLabEnglish[`dice.help.${method}`], {
+            hashRolls: info.recommendedRolls,
+          });
   const inputPlaceholder =
     method === 'bitbox'
       ? UPSTREAM_DICE_PLACEHOLDERS.bitbox
@@ -347,31 +295,25 @@ export function getDirectDiceState(
   rolls: string,
   method: DirectDiceMethodId,
   wordCount: WordCount,
+  selectedFinalWord: string,
 ): DirectDiceState {
-  return nativeDirectDiceState(
+  return nativeDirectDiceInputState(
     rolls,
     method === 'bitbox' ? DirectDiceMethod.Bitbox : DirectDiceMethod.D8D16,
     wordCount,
+    selectedFinalWord,
   );
 }
 
-export function directDiceCanDerive(
-  state: DirectDiceState,
-  method: DirectDiceMethodId,
-  selectedFinalWord: string,
-): boolean {
-  if (state.invalidCount > 0 || state.words.length !== state.partialWords) {
-    return false;
-  }
-  return method === 'bitbox'
-    ? Boolean(normalizedCandidate(state, selectedFinalWord))
-    : state.complete;
+export function directDiceCanDerive(state: DirectDiceState): boolean {
+  return state.canDerive;
 }
 
 export function deriveDiceResult(
   rolls: string,
   method: HashedDiceMethod,
   wordCount: WordCount,
+  state: HashedDiceState,
 ): DiceResult {
   try {
     const entropy = diceRollsToEntropy(
@@ -384,40 +326,29 @@ export function deriveDiceResult(
       mnemonic: entropyToMnemonic(entropy),
     };
   } catch (error) {
-    return { error: upstreamDiceError(error, rolls) };
+    return { error: upstreamDiceError(error, state) };
   }
 }
 
 export function deriveDirectDiceResult(
   state: DirectDiceState,
-  method: DirectDiceMethodId,
-  selectedFinalWord: string,
 ): DiceResult {
-  if (!directDiceCanDerive(state, method, selectedFinalWord)) {
+  if (!state.canDerive || !state.mnemonic) {
     return { error: entropyLabEnglish['error.generic'] };
   }
 
-  const finalWord =
-    method === 'bitbox' ? normalizedCandidate(state, selectedFinalWord) : state.finalWord;
-  const mnemonic = [...state.words, finalWord].join(' ');
   try {
-    const entropy = mnemonicToEntropy(mnemonic);
+    const entropy = mnemonicToEntropy(state.mnemonic);
     return {
       entropy: arrayBufferToHex(entropy),
-      mnemonic,
+      mnemonic: state.mnemonic,
     };
   } catch {
     return { error: entropyLabEnglish['error.generic'] };
   }
 }
 
-function normalizedCandidate(state: DirectDiceState, selectedFinalWord: string): string {
-  const normalized = selectedFinalWord.trim().toLowerCase();
-  return state.candidates.includes(normalized) ? normalized : '';
-}
-
-function d8D16FinalDescription(wordCount: WordCount): string {
-  const steps = D8_D16_FINAL_STEPS[wordCount];
+function d8D16FinalDescription(steps: readonly DiceFinalStep[]): string {
   const labels = steps.map(d8D16StepLabel);
   if (labels.length === 1) {
     return formatCopy(entropyLabEnglish['dice.dplus.rollOnceMore'], { die: labels[0] });
@@ -431,8 +362,8 @@ function d8D16FinalDescription(wordCount: WordCount): string {
   });
 }
 
-function d8D16FinalHelp(wordCount: WordCount): string {
-  const labels = D8_D16_FINAL_STEPS[wordCount].map(d8D16HelpStepLabel);
+function d8D16FinalHelp(steps: readonly DiceFinalStep[]): string {
+  const labels = steps.map(d8D16HelpStepLabel);
   if (labels.length === 1) {
     return formatCopy(entropyLabEnglish['dice.dplus.helpOne'], { die: labels[0] });
   }
@@ -448,14 +379,18 @@ function d8D16FinalHelp(wordCount: WordCount): string {
   });
 }
 
-function d8D16StepLabel(step: (typeof D8_D16_FINAL_STEPS)[WordCount][number]): string {
-  return step === 'coin' ? entropyLabEnglish['dice.dplus.aCoinFlip'] : step.toUpperCase();
+function d8D16StepLabel(step: DiceFinalStep): string {
+  if (step === DiceFinalStep.Coin) {
+    return entropyLabEnglish['dice.dplus.aCoinFlip'];
+  }
+  return step === DiceFinalStep.D8 ? 'D8' : 'D16';
 }
 
-function d8D16HelpStepLabel(
-  step: (typeof D8_D16_FINAL_STEPS)[WordCount][number],
-): string {
-  return step === 'coin' ? entropyLabEnglish['dice.dplus.coinFlip'] : step.toUpperCase();
+function d8D16HelpStepLabel(step: DiceFinalStep): string {
+  if (step === DiceFinalStep.Coin) {
+    return entropyLabEnglish['dice.dplus.coinFlip'];
+  }
+  return step === DiceFinalStep.D8 ? 'D8' : 'D16';
 }
 
 function arrayBufferToHex(buffer: ArrayBuffer): string {
@@ -471,22 +406,16 @@ function formatCopy(template: string, values: Record<string, number | string>): 
   );
 }
 
-function upstreamDiceError(error: unknown, rolls: string): string {
+function upstreamDiceError(error: unknown, state: HashedDiceState): string {
   const tag =
     typeof error === 'object' && error !== null && 'tag' in error && typeof error.tag === 'string'
       ? error.tag
       : undefined;
 
   if (tag === EntropyStudioError_Tags.InvalidDiceRolls) {
-    let ignored = '';
-    for (const character of rolls) {
-      if (!/\s|,|;|\|/.test(character) && (character < '1' || character > '6')) {
-        ignored += character;
-      }
-    }
     return entropyLabEnglish['error.diceFaces'].replace(
       '{chars}',
-      JSON.stringify(ignored.slice(0, 24)),
+      JSON.stringify(state.invalidFaces.slice(0, 24)),
     );
   }
 
@@ -495,4 +424,17 @@ function upstreamDiceError(error: unknown, rolls: string): string {
   }
 
   return entropyLabEnglish['error.generic'];
+}
+
+function nativeDiceInputMethod(method: DiceMethod) {
+  switch (method) {
+    case 'coldcard':
+      return DiceInputMethod.Coldcard;
+    case 'coleman':
+      return DiceInputMethod.Coleman;
+    case 'bitbox':
+      return DiceInputMethod.Bitbox;
+    case 'd8d16':
+      return DiceInputMethod.D8D16;
+  }
 }

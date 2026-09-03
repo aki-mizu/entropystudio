@@ -19,7 +19,7 @@ import { DiceTranscriptInput } from '../features/dice/components/DiceTranscriptI
 import type { DiceTranscriptSelection } from '../features/dice/components/DiceTranscriptInput';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { WordCountSelector } from '../features/dice/components/WordCountSelector';
-import { D8_D16_FACES, enabledDiceFaces } from '../features/dice/dice';
+import { D8_D16_FACES } from '../features/dice/dice';
 import type { DiceInputFace } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
 import { useDiceRolls } from '../features/dice/useDiceRolls';
@@ -53,6 +53,7 @@ export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool
     directState,
     derivePhrase,
     d8D16Copy,
+    enabledFaces,
     method,
     progress,
     progressText,
@@ -69,7 +70,6 @@ export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool
   const isCompactHeight = windowHeight < 700;
   const maxTileSize =
     method === 'd8d16' ? (isCompactHeight ? 48 : 56) : isCompactHeight ? 68 : 84;
-  const enabledFaces = enabledDiceFaces(method, directState);
   const liveHashedWords =
     !directState && result && typeof result.mnemonic === 'string'
       ? result.mnemonic.split(' ')
@@ -243,7 +243,6 @@ export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool
               <DirectDicePreview
                 compact
                 colors={colors}
-                selectedFinalWord={selectedFinalWord}
                 slotCount={wordCount}
                 state={directState}
                 wordSlotsAria={copy.wordSlotsAria}

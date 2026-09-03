@@ -26,6 +26,10 @@ pub struct DirectCardState {
     pub active_word: u8,
     pub active_draw: u8,
     pub active_max: u8,
+    pub entered_draws: u32,
+    pub final_draws: u8,
+    pub progress: f64,
+    pub required_draws: u32,
 }
 
 #[uniffi::export]
@@ -161,6 +165,10 @@ fn direct_card_state_inner(
         active_word,
         active_draw,
         active_max,
+        entered_draws: entered_draws as u32,
+        final_draws: final_radices.len() as u8,
+        progress: (entered_draws as f64 / required_draws as f64).min(1.0),
+        required_draws: required_draws as u32,
     })
 }
 

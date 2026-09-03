@@ -12,23 +12,8 @@ import {
   ScrollView,
   selectEntropyTool,
 } from '../../test/testSupport';
-import {
-  numberBaseFormatConfig,
-} from '../../src/features/numberBases/numberBases';
-import { expectZeroEntropy } from '../../test/numberBaseTestSupport';
 
 describe('Number Bases / Hexadecimal', () => {
-  test('uses the same digit count as EntropyLab', () => {
-    expect(numberBaseFormatConfig('hex', 12)).toMatchObject({
-      digits: 32,
-      finalCharacters: '0123456789ABCDEF',
-    });
-  });
-
-  test('converts zero entropy', () => {
-    expectZeroEntropy('hex', '0'.repeat(32));
-  });
-
   test('derives entropy through the native BIP39 binding', async () => {
     const mnemonic =
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';

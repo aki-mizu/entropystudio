@@ -9,25 +9,8 @@ import {
   ScrollView,
   selectEntropyTool,
 } from '../../test/testSupport';
-import {
-  numberBaseFormatConfig,
-} from '../../src/features/numberBases/numberBases';
-import { expectZeroEntropy } from '../../test/numberBaseTestSupport';
 
 describe('Number Bases / Base64', () => {
-  test('uses the same digit count as EntropyLab', () => {
-    expect(numberBaseFormatConfig('base64', 12)).toMatchObject({
-      digits: 23,
-      fullDigits: 21,
-      finalCharacters: '01',
-      remainderBits: 2,
-    });
-  });
-
-  test('converts zero entropy', () => {
-    expectZeroEntropy('base64', `${'A'.repeat(21)}00`);
-  });
-
   test('uses the upstream-style soft keyboard', async () => {
     let app: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(async () => {

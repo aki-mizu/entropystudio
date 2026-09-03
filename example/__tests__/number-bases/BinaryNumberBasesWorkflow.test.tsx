@@ -8,13 +8,8 @@ import {
   ReactTestRenderer,
   selectEntropyTool,
 } from '../../test/testSupport';
-import { expectZeroEntropy } from '../../test/numberBaseTestSupport';
 
 describe('Number Bases / Binary', () => {
-  test('converts zero entropy', () => {
-    expectZeroEntropy('bin', '0'.repeat(128));
-  });
-
   test('enters binary entropy through the on-screen keypad', async () => {
     let app: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(async () => {

@@ -1,21 +1,69 @@
 import {
   CardHashMethod,
+  CardInputMethod,
   DirectCardStep as GeneratedDirectCardStep,
+  DiceFinalStep,
+  DiceInputMethod as GeneratedDiceInputMethod,
   DiceRollMethod,
   DirectDiceMethod as GeneratedDirectDiceMethod,
   DirectDiceStep as GeneratedDirectDiceStep,
+  HashedCardInstruction,
+  NumberBaseFormat as GeneratedNumberBaseFormat,
+  SeedPhraseInputMethod as GeneratedSeedPhraseInputMethod,
+  SeedPhraseStatus as GeneratedSeedPhraseStatus,
+  analyzeNumberBaseInput,
+  cardKeyAllowed,
   cardTranscriptToEntropy,
+  diceMethodInfo,
   directCardState,
+  directDiceInputState,
   directDiceState,
   diceRollsToEntropy,
   entropyToMnemonic,
   EntropyStudioError_Tags,
+  formatDiceTranscript,
+  hashedCardState,
+  hashedDiceState,
   mnemonicToEntropy,
+  normalizeCardToken,
+  normalizeDirectCardTranscript,
+  numberBaseEntropy,
+  seedPhraseAutocomplete,
+  seedPhraseKeyAllowed,
+  seedPhraseNumbersToWords,
+  seedPhraseSpaceAllowed,
+  seedPhraseState,
+  seedPhraseWordsToNumbers,
+  translateSeedNumberIndices,
 } from 'entropystudio';
 
 export const DirectDiceMethod = {
   Bitbox: GeneratedDirectDiceMethod.Bitbox,
   D8D16: GeneratedDirectDiceMethod.D8d16,
+} as const;
+
+export const DiceInputMethod = {
+  Bitbox: GeneratedDiceInputMethod.Bitbox,
+  Coldcard: GeneratedDiceInputMethod.Coldcard,
+  Coleman: GeneratedDiceInputMethod.Coleman,
+  D8D16: GeneratedDiceInputMethod.D8d16,
+} as const;
+
+export const SeedPhraseInputMethod = {
+  Words: GeneratedSeedPhraseInputMethod.Words,
+  Numbers: GeneratedSeedPhraseInputMethod.Numbers,
+} as const;
+
+export const SeedPhraseStatus = {
+  Remaining: GeneratedSeedPhraseStatus.Remaining,
+  Extra: GeneratedSeedPhraseStatus.Extra,
+  ChooseFinal: GeneratedSeedPhraseStatus.ChooseFinal,
+  Ready: GeneratedSeedPhraseStatus.Ready,
+  FinalPrefix: GeneratedSeedPhraseStatus.FinalPrefix,
+  NoFinalPrefix: GeneratedSeedPhraseStatus.NoFinalPrefix,
+  InvalidWord: GeneratedSeedPhraseStatus.InvalidWord,
+  InvalidNumber: GeneratedSeedPhraseStatus.InvalidNumber,
+  ChecksumInvalid: GeneratedSeedPhraseStatus.ChecksumInvalid,
 } as const;
 
 export const DirectCardStep = {
@@ -41,14 +89,44 @@ export const DirectDiceStep = {
 
 export {
   CardHashMethod,
+  CardInputMethod,
+  DiceFinalStep,
   DiceRollMethod,
+  HashedCardInstruction,
+  GeneratedNumberBaseFormat as NumberBaseFormat,
+  analyzeNumberBaseInput,
+  cardKeyAllowed,
   cardTranscriptToEntropy,
+  diceMethodInfo,
   directCardState,
+  directDiceInputState,
   directDiceState,
   diceRollsToEntropy,
   entropyToMnemonic,
   EntropyStudioError_Tags,
+  formatDiceTranscript,
+  hashedCardState,
+  hashedDiceState,
   mnemonicToEntropy,
+  normalizeCardToken,
+  normalizeDirectCardTranscript,
+  numberBaseEntropy,
+  seedPhraseAutocomplete,
+  seedPhraseKeyAllowed,
+  seedPhraseNumbersToWords,
+  seedPhraseSpaceAllowed,
+  seedPhraseState,
+  seedPhraseWordsToNumbers,
+  translateSeedNumberIndices,
 };
 
-export type { DirectCardState, DirectDiceState } from 'entropystudio';
+export type {
+  DiceMethodInfo,
+  DirectCardState,
+  DirectDiceState,
+  HashedCardState,
+  HashedDiceState,
+  NumberBaseAnalysis,
+  SeedPhraseAutocompleteResult,
+  SeedPhraseState,
+} from 'entropystudio';

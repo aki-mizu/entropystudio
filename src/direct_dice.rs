@@ -1,12 +1,36 @@
 use crate::bip39::bip39_word;
 use crate::error::EntropyStudioError;
-use crate::hashed_dice::{dice_entropy_length, is_dice_separator};
+use crate::hashed_dice::{dice_entropy_length, is_dice_separator, recommended_dice_rolls};
 use crate::wipe::{wipe_bytes, wipe_string};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum DirectDiceMethod {
     Bitbox,
     D8D16,
+}
+
+#[derive(Debug, Clone, Copy, uniffi::Enum)]
+pub enum DiceInputMethod {
+    Coldcard,
+    Coleman,
+    Bitbox,
+    D8D16,
+}
+
+#[derive(Debug, Clone, Copy, uniffi::Enum)]
+pub enum DiceFinalStep {
+    D8,
+    D16,
+    Coin,
+}
+
+#[derive(Debug, uniffi::Record)]
+pub struct DiceMethodInfo {
+    pub checksum_candidates: u16,
+    pub entropy_bits: u16,
+    pub final_steps: Vec<DiceFinalStep>,
+    pub partial_words: u8,
+    pub recommended_rolls: u8,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -38,6 +62,10 @@ pub struct DirectDiceState {
     pub completed_groups: u8,
     pub active_word: u8,
     pub active_roll: u8,
+    pub allowed_faces: Vec<String>,
+    pub can_derive: bool,
+    pub mnemonic: String,
+    pub progress: f64,
 }
 
 #[uniffi::export]
@@ -46,12 +74,72 @@ pub fn direct_dice_state(
     method: DirectDiceMethod,
     target_words: u8,
 ) -> Result<DirectDiceState, EntropyStudioError> {
+    let result = direct_dice_input_state_inner(&rolls, method, target_words, "");
+    wipe_string(&mut rolls);
+    result
+}
+
+#[uniffi::export]
+pub fn direct_dice_input_state(
+    mut rolls: String,
+    method: DirectDiceMethod,
+    target_words: u8,
+    mut selected_final_word: String,
+) -> Result<DirectDiceState, EntropyStudioError> {
+    let result = direct_dice_input_state_inner(&rolls, method, target_words, &selected_final_word);
+    wipe_string(&mut rolls);
+    wipe_string(&mut selected_final_word);
+    result
+}
+
+#[uniffi::export]
+pub fn dice_method_info(target_words: u8) -> Result<DiceMethodInfo, EntropyStudioError> {
+    let entropy_bits = dice_entropy_length(target_words)? * 8;
+    let checksum_bits = entropy_bits / 32;
+    let final_steps = d8_d16_final_steps(target_words)?
+        .iter()
+        .map(|step| match step {
+            D8D16FinalStep::D8 => DiceFinalStep::D8,
+            D8D16FinalStep::D16 => DiceFinalStep::D16,
+            D8D16FinalStep::Coin => DiceFinalStep::Coin,
+        })
+        .collect();
+
+    Ok(DiceMethodInfo {
+        checksum_candidates: (1usize << (11 - checksum_bits)) as u16,
+        entropy_bits: entropy_bits as u16,
+        final_steps,
+        partial_words: target_words - 1,
+        recommended_rolls: recommended_dice_rolls(target_words)?,
+    })
+}
+
+#[uniffi::export]
+pub fn format_dice_transcript(
+    mut rolls: String,
+    method: DiceInputMethod,
+    target_words: u8,
+) -> Result<String, EntropyStudioError> {
     let result = match method {
-        DirectDiceMethod::Bitbox => bitbox_dice_state(&rolls, target_words),
-        DirectDiceMethod::D8D16 => d8_d16_dice_state(&rolls, target_words),
+        DiceInputMethod::Coldcard | DiceInputMethod::Coleman => Ok(rolls.clone()),
+        DiceInputMethod::Bitbox => format_bitbox_transcript(&rolls, target_words),
+        DiceInputMethod::D8D16 => Ok(format_d8_d16_transcript(&rolls, target_words)),
     };
     wipe_string(&mut rolls);
     result
+}
+
+fn direct_dice_input_state_inner(
+    rolls: &str,
+    method: DirectDiceMethod,
+    target_words: u8,
+    selected_final_word: &str,
+) -> Result<DirectDiceState, EntropyStudioError> {
+    let state = match method {
+        DirectDiceMethod::Bitbox => bitbox_dice_state(&rolls, target_words),
+        DirectDiceMethod::D8D16 => d8_d16_dice_state(&rolls, target_words),
+    }?;
+    Ok(finalize_direct_dice_state(state, method, selected_final_word))
 }
 
 #[derive(Clone, Copy)]
@@ -138,6 +226,10 @@ fn bitbox_dice_state(rolls: &str, target_words: u8) -> Result<DirectDiceState, E
         partial_words,
         active_word,
         active_roll,
+        allowed_faces: Vec::new(),
+        can_derive: false,
+        mnemonic: String::new(),
+        progress: 0.0,
     })
 }
 
@@ -269,7 +361,110 @@ fn d8_d16_dice_state(rolls: &str, target_words: u8) -> Result<DirectDiceState, E
         completed_groups,
         active_word,
         active_roll,
+        allowed_faces: Vec::new(),
+        can_derive: false,
+        mnemonic: String::new(),
+        progress: 0.0,
     })
+}
+
+fn finalize_direct_dice_state(
+    mut state: DirectDiceState,
+    method: DirectDiceMethod,
+    selected_final_word: &str,
+) -> DirectDiceState {
+    let valid_partial_phrase = state.invalid_count == 0
+        && state.words.len() == usize::from(state.partial_words);
+    if matches!(method, DirectDiceMethod::Bitbox) && valid_partial_phrase {
+        let selected = selected_final_word.trim().to_ascii_lowercase();
+        if state.candidates.iter().any(|candidate| candidate == &selected) {
+            state.final_word = selected;
+        }
+    }
+
+    state.can_derive = valid_partial_phrase
+        && match method {
+            DirectDiceMethod::Bitbox => !state.final_word.is_empty(),
+            DirectDiceMethod::D8D16 => state.complete,
+        };
+    state.progress = (f64::from(state.completed_groups) + f64::from(state.can_derive))
+        / f64::from(state.partial_words + 1);
+    state.allowed_faces = direct_dice_allowed_faces(method, state.step);
+    if state.can_derive {
+        state.mnemonic = format!("{} {}", state.words.join(" "), state.final_word);
+    }
+    state
+}
+
+fn direct_dice_allowed_faces(method: DirectDiceMethod, step: DirectDiceStep) -> Vec<String> {
+    match (method, step) {
+        (DirectDiceMethod::Bitbox, DirectDiceStep::BitboxDie) => {
+            ('1'..='4').map(|face| face.to_string()).collect()
+        }
+        (DirectDiceMethod::Bitbox, DirectDiceStep::BitboxCoin) => {
+            ('1'..='6').map(|face| face.to_string()).collect()
+        }
+        (
+            DirectDiceMethod::D8D16,
+            DirectDiceStep::D8D16WordD8
+            | DirectDiceStep::D8D16ChecksumD8
+            | DirectDiceStep::D8D16ChecksumCoin,
+        ) => ('1'..='8').map(|face| face.to_string()).collect(),
+        (
+            DirectDiceMethod::D8D16,
+            DirectDiceStep::D8D16WordD16First
+            | DirectDiceStep::D8D16WordD16Second
+            | DirectDiceStep::D8D16ChecksumD16,
+        ) => "0123456789ABCDEF".chars().map(|face| face.to_string()).collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn format_bitbox_transcript(rolls: &str, target_words: u8) -> Result<String, EntropyStudioError> {
+    let partial_words = direct_dice_partial_words(target_words)?;
+    let mut completed_words = 0;
+    let mut rolls_in_word = 0;
+    let mut separate_next_roll = false;
+    let mut transcript = String::with_capacity(rolls.len() + usize::from(partial_words));
+
+    for face in rolls.chars() {
+        if separate_next_roll {
+            transcript.push(' ');
+            separate_next_roll = false;
+        }
+        transcript.push(face);
+
+        if completed_words >= partial_words {
+            continue;
+        }
+        if rolls_in_word < 5 {
+            if matches!(face, '1'..='4') {
+                rolls_in_word += 1;
+            }
+        } else {
+            completed_words += 1;
+            rolls_in_word = 0;
+            separate_next_roll = true;
+        }
+    }
+
+    Ok(transcript)
+}
+
+fn format_d8_d16_transcript(rolls: &str, target_words: u8) -> String {
+    let word_roll_count = usize::from(target_words.saturating_sub(1)) * 3;
+    let mut transcript = String::with_capacity(rolls.len() + usize::from(target_words));
+
+    for (index, face) in rolls.chars().enumerate() {
+        if index > 0
+            && (index == word_roll_count || (index < word_roll_count && index % 3 == 0))
+        {
+            transcript.push(' ');
+        }
+        transcript.push(face);
+    }
+
+    transcript
 }
 
 fn direct_dice_partial_words(target_words: u8) -> Result<u8, EntropyStudioError> {

@@ -5,6 +5,7 @@ use std::fmt;
 pub enum EntropyStudioError {
     InvalidMnemonic,
     InvalidEntropy,
+    InvalidNumberBaseInput,
     InvalidDiceRolls,
     NoDiceRolls,
     UnsupportedDiceWordCount,

@@ -98,12 +98,21 @@ test('enables only D8/D16 faces valid for the current direct-dice step', async (
   };
   mockDirectDiceState.mockImplementation((rolls: string) => {
     if (rolls === '1') {
-      return { ...directState, activeRoll: 2, step: 4 };
+      return {
+        ...directState,
+        activeRoll: 2,
+        allowedFaces: d8D16Faces,
+        step: 4,
+      };
     }
     if (rolls === 'correction') {
-      return { ...directState, activeRoll: 0, step: 9 };
+      return { ...directState, activeRoll: 0, allowedFaces: [], step: 9 };
     }
-    return { ...directState, step: 3 };
+    return {
+      ...directState,
+      allowedFaces: ['1', '2', '3', '4', '5', '6', '7', '8'],
+      step: 3,
+    };
   });
 
   let app: ReactTestRenderer.ReactTestRenderer;
@@ -202,6 +211,8 @@ test('derives a D8/D16 direct-dice phrase from its final roll selection', async 
     extraCount: 0,
     finalWord: 'about',
     invalidCount: 0,
+    canDerive: true,
+    mnemonic: `${Array.from({ length: 11 }, () => 'abandon').join(' ')} about`,
     partialWords: 11,
     skippedCount: 0,
     step: 10,

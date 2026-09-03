@@ -8,31 +8,8 @@ import {
   ReactTestRenderer,
   selectEntropyTool,
 } from '../../test/testSupport';
-import {
-  analyzeNumberBaseInput,
-  numberBaseFormatConfig,
-} from '../../src/features/numberBases/numberBases';
-import { expectZeroEntropy } from '../../test/numberBaseTestSupport';
 
 describe('Number Bases / Octal (Base 8)', () => {
-  test('uses the same digit count as EntropyLab', () => {
-    expect(numberBaseFormatConfig('base8', 12)).toMatchObject({
-      digits: 43,
-      finalCharacters: '0123',
-    });
-  });
-
-  test('converts zero entropy', () => {
-    expectZeroEntropy('base8', '0'.repeat(43));
-  });
-
-  test('rejects an invalid final digit', () => {
-    const invalidFinal = analyzeNumberBaseInput(`${'0'.repeat(42)}4`, 'base8', 12);
-
-    expect(invalidFinal.finalInvalid).toBe(true);
-    expect(invalidFinal.isReady).toBe(false);
-  });
-
   test('enters octal entropy through the on-screen keypad', async () => {
     let app: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(async () => {

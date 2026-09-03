@@ -25,7 +25,6 @@ import {
   analyzeNumberBaseInput,
   numberBaseEntropy,
   numberBaseFormatConfig,
-  numberBasePreviewWords,
 } from '../features/numberBases/numberBases';
 import type { NumberBaseFormat } from '../features/numberBases/numberBases';
 
@@ -193,7 +192,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
     !/\s$/u.test(input) &&
     analysis.digitCount < analysis.config.digits;
   const inputHelp = numberBaseInputHelp(format, analysis.config);
-  let words = numberBasePreviewWords(input, format, wordCount);
+  let words = [...analysis.previewWords];
 
   if (entropy) {
     try {

@@ -1,13 +1,19 @@
 import {
   CardHashMethod,
+  CardInputMethod,
   DirectCardStep,
+  HashedCardInstruction,
+  cardKeyAllowed as nativeCardKeyAllowed,
   cardTranscriptToEntropy,
   directCardState as nativeDirectCardState,
   entropyToMnemonic,
   EntropyStudioError_Tags,
+  hashedCardState as nativeHashedCardState,
   mnemonicToEntropy,
+  normalizeCardToken as nativeNormalizeCardToken,
+  normalizeDirectCardTranscript as nativeNormalizeDirectCardTranscript,
 } from '../../native/entropyStudio';
-import type { DirectCardState } from '../../native/entropyStudio';
+import type { DirectCardState, HashedCardState } from '../../native/entropyStudio';
 import type { WordCount } from '../dice/dice';
 import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
 
@@ -35,35 +41,7 @@ export const CARD_SUITS = [
 ] as const;
 export const DIRECT_CARD_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8'] as const;
 
-const HASHED_CARD_COUNTS = {
-  12: 25,
-  15: 31,
-  18: 39,
-  21: 50,
-  24: 58,
-} as const;
-
-const HASHED_FIRST_SHUFFLE_COUNTS = {
-  12: 25,
-  15: 31,
-  18: 39,
-  21: 50,
-  24: 52,
-} as const;
-
-const DIRECT_CARD_FINAL_DRAWS = {
-  12: 3,
-  15: 2,
-  18: 2,
-  21: 2,
-  24: 1,
-} as const;
-
-const CARD_SEPARATOR = /[\s,.;:_|/-]/;
-const CARD_SEPARATOR_PATTERN = /[\s,.;:_|/-]+/;
 const CARD_TOKEN_PATTERN = /10[CDHS\u2660\u2663\u2665\u2666]|[A2-9TJQK][CDHS\u2660\u2663\u2665\u2666]/gi;
-const CARD_TYPED_CHARACTER = /^[A2-9TJQKCDHS10\s,.;:_|/\-\u2660\u2663\u2665\u2666]$/i;
-const TEXT_EDITING_KEYS = new Set(['Backspace', 'Delete', 'Enter', 'Tab']);
 
 export type CardMethod = (typeof CARD_METHODS)[number];
 export type CardRank = (typeof CARD_RANKS)[number];
@@ -140,24 +118,11 @@ export function cardScreenCopy(
 }
 
 export function hashedCardsNeeded(wordCount: WordCount): number {
-  return HASHED_CARD_COUNTS[wordCount];
-}
-
-export function directCardTotalDraws(wordCount: WordCount): number {
-  return (wordCount - 1) * 4 + DIRECT_CARD_FINAL_DRAWS[wordCount];
+  return getHashedCardState('', wordCount).requiredCards;
 }
 
 export function normalizeCardToken(token: string): string | null {
-  const normalized = token
-    .trim()
-    .toUpperCase()
-    .replace(/\u2660/g, 'S')
-    .replace(/\u2665/g, 'H')
-    .replace(/\u2666/g, 'D')
-    .replace(/\u2663/g, 'C')
-    .replace(/^10/, 'T');
-
-  return /^[A2-9TJQK][CDHS]$/.test(normalized) ? normalized : null;
+  return nativeNormalizeCardToken(token) || null;
 }
 
 export function formatCardTranscript(
@@ -183,9 +148,7 @@ export function formatCardTranscript(
 }
 
 export function normalizeDirectCardTranscript(transcript: string): string {
-  return Array.from(transcript)
-    .filter(character => !CARD_SEPARATOR.test(character))
-    .join('');
+  return nativeNormalizeDirectCardTranscript(transcript);
 }
 
 export function formatDirectCardTranscript(transcript: string): string {
@@ -197,37 +160,26 @@ export function isCardKeyAllowed(
   method: CardMethod,
   activeMax = 0,
 ): boolean {
-  if (TEXT_EDITING_KEYS.has(key) || key.startsWith('Arrow')) {
-    return true;
-  }
-  if (method !== 'direct') {
-    return CARD_TYPED_CHARACTER.test(key);
-  }
-  if (CARD_SEPARATOR.test(key)) {
-    return true;
-  }
-
-  const rank = key.toUpperCase();
-  return rank === 'A'
-    ? activeMax > 0
-    : /^[2-8]$/.test(rank) && Number(rank) <= activeMax;
+  return nativeCardKeyAllowed(
+    key,
+    method === 'direct' ? CardInputMethod.Direct : CardInputMethod.Hashed,
+    activeMax,
+  );
 }
 
 export function cardIsAvailable(
-  transcript: string,
+  state: HashedCardState,
   candidate: string,
-  wordCount: WordCount,
 ): boolean {
-  return availableCardCodes(transcript, wordCount).includes(candidate);
+  return state.availableCards.includes(candidate);
 }
 
 export function cardSelectionState(
-  transcript: string,
-  wordCount: WordCount,
+  state: HashedCardState,
   selectedRank: CardRank | null,
   selectedSuit: CardSuit | null,
 ): CardSelectionState {
-  const availableCards = availableCardCodes(transcript, wordCount);
+  const { availableCards } = state;
   const availableSuits = CARD_SUITS.map(suit => suit.code).filter(suit =>
     availableCards.some(card => card.endsWith(suit)),
   );
@@ -247,6 +199,10 @@ export function cardSelectionState(
   };
 }
 
+export function getHashedCardState(transcript: string, wordCount: WordCount): HashedCardState {
+  return nativeHashedCardState(transcript, wordCount);
+}
+
 export function getDirectCardState(
   transcript: string,
   wordCount: WordCount,
@@ -254,18 +210,17 @@ export function getDirectCardState(
   return nativeDirectCardState(transcript, wordCount);
 }
 
-export function hasHashedCardInput(transcript: string): boolean {
-  return Array.from(transcript).some(character => !CARD_SEPARATOR.test(character));
+export function hasHashedCardInput(state: HashedCardState): boolean {
+  return state.hasInput;
 }
 
-export function hashedCardProgress(transcript: string, wordCount: WordCount): number {
-  return Math.min(canonicalCardTokens(transcript).length / hashedCardsNeeded(wordCount), 1);
+export function hashedCardProgress(state: HashedCardState): number {
+  return state.progress;
 }
 
-export function hashedCardProgressCopy(transcript: string, wordCount: WordCount): string {
-  const count = canonicalCardTokens(transcript).length;
-  const needed = hashedCardsNeeded(wordCount);
-  const bits = cardsWithoutReplacementBits(count, wordCount).toFixed(1);
+export function hashedCardProgressCopy(state: HashedCardState): string {
+  const { cardCount: count, requiredCards: needed } = state;
+  const bits = state.entropyBits.toFixed(1);
 
   if (count === 0) {
     return formatCopy(entropyLabEnglish['cards.meta.hashedEmpty'], { need: needed });
@@ -296,17 +251,16 @@ export function hashedCardProgressCopy(transcript: string, wordCount: WordCount)
   )}`;
 }
 
-export function directCardProgress(state: DirectCardState, transcript: string, wordCount: WordCount): number {
-  return Math.min(countDirectCardDraws(transcript) / directCardTotalDraws(wordCount), 1);
+export function directCardProgress(state: DirectCardState): number {
+  return state.progress;
 }
 
 export function directCardProgressCopy(
   state: DirectCardState,
-  transcript: string,
   wordCount: WordCount,
 ): string {
-  const entered = countDirectCardDraws(transcript);
-  const needed = directCardTotalDraws(wordCount);
+  const entered = state.enteredDraws;
+  const needed = state.requiredDraws;
   if (state.complete) {
     return formatCopy(entropyLabEnglish['cards.meta.directComplete'], {
       have: entered,
@@ -348,7 +302,7 @@ export function directCardProgressCopy(
       : state.step === DirectCardStep.Final
         ? formatCopy(entropyLabEnglish['cards.meta.directFinal'], {
             draw: state.activeDraw,
-            need: DIRECT_CARD_FINAL_DRAWS[wordCount],
+          need: state.finalDraws,
             set,
           })
         : entropyLabEnglish['error.directChecksum'];
@@ -361,8 +315,8 @@ export function directCardProgressCopy(
 
 export function cardInstruction(
   method: CardMethod,
-  transcript: string,
   wordCount: WordCount,
+  hashedState: HashedCardState | null,
   directState: DirectCardState | null,
 ): string {
   if (method === 'direct') {
@@ -371,7 +325,7 @@ export function cardInstruction(
     }
     return formatCopy(
       entropyLabEnglish[
-        countDirectCardDraws(transcript) === 0
+        directState.enteredDraws === 0
           ? 'cards.instruct.directFirst'
           : 'cards.instruct.directNext'
       ],
@@ -379,27 +333,28 @@ export function cardInstruction(
     );
   }
 
-  const count = canonicalCardTokens(transcript).length;
-  const firstShuffleCards = HASHED_FIRST_SHUFFLE_COUNTS[wordCount];
-  if (count >= hashedCardsNeeded(wordCount)) {
+  if (!hashedState) {
     return '';
   }
-  if (count === 0) {
-    return entropyLabEnglish['cards.instruct.hashedFirst'];
+  switch (hashedState.instruction) {
+    case HashedCardInstruction.Empty:
+      return entropyLabEnglish['cards.instruct.hashedFirst'];
+    case HashedCardInstruction.FirstShuffle:
+      return entropyLabEnglish['cards.instruct.hashedNext'];
+    case HashedCardInstruction.ShuffleAgain:
+      return entropyLabEnglish['cards.instruct.hashedAgain'];
+    case HashedCardInstruction.SecondShuffle:
+      return entropyLabEnglish['cards.instruct.hashedSecond'];
+    case HashedCardInstruction.Complete:
+      return '';
   }
-  if (wordCount === 24 && count === firstShuffleCards) {
-    return entropyLabEnglish['cards.instruct.hashedAgain'];
-  }
-  if (wordCount === 24 && count > firstShuffleCards) {
-    return entropyLabEnglish['cards.instruct.hashedSecond'];
-  }
-  return entropyLabEnglish['cards.instruct.hashedNext'];
 }
 
 export function deriveHashedCardResult(
   transcript: string,
   matchesIanColeman: boolean,
   wordCount: WordCount,
+  state: HashedCardState,
 ): CardResult {
   try {
     const entropy = cardTranscriptToEntropy(
@@ -412,7 +367,7 @@ export function deriveHashedCardResult(
       mnemonic: entropyToMnemonic(entropy),
     };
   } catch (error) {
-    return { error: upstreamCardError(error, transcript, wordCount) };
+    return { error: upstreamCardError(error, state) };
   }
 }
 
@@ -432,39 +387,6 @@ export function deriveDirectCardResult(state: DirectCardState): CardResult {
   }
 }
 
-function canonicalCardTokens(transcript: string): string[] {
-  return transcript
-    .split(CARD_SEPARATOR_PATTERN)
-    .filter(Boolean)
-    .flatMap(token => {
-      const card = normalizeCardToken(token);
-      return card ? [card] : [];
-    });
-}
-
-function availableCardCodes(transcript: string, wordCount: WordCount): string[] {
-  const cards = canonicalCardTokens(transcript);
-  const firstShuffleCards = HASHED_FIRST_SHUFFLE_COUNTS[wordCount];
-  const currentShuffle =
-    cards.length < firstShuffleCards ? cards : cards.slice(firstShuffleCards);
-
-  return CARD_SUITS.flatMap(suit =>
-    CARD_RANKS.map(rank => `${rank}${suit.code}`).filter(card => !currentShuffle.includes(card)),
-  );
-}
-
-function cardsWithoutReplacementBits(count: number, wordCount: WordCount): number {
-  const firstShuffleCards = HASHED_FIRST_SHUFFLE_COUNTS[wordCount];
-  return Array.from({ length: Math.min(count, 104) }, (_, index) => {
-    const cardPosition = index < firstShuffleCards ? index : index - firstShuffleCards;
-    return Math.log2(52 - cardPosition);
-  }).reduce((bits, cardBits) => bits + cardBits, 0);
-}
-
-function countDirectCardDraws(transcript: string): number {
-  return Array.from(transcript).filter(character => !CARD_SEPARATOR.test(character)).length;
-}
-
 function directRankSet(max: number): string {
   return max > 0 ? `A-${max}` : 'A-8';
 }
@@ -480,42 +402,23 @@ function formatCopy(template: string, values: Record<string, number | string>): 
   );
 }
 
-function upstreamCardError(error: unknown, transcript: string, wordCount: WordCount): string {
+function upstreamCardError(error: unknown, state: HashedCardState): string {
   const tag =
     typeof error === 'object' && error !== null && 'tag' in error && typeof error.tag === 'string'
       ? error.tag
       : undefined;
 
   if (tag === EntropyStudioError_Tags.InvalidCardTranscript) {
-    const ignored = transcript
-      .split(CARD_SEPARATOR_PATTERN)
-      .filter(token => token && !normalizeCardToken(token))
-      .slice(0, 8)
-      .join(' ');
+    const ignored = state.invalidTokens.slice(0, 8).join(' ');
     return formatCopy(entropyLabEnglish['error.cardsFormat'], { ignored });
   }
   if (tag === EntropyStudioError_Tags.DuplicateCard) {
     return formatCopy(entropyLabEnglish['error.cardsDuplicate'], {
-      card: firstDuplicateCard(transcript, wordCount),
+      card: state.firstDuplicateCard,
     });
   }
   if (tag === EntropyStudioError_Tags.NoCards) {
     return entropyLabEnglish['error.cardsEmpty'];
   }
   return entropyLabEnglish['error.generic'];
-}
-
-function firstDuplicateCard(transcript: string, wordCount: WordCount): string {
-  const firstShuffleCards = HASHED_FIRST_SHUFFLE_COUNTS[wordCount];
-  const seen = new Set<string>();
-  for (const [index, card] of canonicalCardTokens(transcript).entries()) {
-    if (index === firstShuffleCards) {
-      seen.clear();
-    }
-    if (seen.has(card)) {
-      return card;
-    }
-    seen.add(card);
-  }
-  return '';
 }
