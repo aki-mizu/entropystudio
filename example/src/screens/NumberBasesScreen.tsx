@@ -192,6 +192,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
     input.length > 0 &&
     !/\s$/u.test(input) &&
     analysis.digitCount < analysis.config.digits;
+  const inputHelp = numberBaseInputHelp(format, analysis.config);
   let words = numberBasePreviewWords(input, format, wordCount);
 
   if (entropy) {
@@ -430,17 +431,27 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
               <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
             </Pressable>
           </View>
-          <ScrollView
-            contentContainerStyle={styles.inputHelpContent}
-            nestedScrollEnabled
-            showsVerticalScrollIndicator
-            style={styles.inputHelpScroll}
-            testID="number-base-help-scroll"
-          >
-            <Text style={[styles.inputHelp, { color: colors.muted }]} testID="number-base-help">
-              {numberBaseInputHelp(format, analysis.config)}
+          {format === 'base64' ? (
+            <ScrollView
+              contentContainerStyle={styles.inputHelpContent}
+              nestedScrollEnabled
+              overScrollMode="never"
+              showsVerticalScrollIndicator
+              style={styles.inputHelpScroll}
+              testID="number-base-help-scroll"
+            >
+              <Text style={[styles.inputHelp, { color: colors.muted }]} testID="number-base-help">
+                {inputHelp}
+              </Text>
+            </ScrollView>
+          ) : (
+            <Text
+              style={[styles.inputHelp, styles.staticInputHelp, { color: colors.muted }]}
+              testID="number-base-help"
+            >
+              {inputHelp}
             </Text>
-          </ScrollView>
+          )}
           <View style={[styles.inputSurface, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <TextInput
               accessibilityLabel={`${analysis.config.label} entropy`}
@@ -706,6 +717,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     justifyContent: 'center',
     minHeight: 52,
+  },
+  staticInputHelp: {
+    marginBottom: 10,
   },
   subtitle: {
     fontSize: 13,

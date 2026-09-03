@@ -263,6 +263,11 @@ test('derives Number Bases entropy through the native BIP39 binding', async () =
   expect(app!.root.findByProps({ testID: 'number-base-input' }).props.showSoftInputOnFocus).toBe(
     false,
   );
+  expect(
+    app!
+      .root.findByProps({ testID: 'number-bases-entry-view' })
+      .findAllByType(ScrollView),
+  ).toHaveLength(0);
   expect(app!.root.findByProps({ testID: 'derive-number-base-phrase' }).props.disabled).toBe(true);
 
   await ReactTestRenderer.act(async () => {
@@ -355,6 +360,9 @@ test('matches EntropyLab Base64 coin-flip progress text exactly', async () => {
   ).toHaveLength(1);
   expect(app!.root.findByProps({ testID: 'number-base-help-scroll' }).props.nestedScrollEnabled).toBe(
     true,
+  );
+  expect(app!.root.findByProps({ testID: 'number-base-help-scroll' }).props.overScrollMode).toBe(
+    'never',
   );
 
   const input = app!.root.findByProps({ testID: 'number-base-input' });
