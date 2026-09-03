@@ -16,13 +16,16 @@ const KEYBOARD_LAYOUTS = {
   upper: ['ABCDEFGHIJ', 'KLMNOPQRS', 'TUVWXYZ'],
 } as const;
 
-type KeyboardMode = keyof typeof KEYBOARD_LAYOUTS;
+export type SoftKeyboardMode = keyof typeof KEYBOARD_LAYOUTS;
+
+type KeyboardMode = SoftKeyboardMode;
 type ModeControl = 'disabled' | 'enabled' | 'hidden';
 
 type Props = {
   readonly canInsert: (character: string) => boolean;
   readonly canInsertSpace: boolean;
   readonly colors: DiceColors;
+  readonly initialMode?: SoftKeyboardMode;
   readonly keyboardLabel: (mode: KeyboardMode) => string;
   readonly keyboardTestID: string;
   readonly keyTestIDPrefix: string;
@@ -39,6 +42,7 @@ export function SoftKeyboard({
   canInsert,
   canInsertSpace,
   colors,
+  initialMode = 'lower',
   keyboardLabel,
   keyboardTestID,
   keyTestIDPrefix,
@@ -50,7 +54,7 @@ export function SoftKeyboard({
   spaceTestID,
   style,
 }: Props) {
-  const [mode, setMode] = useState<KeyboardMode>('lower');
+  const [mode, setMode] = useState<KeyboardMode>(initialMode);
   const { width: windowWidth } = useWindowDimensions();
   const activeMode = modeControl === 'enabled' ? mode : 'lower';
   const rows = KEYBOARD_LAYOUTS[activeMode];

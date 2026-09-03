@@ -12,7 +12,7 @@ import {
   selectEntropyTool,
 } from '../test/testSupport';
 
-test('shows Dice, Cards, Number Bases, and Seed Phrase workflows on the shared setup screen', async () => {
+test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on the shared setup screen', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
     app = ReactTestRenderer.create(<App />);
@@ -34,6 +34,9 @@ test('shows Dice, Cards, Number Bases, and Seed Phrase workflows on the shared s
     selected: false,
   });
   expect(diceMethodList.findByProps({ testID: 'key-method-seed' }).props.accessibilityState).toEqual({
+    selected: false,
+  });
+  expect(diceMethodList.findByProps({ testID: 'key-method-key' }).props.accessibilityState).toEqual({
     selected: false,
   });
 
@@ -73,9 +76,12 @@ test('keeps native workflow trees mounted while changing methods', async () => {
 
   const diceScreen = app!.root.findByProps({ testID: 'dice-screen-safe-area' });
   const cardsScreen = app!.root.findByProps({ testID: 'cards-screen-safe-area' });
+  const privateKeyScreen = app!.root.findByProps({ testID: 'private-key-screen-safe-area' });
   expect(diceScreen.props.pointerEvents).toBe('auto');
   expect(cardsScreen.props.pointerEvents).toBe('none');
   expect(cardsScreen.props.style).toContainEqual({ display: 'none' });
+  expect(privateKeyScreen.props.pointerEvents).toBe('none');
+  expect(privateKeyScreen.props.style).toContainEqual({ display: 'none' });
 
   await selectEntropyTool(app!, 'cards');
 

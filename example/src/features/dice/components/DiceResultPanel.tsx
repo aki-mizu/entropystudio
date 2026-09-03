@@ -1,11 +1,14 @@
 import { StyleSheet, Text, View } from 'react-native';
-import type { DiceResult } from '../dice';
 import type { DiceColors } from '../diceTheme';
+
+export type EntropyResult =
+  | { readonly entropy: string; readonly error?: never }
+  | { readonly entropy?: never; readonly error: string };
 
 type Props = {
   readonly colors: DiceColors;
   readonly entropyLabel: string;
-  readonly result: DiceResult | null;
+  readonly result: EntropyResult | null;
 };
 
 export function DiceResultPanel({

@@ -5,6 +5,7 @@ import type { EntropyTool } from './components/EntropyMethodList';
 import { CardsScreen } from './screens/CardsScreen';
 import { DiceRollsScreen } from './screens/DiceRollsScreen';
 import { NumberBasesScreen } from './screens/NumberBasesScreen';
+import { PrivateKeyScreen } from './screens/PrivateKeyScreen';
 import { SeedPhraseScreen } from './screens/SeedPhraseScreen';
 
 function App() {
@@ -35,6 +36,12 @@ function App() {
       <SeedPhraseScreen
         activeTool={activeTool}
         isActive={activeTool === 'seed'}
+        isDarkMode={isDarkMode}
+        onSelectTool={setActiveTool}
+      />
+      <PrivateKeyScreen
+        activeTool={activeTool}
+        isActive={activeTool === 'key'}
         isDarkMode={isDarkMode}
         onSelectTool={setActiveTool}
       />

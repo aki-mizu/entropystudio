@@ -6,6 +6,7 @@ mod error;
 mod hash;
 mod hashed_dice;
 mod number_bases;
+mod private_key;
 mod seed_phrase;
 mod wipe;
 
@@ -26,6 +27,10 @@ pub use hash::sha256;
 pub use hashed_dice::{dice_rolls_to_entropy, hashed_dice_state, DiceRollMethod, HashedDiceState};
 pub use number_bases::{
 	analyze_number_base_input, number_base_entropy, NumberBaseAnalysis, NumberBaseFormat,
+};
+pub use private_key::{
+	private_key_entropy, private_key_input_state, private_key_key_allowed, PrivateKeyFormat,
+	PrivateKeyInputState, PrivateKeyInputStatus,
 };
 pub use seed_phrase::{
 	seed_phrase_autocomplete, seed_phrase_key_allowed, seed_phrase_numbers_to_words,

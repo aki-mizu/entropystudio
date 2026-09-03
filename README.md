@@ -28,6 +28,7 @@ The current public API intentionally stays small:
 - `directDiceState(rolls: string, method: DirectDiceMethod, targetWords: number): DirectDiceState`
 - `cardTranscriptToEntropy(transcript: string, method: CardHashMethod, targetWords: number): ArrayBuffer`
 - `directCardState(transcript: string, targetWords: number): DirectCardState`
+- `privateKeyEntropy(value: string, format: PrivateKeyFormat): ArrayBuffer`
 
 `mnemonicToEntropy` expects an NFKD-normalized English BIP39 phrase. In
 TypeScript, call `phrase.normalize("NFKD")` before passing text to it.
@@ -68,6 +69,24 @@ the same `12`, `15`, `18`, `21`, and `24` BIP39 word counts as dice.
 draws from the currently required rank set, produces each completed BIP39
 word, and calculates the checksum-valid final-word candidates from the final
 rank draw sequence.
+
+## Private keys
+
+`privateKeyEntropy` validates a supported private-key input and returns its
+32-byte private-key material. It does not recover or create a BIP39 seed
+phrase. The wrapper uses EntropyLab's Base58Check decoder, secp256k1
+secret-key validator, and SHA-256 implementation; Studio only owns the
+input-format framing and dispatch.
+
+- `PrivateKeyFormat.Wif` accepts checksum-valid Bitcoin mainnet WIF,
+  including the required `0x01` compression marker when present.
+- `PrivateKeyFormat.Hex` accepts a valid 32-byte secp256k1 scalar as 64
+	hexadecimal characters, with optional whitespace and a `0x` prefix.
+- `PrivateKeyFormat.MiniKey` accepts 22- or 30-character Casascius mini keys,
+	including the published SHA-256 checksum rule.
+- `PrivateKeyFormat.BrainWallet` hashes exact, nonempty UTF-8 text with
+	SHA-256. Boundary whitespace is significant and brain-wallet phrases are
+	generally unsafe for funds.
 
 ## Setup
 

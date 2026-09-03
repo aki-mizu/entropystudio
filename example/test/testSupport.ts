@@ -2,10 +2,15 @@ import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 import { ScrollView } from 'react-native';
 import entropyLabEnglish from '../../entropylab/src/locales/en.json';
-import type { HashedCardState, NumberBaseAnalysis } from '../src/native/entropyStudio';
+import type {
+  HashedCardState,
+  NumberBaseAnalysis,
+  PrivateKeyInputState,
+} from '../src/native/entropyStudio';
 import { installCardUiFixtures } from './cardUiFixtures';
 import { installDiceUiFixtures } from './diceUiFixtures';
 import { installNumberBaseUiFixtures } from './numberBaseUiFixtures';
+import { installPrivateKeyUiFixtures } from './privateKeyUiFixtures';
 import { installSeedPhraseUiFixtures } from './seedPhraseUiFixtures';
 
 export const mockDiceRollsToEntropy = jest.fn<ArrayBuffer, [string, number, number]>();
@@ -31,6 +36,9 @@ export const mockNormalizeCardToken = jest.fn<string, [string]>();
 export const mockNormalizeDirectCardTranscript = jest.fn<string, [string]>();
 export const mockAnalyzeNumberBaseInput = jest.fn<NumberBaseAnalysis, [string, number, number]>();
 export const mockNumberBaseEntropy = jest.fn<ArrayBuffer, [string, number, number]>();
+export const mockPrivateKeyEntropy = jest.fn<ArrayBuffer, [string, number]>();
+export const mockPrivateKeyInputState = jest.fn<PrivateKeyInputState, [string, number]>();
+export const mockPrivateKeyKeyAllowed = jest.fn<boolean, [string, number, number, string, number]>();
 
 jest.mock('entropystudio', () => ({
   CardHashMethod: {
@@ -102,6 +110,20 @@ jest.mock('entropystudio', () => ({
     Base32: 4,
     Base64: 5,
   },
+  PrivateKeyFormat: {
+    Wif: 0,
+    Hex: 1,
+    MiniKey: 2,
+    BrainWallet: 3,
+  },
+  PrivateKeyInputStatus: {
+    Empty: 0,
+    Prefix: 1,
+    Incomplete: 2,
+    Invalid: 3,
+    Excess: 4,
+    Ready: 5,
+  },
   EntropyStudioError_Tags: {
     InvalidMnemonic: 'InvalidMnemonic',
     InvalidEntropy: 'InvalidEntropy',
@@ -111,6 +133,13 @@ jest.mock('entropystudio', () => ({
     InvalidCardTranscript: 'InvalidCardTranscript',
     NoCards: 'NoCards',
     DuplicateCard: 'DuplicateCard',
+    EmptyPrivateKey: 'EmptyPrivateKey',
+    InvalidWifPrivateKey: 'InvalidWifPrivateKey',
+    InvalidHexPrivateKey: 'InvalidHexPrivateKey',
+    InvalidMiniPrivateKeyFormat: 'InvalidMiniPrivateKeyFormat',
+    InvalidMiniPrivateKey: 'InvalidMiniPrivateKey',
+    InvalidPrivateKeyRange: 'InvalidPrivateKeyRange',
+    EmptyBrainWallet: 'EmptyBrainWallet',
   },
   HashedCardInstruction: {
     Empty: 0,
@@ -135,6 +164,9 @@ jest.mock('entropystudio', () => ({
   normalizeCardToken: mockNormalizeCardToken,
   normalizeDirectCardTranscript: mockNormalizeDirectCardTranscript,
   numberBaseEntropy: mockNumberBaseEntropy,
+  privateKeyEntropy: mockPrivateKeyEntropy,
+  privateKeyInputState: mockPrivateKeyInputState,
+  privateKeyKeyAllowed: mockPrivateKeyKeyAllowed,
   seedPhraseAutocomplete: mockSeedPhraseAutocomplete,
   seedPhraseKeyAllowed: mockSeedPhraseKeyAllowed,
   seedPhraseNumbersToWords: mockSeedPhraseNumbersToWords,
@@ -155,6 +187,13 @@ installNumberBaseUiFixtures({
   setAnalyzeNumberBaseInput: implementation =>
     mockAnalyzeNumberBaseInput.mockImplementation(implementation),
   setNumberBaseEntropy: implementation => mockNumberBaseEntropy.mockImplementation(implementation),
+});
+installPrivateKeyUiFixtures({
+  setPrivateKeyEntropy: implementation => mockPrivateKeyEntropy.mockImplementation(implementation),
+  setPrivateKeyInputState: implementation =>
+    mockPrivateKeyInputState.mockImplementation(implementation),
+  setPrivateKeyKeyAllowed: implementation =>
+    mockPrivateKeyKeyAllowed.mockImplementation(implementation),
 });
 installDiceUiFixtures({
   getDirectDiceState: (rolls, method, targetWords) =>
@@ -230,7 +269,7 @@ export function activeMethodList(app: ReactTestRenderer.ReactTestRenderer) {
 
 export async function selectEntropyTool(
   app: ReactTestRenderer.ReactTestRenderer,
-  tool: 'cards' | 'dice' | 'hex' | 'seed',
+  tool: 'cards' | 'dice' | 'hex' | 'key' | 'seed',
 ) {
   await ReactTestRenderer.act(async () => {
     activeMethodList(app).findByProps({ testID: `key-method-${tool}` }).props.onPress();

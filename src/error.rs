@@ -12,6 +12,13 @@ pub enum EntropyStudioError {
     InvalidCardTranscript,
     NoCards,
     DuplicateCard,
+    EmptyPrivateKey,
+    InvalidWifPrivateKey,
+    InvalidHexPrivateKey,
+    InvalidMiniPrivateKeyFormat,
+    InvalidMiniPrivateKey,
+    InvalidPrivateKeyRange,
+    EmptyBrainWallet,
 }
 
 impl fmt::Display for EntropyStudioError {

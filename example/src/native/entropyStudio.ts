@@ -9,6 +9,8 @@ import {
   DirectDiceStep as GeneratedDirectDiceStep,
   HashedCardInstruction,
   NumberBaseFormat as GeneratedNumberBaseFormat,
+  PrivateKeyFormat as GeneratedPrivateKeyFormat,
+  PrivateKeyInputStatus as GeneratedPrivateKeyInputStatus,
   SeedPhraseInputMethod as GeneratedSeedPhraseInputMethod,
   SeedPhraseStatus as GeneratedSeedPhraseStatus,
   analyzeNumberBaseInput,
@@ -28,6 +30,9 @@ import {
   normalizeCardToken,
   normalizeDirectCardTranscript,
   numberBaseEntropy,
+  privateKeyEntropy,
+  privateKeyInputState,
+  privateKeyKeyAllowed,
   seedPhraseAutocomplete,
   seedPhraseKeyAllowed,
   seedPhraseNumbersToWords,
@@ -52,6 +57,22 @@ export const DiceInputMethod = {
 export const SeedPhraseInputMethod = {
   Words: GeneratedSeedPhraseInputMethod.Words,
   Numbers: GeneratedSeedPhraseInputMethod.Numbers,
+} as const;
+
+export const PrivateKeyFormat = {
+  Wif: GeneratedPrivateKeyFormat.Wif,
+  Hex: GeneratedPrivateKeyFormat.Hex,
+  MiniKey: GeneratedPrivateKeyFormat.MiniKey,
+  BrainWallet: GeneratedPrivateKeyFormat.BrainWallet,
+} as const;
+
+export const PrivateKeyInputStatus = {
+  Empty: GeneratedPrivateKeyInputStatus.Empty,
+  Prefix: GeneratedPrivateKeyInputStatus.Prefix,
+  Incomplete: GeneratedPrivateKeyInputStatus.Incomplete,
+  Invalid: GeneratedPrivateKeyInputStatus.Invalid,
+  Excess: GeneratedPrivateKeyInputStatus.Excess,
+  Ready: GeneratedPrivateKeyInputStatus.Ready,
 } as const;
 
 export const SeedPhraseStatus = {
@@ -111,6 +132,9 @@ export {
   normalizeCardToken,
   normalizeDirectCardTranscript,
   numberBaseEntropy,
+  privateKeyEntropy,
+  privateKeyInputState,
+  privateKeyKeyAllowed,
   seedPhraseAutocomplete,
   seedPhraseKeyAllowed,
   seedPhraseNumbersToWords,
@@ -127,6 +151,7 @@ export type {
   HashedCardState,
   HashedDiceState,
   NumberBaseAnalysis,
+  PrivateKeyInputState,
   SeedPhraseAutocompleteResult,
   SeedPhraseState,
 } from 'entropystudio';
