@@ -8,6 +8,9 @@ The Rust wrapper depends on the pinned EntropyLab Git submodule at
 `entropylab/entropylab-wasm`. It calls that crate internally while exposing
 safe, typed UniFFI functions to React Native.
 
+Studio's visible and accessibility copy is now audited against pinned upstream
+`app.js` and `en.json`.
+
 ## Layout
 
 ```text
