@@ -8,7 +8,6 @@ import {
   DiceGrid,
   diceScreenCopy,
   DiceWordList,
-  entropyLabEnglish,
   expectPlaceholderSeedGrid,
   mockDiceRollsToEntropy,
   mockEntropyToMnemonic,
@@ -17,11 +16,12 @@ import {
   ReactTestRenderer,
   ScrollView,
 } from '../../test/testSupport';
+import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
-describe('Hashed rolls / Dice [1-6]', () => {
+describe(UPSTREAM_TEXT.dice.coleman.title, () => {
   test('uses EntropyLab help copy', () => {
     expect(diceScreenCopy('coldcard', 24).inputHelp).toBe(
-      entropyLabEnglish['dice.help.coldcard'].replace('{hashRolls}', '99'),
+      UPSTREAM_TEXT.dice.help.coldcard.replace('{hashRolls}', '99'),
     );
   });
 
@@ -38,10 +38,10 @@ describe('Hashed rolls / Dice [1-6]', () => {
     });
 
     expect(app!.root.findByProps({ testID: 'dice-screen-title' }).props.children).toBe(
-      entropyLabEnglish['mode.dice'],
+      UPSTREAM_TEXT.mode.dice,
     );
     expect(app!.root.findByProps({ testID: 'dice-screen-how' }).props.children).toBe(
-      entropyLabEnglish['dice.how'].replace('{words}', '24'),
+      UPSTREAM_TEXT.dice.how.replace('{words}', '24'),
     );
     expect(
       app!
@@ -59,7 +59,7 @@ describe('Hashed rolls / Dice [1-6]', () => {
     expect(app!.root.findByProps({ testID: 'dice-setup-settings' })).toBeDefined();
     expect(app!.root.findAllByProps({ testID: 'dice-settings-sheet' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'dice-method-coldcard-title' }).props.children).toBe(
-      entropyLabEnglish['dice.coldcard.title'],
+      UPSTREAM_TEXT.dice.coldcard.title,
     );
     expect(
       app!
@@ -67,7 +67,7 @@ describe('Hashed rolls / Dice [1-6]', () => {
         .findByProps({ testID: 'dice-setup-view' })
         .findByProps({ testID: 'seed-length-value' }).props.children,
     ).toBe(
-      entropyLabEnglish['seedLength.words'].replace('{n}', '24'),
+      UPSTREAM_TEXT.seedLength.words.replace('{n}', '24'),
     );
     await openDiceEntry(app!);
     expect(app!.root.findByProps({ testID: 'dice-rolls-view' })).toBeDefined();
@@ -79,12 +79,12 @@ describe('Hashed rolls / Dice [1-6]', () => {
     expect(
       app!.root.findByProps({ testID: 'dice-method-coldcard-title' }).props
         .children,
-    ).toBe(entropyLabEnglish['dice.coldcard.title']);
+    ).toBe(UPSTREAM_TEXT.dice.coldcard.title);
     expect(
       app!.root.findByProps({ testID: 'dice-method-coldcard-description' }).props
         .children,
     ).toBe(
-      entropyLabEnglish['dice.coldcard.desc']
+      UPSTREAM_TEXT.dice.coldcard.desc
         .replace('{bits}', '256')
         .replace('{words}', '24')
         .replace('{hashRolls}', '99'),
@@ -95,14 +95,14 @@ describe('Hashed rolls / Dice [1-6]', () => {
         .findByProps({ testID: 'dice-setup-view' })
         .findByProps({ testID: 'seed-length-label' }).props.children,
     ).toBe(
-      entropyLabEnglish['seedLength.label'],
+      UPSTREAM_TEXT.seedLength.label,
     );
     await openDiceEntry(app!);
     expect(app!.root.findByProps({ testID: 'dice-method-help' }).props.children).toBe(
-      entropyLabEnglish['dice.help.coldcard'].replace('{hashRolls}', '99'),
+      UPSTREAM_TEXT.dice.help.coldcard.replace('{hashRolls}', '99'),
     );
     expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
-      entropyLabEnglish['dice.label.hashed'],
+      UPSTREAM_TEXT.dice.label.hashed,
     );
     expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.placeholder).toBe(
       '415263415263…',
@@ -111,13 +111,13 @@ describe('Hashed rolls / Dice [1-6]', () => {
       app!.root.findByProps({ testID: 'dice-rolls-input' }).props.showSoftInputOnFocus,
     ).toBe(false);
     expect(app!.root.findByProps({ testID: 'dice-progress' }).props.children).toBe(
-      entropyLabEnglish['dice.meta.empty']
+      UPSTREAM_TEXT.dice.meta.empty
         .replace('{n}', '99')
-        .replace('{method}', entropyLabEnglish['dice.method.coldcard']),
+        .replace('{method}', UPSTREAM_TEXT.dice.method.coldcard),
     );
     expect(
       app!.root.findByProps({ testID: 'derive-dice-phrase-label' }).props.children,
-    ).toBe(entropyLabEnglish['action.derive']);
+    ).toBe(UPSTREAM_TEXT.action.derive);
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1');
@@ -181,7 +181,7 @@ describe('Hashed rolls / Dice [1-6]', () => {
     });
 
     expect(app!.root.findByProps({ testID: 'dice-error' }).props.children).toBe(
-      entropyLabEnglish['error.diceFaces'].replace('{chars}', JSON.stringify('x')),
+      UPSTREAM_TEXT.error.diceFaces.replace('{chars}', JSON.stringify('x')),
     );
   });
 

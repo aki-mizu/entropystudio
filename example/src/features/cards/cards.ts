@@ -15,8 +15,7 @@ import {
 } from '../../native/entropyStudio';
 import type { DirectCardState, HashedCardState } from '../../native/entropyStudio';
 import type { WordCount } from '../dice/dice';
-import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
+import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
 
 export const CARD_METHODS = ['hashed', 'direct'] as const;
 export const CARD_RANKS = [
@@ -64,24 +63,24 @@ export function isHashedCardMethod(method: CardMethod): method is 'hashed' {
 export function cardMethodCopy(method: CardMethod, wordCount: WordCount) {
   if (method === 'direct') {
     return {
-      description: entropyLabEnglish['cards.direct.desc'],
-      title: entropyLabEnglish['cards.direct.title'],
+      description: UPSTREAM_TEXT.cards.direct.desc,
+      title: UPSTREAM_TEXT.cards.direct.title,
     };
   }
 
   const recommendation =
     wordCount === 24
-      ? entropyLabEnglish['cards.hashed.recommended24']
-      : formatCopy(entropyLabEnglish['cards.hashed.recommendedN'], {
+      ? UPSTREAM_TEXT.cards.hashed.recommended24
+      : formatCopy(UPSTREAM_TEXT.cards.hashed.recommendedN, {
           n: hashedCardsNeeded(wordCount),
         });
-  const hashedDescription = formatCopy(entropyLabEnglish['cards.hashed.desc'], {
+  const hashedDescription = formatCopy(UPSTREAM_TEXT.cards.hashed.desc, {
     recommended: recommendation,
   });
 
   return {
     description: hashedDescription,
-    title: entropyLabEnglish['cards.hashed.title'],
+    title: UPSTREAM_TEXT.cards.hashed.title,
   };
 }
 
@@ -93,28 +92,28 @@ export function cardScreenCopy(
   const isDirect = method === 'direct';
   const deal =
     wordCount === 24
-      ? entropyLabEnglish['cards.help.deal24']
-      : formatCopy(entropyLabEnglish['cards.help.dealN'], { n: hashedCardsNeeded(wordCount) });
+      ? UPSTREAM_UI_FALLBACK_COPY.cards.deal24
+      : UPSTREAM_UI_FALLBACK_COPY.cards.dealN(hashedCardsNeeded(wordCount));
 
   return {
-    deriveAction: entropyLabEnglish['action.derive'],
-    how: formatCopy(entropyLabEnglish['cards.how'], { words: wordCount }),
+    deriveAction: UPSTREAM_TEXT.action.derive,
+    how: formatCopy(UPSTREAM_TEXT.cards.how, { words: wordCount }),
     inputHelp: isDirect
-      ? formatCopy(entropyLabEnglish['cards.help.direct'], { partialWords: wordCount - 1 })
+      ? UPSTREAM_UI_FALLBACK_COPY.cards.directHelp(wordCount - 1)
       : UPSTREAM_UI_FALLBACK_COPY.cards.hashedInputHelp(deal),
     inputLabel: isDirect
-      ? entropyLabEnglish['cards.transcriptDirect']
-      : entropyLabEnglish['cards.transcript'],
+      ? UPSTREAM_UI_FALLBACK_COPY.cards.directTranscript
+      : UPSTREAM_TEXT.cards.transcript,
     inputPlaceholder: isDirect
       ? UPSTREAM_UI_FALLBACK_COPY.cards.placeholders.direct
       : matchesIanColeman
         ? UPSTREAM_UI_FALLBACK_COPY.cards.placeholders.ianColeman
         : UPSTREAM_UI_FALLBACK_COPY.cards.placeholders.standard,
-    mode: entropyLabEnglish['mode.cards'],
-    resultEntropy: entropyLabEnglish['result.entropyHex'],
-    seedLengthLabel: entropyLabEnglish['seedLength.label'],
-    seedLengthValue: formatCopy(entropyLabEnglish['seedLength.words'], { n: wordCount }),
-    wordSlotsAria: formatCopy(entropyLabEnglish['seed.wordSlotsAria'], { n: wordCount }),
+    mode: UPSTREAM_TEXT.mode.cards,
+      resultEntropy: UPSTREAM_TEXT.result.entropyHex,
+    seedLengthLabel: UPSTREAM_TEXT.seedLength.label,
+    seedLengthValue: UPSTREAM_UI_FALLBACK_COPY.common.seedLengthWords(wordCount),
+    wordSlotsAria: formatCopy(UPSTREAM_TEXT.seed.wordSlotsAria, { n: wordCount }),
   };
 }
 
@@ -224,10 +223,10 @@ export function hashedCardProgressCopy(state: HashedCardState): string {
   const bits = state.entropyBits.toFixed(1);
 
   if (count === 0) {
-    return formatCopy(entropyLabEnglish['cards.meta.hashedEmpty'], { need: needed });
+    return formatCopy(UPSTREAM_TEXT.cards.meta.hashedEmpty, { need: needed });
   }
   if (count < needed) {
-    return formatCopy(entropyLabEnglish['cards.meta.hashedMissing'], {
+    return formatCopy(UPSTREAM_TEXT.cards.meta.hashedMissing, {
       bits,
       have: count,
       missing: needed - count,
@@ -236,18 +235,18 @@ export function hashedCardProgressCopy(state: HashedCardState): string {
   }
 
   const ready = formatCopy(
-    entropyLabEnglish[
-      count === 1 ? 'cards.meta.hashedReadyOne' : 'cards.meta.hashedReady'
-    ],
+    count === 1
+      ? UPSTREAM_TEXT.cards.meta.hashedReadyOne
+      : UPSTREAM_TEXT.cards.meta.hashedReady,
     { bits, n: count },
   );
   if (count === needed) {
     return ready;
   }
   return `${ready} ${formatCopy(
-    entropyLabEnglish[
-      count - needed === 1 ? 'cards.meta.hashedExtraOne' : 'cards.meta.hashedExtra'
-    ],
+    count - needed === 1
+      ? UPSTREAM_TEXT.cards.meta.hashedExtraOne
+      : UPSTREAM_TEXT.cards.meta.hashedExtra,
     { n: count - needed },
   )}`;
 }
@@ -263,36 +262,26 @@ export function directCardProgressCopy(
   const entered = state.enteredDraws;
   const needed = state.requiredDraws;
   if (state.complete) {
-    return formatCopy(entropyLabEnglish['cards.meta.directComplete'], {
-      have: entered,
-      need: needed,
-      words: wordCount,
-    });
+    return UPSTREAM_UI_FALLBACK_COPY.cards.directComplete(entered, needed, wordCount);
   }
   if (state.extraCount > 0) {
-    return formatCopy(
-      entropyLabEnglish[
-        state.extraCount === 1 ? 'cards.meta.extraCard' : 'cards.meta.extraCards'
-      ],
-      { n: state.extraCount },
-    );
+    return state.extraCount === 1
+      ? UPSTREAM_UI_FALLBACK_COPY.cards.extraCard(state.extraCount)
+      : UPSTREAM_UI_FALLBACK_COPY.cards.extraCards(state.extraCount);
   }
   if (state.invalidCount > 0) {
-    return formatCopy(
-      entropyLabEnglish[
-        state.invalidCount === 1 ? 'cards.meta.invalidRank' : 'cards.meta.invalidRanks'
-      ],
-      { n: state.invalidCount },
-    );
+    return state.invalidCount === 1
+      ? UPSTREAM_UI_FALLBACK_COPY.cards.invalidRank(state.invalidCount)
+      : UPSTREAM_UI_FALLBACK_COPY.cards.invalidRanks(state.invalidCount);
   }
 
   const set = directRankSet(state.activeMax);
   const step =
     state.step === DirectCardStep.Word
       ? formatCopy(
-          entropyLabEnglish[
-            state.activeDraw === 1 ? 'cards.meta.directWord' : 'cards.meta.directWordShuffle'
-          ],
+          state.activeDraw === 1
+            ? UPSTREAM_TEXT.cards.meta.directWord
+            : UPSTREAM_TEXT.cards.meta.directWordShuffle,
           {
             draw: state.activeDraw,
             set,
@@ -301,17 +290,13 @@ export function directCardProgressCopy(
           },
         )
       : state.step === DirectCardStep.Final
-        ? formatCopy(entropyLabEnglish['cards.meta.directFinal'], {
+        ? formatCopy(UPSTREAM_TEXT.cards.meta.directFinal, {
             draw: state.activeDraw,
-          need: state.finalDraws,
+            need: state.finalDraws,
             set,
           })
-        : entropyLabEnglish['error.directChecksum'];
-  return formatCopy(entropyLabEnglish['cards.meta.directProgress'], {
-    have: entered,
-    need: needed,
-    step,
-  });
+        : UPSTREAM_UI_FALLBACK_COPY.cards.checksumError;
+  return UPSTREAM_UI_FALLBACK_COPY.cards.directProgress(entered, needed, step);
 }
 
 export function cardInstruction(
@@ -325,11 +310,9 @@ export function cardInstruction(
       return '';
     }
     return formatCopy(
-      entropyLabEnglish[
-        directState.enteredDraws === 0
-          ? 'cards.instruct.directFirst'
-          : 'cards.instruct.directNext'
-      ],
+      directState.enteredDraws === 0
+        ? UPSTREAM_TEXT.cards.instruct.directFirst
+        : UPSTREAM_TEXT.cards.instruct.directNext,
       { set: directRankSet(directState.activeMax) },
     );
   }
@@ -339,13 +322,13 @@ export function cardInstruction(
   }
   switch (hashedState.instruction) {
     case HashedCardInstruction.Empty:
-      return entropyLabEnglish['cards.instruct.hashedFirst'];
+      return UPSTREAM_TEXT.cards.instruct.hashedFirst;
     case HashedCardInstruction.FirstShuffle:
-      return entropyLabEnglish['cards.instruct.hashedNext'];
+      return UPSTREAM_TEXT.cards.instruct.hashedNext;
     case HashedCardInstruction.ShuffleAgain:
-      return entropyLabEnglish['cards.instruct.hashedAgain'];
+      return UPSTREAM_TEXT.cards.instruct.hashedAgain;
     case HashedCardInstruction.SecondShuffle:
-      return entropyLabEnglish['cards.instruct.hashedSecond'];
+      return UPSTREAM_TEXT.cards.instruct.hashedSecond;
     case HashedCardInstruction.Complete:
       return '';
   }
@@ -374,7 +357,7 @@ export function deriveHashedCardResult(
 
 export function deriveDirectCardResult(state: DirectCardState): CardResult {
   if (!state.complete || !state.finalWord) {
-    return { error: entropyLabEnglish['error.generic'] };
+    return { error: UPSTREAM_TEXT.error.generic };
   }
 
   const mnemonic = [...state.words, state.finalWord].join(' ');
@@ -384,7 +367,7 @@ export function deriveDirectCardResult(state: DirectCardState): CardResult {
       mnemonic,
     };
   } catch {
-    return { error: entropyLabEnglish['error.directChecksum'] };
+    return { error: UPSTREAM_UI_FALLBACK_COPY.cards.checksumError };
   }
 }
 
@@ -411,15 +394,13 @@ function upstreamCardError(error: unknown, state: HashedCardState): string {
 
   if (tag === EntropyStudioError_Tags.InvalidCardTranscript) {
     const ignored = state.invalidTokens.slice(0, 8).join(' ');
-    return formatCopy(entropyLabEnglish['error.cardsFormat'], { ignored });
+    return UPSTREAM_UI_FALLBACK_COPY.cards.formatError(ignored);
   }
   if (tag === EntropyStudioError_Tags.DuplicateCard) {
-    return formatCopy(entropyLabEnglish['error.cardsDuplicate'], {
-      card: state.firstDuplicateCard,
-    });
+    return UPSTREAM_UI_FALLBACK_COPY.cards.duplicateError(state.firstDuplicateCard);
   }
   if (tag === EntropyStudioError_Tags.NoCards) {
-    return entropyLabEnglish['error.cardsEmpty'];
+    return UPSTREAM_UI_FALLBACK_COPY.cards.emptyError;
   }
-  return entropyLabEnglish['error.generic'];
+  return UPSTREAM_TEXT.error.generic;
 }

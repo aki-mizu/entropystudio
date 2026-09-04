@@ -1,3 +1,4 @@
+import { UPSTREAM_UI_LABELS } from '../upstreamUiCopy';
 import {
   NumberBaseFormat as NativeNumberBaseFormat,
   analyzeNumberBaseInput as nativeAnalyzeNumberBaseInput,
@@ -5,7 +6,6 @@ import {
 } from '../../native/entropyStudio';
 import type { NumberBaseAnalysis as NativeNumberBaseAnalysis } from '../../native/entropyStudio';
 import type { WordCount } from '../dice/dice';
-import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
 
 export const NUMBER_BASE_FORMATS = [
   'bin',
@@ -131,8 +131,8 @@ function formatConfig(
 
 function formatDefinition(format: NumberBaseFormat): NumberBaseDefinition {
   return {
-    label: entropyLabEnglish[`hex.format.${format}`],
-    shortLabel: entropyLabEnglish[`hex.short.${format}`],
-    unit: entropyLabEnglish[`hex.unit.${format}`],
+    label: UPSTREAM_UI_LABELS.hexFormat[format].label,
+    shortLabel: UPSTREAM_UI_LABELS.hexFormat[format].shortLabel,
+    unit: UPSTREAM_UI_LABELS.hexFormat[format].unit,
   };
 }

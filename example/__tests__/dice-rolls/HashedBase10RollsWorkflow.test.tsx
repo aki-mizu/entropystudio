@@ -5,7 +5,6 @@
 import {
   App,
   diceScreenCopy,
-  entropyLabEnglish,
   mockDiceRollsToEntropy,
   mockEntropyToMnemonic,
   openDiceEntry,
@@ -13,11 +12,12 @@ import {
   ReactTestRenderer,
   selectDiceMethod,
 } from '../../test/testSupport';
+import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
-describe('Hashed rolls / Base 10 [0-9] (recommended)', () => {
+describe(UPSTREAM_TEXT.dice.coldcard.title, () => {
   test('uses EntropyLab help copy', () => {
     expect(diceScreenCopy('coleman', 24).inputHelp).toBe(
-      entropyLabEnglish['dice.help.coleman'].replace('{hashRolls}', '99'),
+      UPSTREAM_TEXT.dice.help.coleman.replace('{hashRolls}', '99'),
     );
   });
 
@@ -36,15 +36,15 @@ describe('Hashed rolls / Base 10 [0-9] (recommended)', () => {
 
     await selectDiceMethod(app!, 'dice-method-coleman');
     expect(app!.root.findByProps({ testID: 'dice-method-coleman-title' }).props.children).toBe(
-      entropyLabEnglish['dice.coleman.title'],
+      UPSTREAM_TEXT.dice.coleman.title,
     );
 
     await openDiceEntry(app!);
     expect(app!.root.findByProps({ testID: 'dice-method-help' }).props.children).toBe(
-      entropyLabEnglish['dice.help.coleman'].replace('{hashRolls}', '99'),
+      UPSTREAM_TEXT.dice.help.coleman.replace('{hashRolls}', '99'),
     );
     expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
-      entropyLabEnglish['dice.label.hashed'],
+      UPSTREAM_TEXT.dice.label.hashed,
     );
 
     await ReactTestRenderer.act(async () => {

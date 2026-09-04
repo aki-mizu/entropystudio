@@ -8,8 +8,10 @@ The Rust wrapper depends on the pinned EntropyLab Git submodule at
 `entropylab/entropylab-wasm`. It calls that crate internally while exposing
 safe, typed UniFFI functions to React Native.
 
-Studio's visible and accessibility copy is now audited against pinned upstream
-`app.js` and `en.json`.
+Studio's visible and accessibility copy is audited against the pinned upstream
+UI sources, including `app.js`, `i18n-labels.js`, and content-keyed localization
+data. Static aliases, direct label tables, and dynamic upstream templates are
+centralized in `example/src/features/upstreamUiCopy.ts`.
 
 ## Layout
 
@@ -113,6 +115,20 @@ Run the Rust contract tests:
 ```sh
 npm test
 ```
+
+After intentionally updating the EntropyLab submodule, synchronize Studio's
+selected upstream UI copy with the pinned source:
+
+```sh
+npm run check:upstream-ui-copy
+```
+
+This statically validates Studio's aliases in
+`example/src/features/upstreamUiCopy.ts` against pinned upstream source files
+and runs Studio's copy-provenance test. It does not execute or rewrite upstream
+synchronization code, and it never imports non-English locale values into React
+Native. Callers only import aliases from that module, so this is the sole Studio
+file validated against upstream text.
 
 Build native artifacts and regenerate bindings for a mobile platform:
 

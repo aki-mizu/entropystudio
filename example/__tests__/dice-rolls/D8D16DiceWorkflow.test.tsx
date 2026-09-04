@@ -6,7 +6,6 @@ import {
   App,
   DiceGrid,
   diceScreenCopy,
-  entropyLabEnglish,
   expectEnabledDiceFaces,
   expectPlaceholderSeedGrid,
   mockDirectDiceState,
@@ -16,12 +15,13 @@ import {
   ReactTestRenderer,
   selectDiceMethod,
 } from '../../test/testSupport';
+import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
 test('uses EntropyLab D8/D16 help copy', () => {
   expect(diceScreenCopy('d8d16', 24).inputHelp).toBe(
-    entropyLabEnglish['dice.help.dplus'].replace(
+    UPSTREAM_TEXT.dice.help.dplus.replace(
       '{finalHelp}',
-      entropyLabEnglish['dice.dplus.helpOne'].replace('{die}', 'D8'),
+      UPSTREAM_TEXT.dice.dplus.helpOne.replace('{die}', 'D8'),
     ),
   );
 });
@@ -234,17 +234,17 @@ test('derives a D8/D16 direct-dice phrase from its final roll selection', async 
   });
 
   expect(app!.root.findByProps({ testID: 'dice-method-d8d16-title' }).props.children).toBe(
-    entropyLabEnglish['dice.dplus.title'],
+    UPSTREAM_TEXT.dice.dplus.title,
   );
   expect(app!.root.findByProps({ testID: 'dice-method-d8d16-description' }).props.children).toBe(
-    entropyLabEnglish['dice.dplus.desc']
+    UPSTREAM_TEXT.dice.dplus.desc
       .replace('{partialWords}', '11')
       .replace('{final}', 'roll a final D8 and D16'),
   );
 
   await openDiceEntry(app!);
   expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
-    entropyLabEnglish['dice.label.dplus'].replace(
+    UPSTREAM_TEXT.dice.label.dplus.replace(
       '{final}',
       'roll a final D8 and D16',
     ),

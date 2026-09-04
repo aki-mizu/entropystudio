@@ -1,4 +1,3 @@
-import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
 import {
   SeedPhraseInputMethod,
   SeedPhraseStatus,
@@ -16,6 +15,7 @@ import type {
 } from '../../native/entropyStudio';
 import type { WordCount } from '../dice/dice';
 import type { SeedPhraseEntryMethod } from './components/SeedPhraseKeypad';
+import { UPSTREAM_TEXT } from '../upstreamUiCopy';
 
 type InputSelection = { readonly end: number; readonly start: number };
 
@@ -99,7 +99,9 @@ export function seedPhraseStatusCopy(
   wordCount: WordCount,
 ): string {
   const progress = formatCopy(
-    entropyLabEnglish[method === 'words' ? 'seed.count' : 'seed.meta.numberProgress'],
+    method === 'words'
+      ? UPSTREAM_TEXT.seed.count
+      : UPSTREAM_TEXT.seed.meta.numberProgress,
     { entered: state.enteredCount, words: wordCount },
   );
   const finalWord = state.words[wordCount - 1] ?? '';
@@ -107,32 +109,34 @@ export function seedPhraseStatusCopy(
   switch (state.status) {
     case SeedPhraseStatus.Extra:
       return formatCopy(
-        entropyLabEnglish[method === 'words' ? 'seed.meta.extraWords' : 'seed.meta.extra'],
+        method === 'words'
+          ? UPSTREAM_TEXT.seed.meta.extraWords
+          : UPSTREAM_TEXT.seed.meta.extra,
         { entered: state.enteredCount, n: state.extraCount, words: wordCount },
       );
     case SeedPhraseStatus.ChooseFinal:
-      return formatCopy(entropyLabEnglish['seed.meta.chooseFinal'], {
+      return formatCopy(UPSTREAM_TEXT.seed.meta.chooseFinal, {
         n: state.finalCandidates.length,
         progress,
       });
     case SeedPhraseStatus.Ready:
-      return formatCopy(entropyLabEnglish['seed.meta.ready'], { progress });
+      return formatCopy(UPSTREAM_TEXT.seed.meta.ready, { progress });
     case SeedPhraseStatus.FinalPrefix:
-      return formatCopy(entropyLabEnglish['seed.meta.prefixMatch'], {
-        n: state.matchingFinalCandidates,
-        prefix: finalWord,
+      return UPSTREAM_UI_FALLBACK_COPY.seedPhrase.finalPrefix(
         progress,
-      });
+        state.matchingFinalCandidates,
+        finalWord,
+      );
     case SeedPhraseStatus.NoFinalPrefix:
-      return formatCopy(entropyLabEnglish['seed.meta.noPrefix'], { prefix: finalWord, progress });
+      return UPSTREAM_UI_FALLBACK_COPY.seedPhrase.noFinalPrefix(progress, finalWord);
     case SeedPhraseStatus.InvalidWord:
-      return formatCopy(entropyLabEnglish['seed.meta.invalidWord'], {
+      return formatCopy(UPSTREAM_TEXT.seed.meta.invalidWord, {
         n: state.invalidPosition,
         progress,
         word: state.invalidToken,
       });
     case SeedPhraseStatus.InvalidNumber:
-      return formatCopy(entropyLabEnglish['seed.meta.invalidNumber'], {
+      return formatCopy(UPSTREAM_TEXT.seed.meta.invalidNumber, {
         max: state.maximumNumber,
         min: state.minimumNumber,
         n: state.invalidPosition,
@@ -140,14 +144,14 @@ export function seedPhraseStatusCopy(
         token: state.invalidToken,
       });
     case SeedPhraseStatus.ChecksumInvalid:
-      return formatCopy(entropyLabEnglish['seed.meta.checksumInvalid'], { progress });
+      return formatCopy(UPSTREAM_TEXT.seed.meta.checksumInvalid, { progress });
     case SeedPhraseStatus.Remaining:
       return method === 'words'
-        ? formatCopy(entropyLabEnglish['seed.meta.remaining'], {
+        ? formatCopy(UPSTREAM_TEXT.seed.meta.remaining, {
             progress,
             remaining: state.remainingCount,
           })
-        : formatCopy(entropyLabEnglish['seed.meta.remainingRange'], {
+        : formatCopy(UPSTREAM_TEXT.seed.meta.remainingRange, {
             max: state.maximumNumber,
             min: state.minimumNumber,
             progress,

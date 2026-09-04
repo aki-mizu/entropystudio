@@ -1,10 +1,18 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import entropyLabEnglish from '../../../entropylab/src/locales/en.json';
+
 import type { DiceColors } from '../features/dice/diceTheme';
+import { UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '../features/upstreamUiCopy';
 
 export type EntropyTool = 'cards' | 'dice' | 'hex' | 'key' | 'seed';
 
 const ENTROPY_TOOLS: readonly EntropyTool[] = ['dice', 'cards', 'hex', 'seed', 'key'];
+const ENTROPY_TOOL_LABELS: Record<EntropyTool, string> = {
+  cards: UPSTREAM_UI_LABELS.keyMode.cards,
+  dice: UPSTREAM_UI_LABELS.keyMode.dice,
+  hex: UPSTREAM_UI_LABELS.keyMode.hex,
+  key: UPSTREAM_UI_LABELS.keyMode.key,
+  seed: UPSTREAM_UI_LABELS.keyMode.seed,
+};
 
 type Props = {
   readonly activeTool: EntropyTool;
@@ -22,7 +30,7 @@ export function EntropyMethodList({ activeTool, colors, isActive, onSelect }: Pr
       testID="key-method-list"
     >
       <Text style={[styles.label, { color: colors.muted }]} testID="key-method-label">
-        {entropyLabEnglish['keys.methodLabel']}
+        {UPSTREAM_TEXT.keys.methodLabel}
       </Text>
       <View
         style={[styles.options, { backgroundColor: colors.segment, borderColor: colors.border }]}
@@ -42,15 +50,7 @@ export function EntropyMethodList({ activeTool, colors, isActive, onSelect }: Pr
               testID={`key-method-${tool}`}
             >
               <Text style={[styles.optionLabel, { color: selected ? colors.text : colors.muted }]}>
-                {tool === 'dice'
-                  ? entropyLabEnglish['mode.dice']
-                  : tool === 'cards'
-                    ? entropyLabEnglish['mode.cards']
-                    : tool === 'hex'
-                      ? entropyLabEnglish['mode.hex']
-                        : tool === 'seed'
-                          ? entropyLabEnglish['mode.seed']
-                          : entropyLabEnglish['mode.key']}
+                {ENTROPY_TOOL_LABELS[tool]}
               </Text>
             </Pressable>
           );

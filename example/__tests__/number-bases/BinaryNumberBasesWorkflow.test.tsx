@@ -4,11 +4,11 @@
 
 import {
   App,
-  entropyLabEnglish,
   React,
   ReactTestRenderer,
   selectEntropyTool,
 } from '../../test/testSupport';
+import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
 describe('Number Bases / Binary', () => {
   test('enters binary entropy through the on-screen keypad', async () => {
@@ -26,9 +26,9 @@ describe('Number Bases / Binary', () => {
 
     expect(
       app!.root.findByProps({
-        accessibilityLabel: entropyLabEnglish['hex.keypadAria'].replace(
+        accessibilityLabel: UPSTREAM_TEXT.hex.keypadAria.replace(
           '{label}',
-          entropyLabEnglish['hex.format.bin'],
+          UPSTREAM_TEXT.hex.format.bin,
         ),
       }),
     ).toBeDefined();

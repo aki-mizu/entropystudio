@@ -4,11 +4,11 @@
 
 import {
   App,
-  entropyLabEnglish,
   React,
   ReactTestRenderer,
   selectEntropyTool,
 } from '../../test/testSupport';
+import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
 describe('Number Bases / Octal (Base 8)', () => {
   test('enters octal entropy through the on-screen keypad', async () => {
@@ -26,9 +26,9 @@ describe('Number Bases / Octal (Base 8)', () => {
 
     expect(
       app!.root.findByProps({
-        accessibilityLabel: entropyLabEnglish['hex.keypadAria'].replace(
+        accessibilityLabel: UPSTREAM_TEXT.hex.keypadAria.replace(
           '{label}',
-          entropyLabEnglish['hex.format.base8'],
+          UPSTREAM_TEXT.hex.format.base8,
         ),
       }),
     ).toBeDefined();

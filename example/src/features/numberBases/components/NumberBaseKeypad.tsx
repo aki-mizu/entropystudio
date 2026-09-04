@@ -1,8 +1,7 @@
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import entropyLabEnglish from '../../../../../entropylab/src/locales/en.json';
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
+import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../../upstreamUiCopy';
 import type { NumberBaseFormat } from '../numberBases';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
@@ -62,14 +61,14 @@ export function NumberBaseKeypad({
   return (
     <View style={styles.keypad} testID="number-base-keypad">
       <View
-        accessibilityLabel={formatCopy(entropyLabEnglish['hex.keypadAria'], { label })}
+        accessibilityLabel={formatCopy(UPSTREAM_TEXT.hex.keypadAria, { label })}
         style={[styles.keyGrid, { width: gridWidth }]}
       >
         {[...characters].map(character => {
           const enabled = canInsert(character);
           return (
             <Pressable
-              accessibilityLabel={formatCopy(entropyLabEnglish['hex.enterDigit'], {
+              accessibilityLabel={formatCopy(UPSTREAM_TEXT.hex.enterDigit, {
                 character,
                 shortLabel,
               })}

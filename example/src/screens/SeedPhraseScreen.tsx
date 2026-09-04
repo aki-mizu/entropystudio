@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import entropyLabEnglish from '../../../entropylab/src/locales/en.json';
+
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
@@ -20,7 +20,7 @@ import type { DiceResult, WordCount } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
 import { SeedPhraseKeypad } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import type { SeedPhraseEntryMethod } from '../features/seedPhrase/components/SeedPhraseKeypad';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
+import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '../features/upstreamUiCopy';
 import {
   analyzeSeedPhrase,
   seedPhraseAutocomplete,
@@ -45,6 +45,17 @@ type Props = {
   readonly isDarkMode: boolean;
   readonly onSelectTool: (tool: EntropyTool) => void;
 };
+
+const SEED_METHOD_COPY = {
+  numbers: {
+    description: UPSTREAM_TEXT.seed.method.numbersDesc,
+    title: UPSTREAM_TEXT.seed.method.numbers,
+  },
+  words: {
+    description: UPSTREAM_TEXT.seed.method.wordsDesc,
+    title: UPSTREAM_TEXT.seed.method.words,
+  },
+} as const;
 
 function formatCopy(template: string, values: Record<string, number | string>): string {
   return Object.entries(values).reduce(
@@ -264,10 +275,10 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
           <View style={styles.header}>
             <View style={styles.headerCopy}>
               <Text style={[styles.title, { color: colors.text }]} testID="seed-phrase-screen-title">
-                {entropyLabEnglish['mode.seed']}
+                {UPSTREAM_UI_LABELS.keyMode.seed}
               </Text>
               <Text style={[styles.subtitle, { color: colors.muted }]}>
-                {entropyLabEnglish[`seed.method.${seedMethod}Desc`]}
+                {SEED_METHOD_COPY[seedMethod].description}
               </Text>
             </View>
           </View>
@@ -280,12 +291,11 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
           />
 
           <View style={styles.setupSettings}>
-            <Text style={[styles.label, { color: colors.muted }]}>{entropyLabEnglish['seed.how']}</Text>
+            <Text style={[styles.label, { color: colors.muted }]}>{UPSTREAM_TEXT.seed.how}</Text>
             <View style={styles.methodOptions}>
               {(['words', 'numbers'] as const).map(method => {
                 const selected = method === seedMethod;
-                const title = entropyLabEnglish[`seed.method.${method}`];
-                const description = entropyLabEnglish[`seed.method.${method}Desc`];
+                const { description, title } = SEED_METHOD_COPY[method];
                 return (
                   <Pressable
                     accessibilityRole="radio"
@@ -314,16 +324,16 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
             </View>
             <WordCountSelector
               colors={colors}
-              label={entropyLabEnglish['seedLength.label']}
+              label={UPSTREAM_TEXT.seedLength.label}
               onSelect={selectWordCount}
-              valueLabel={entropyLabEnglish['seedLength.words'].replace('{n}', String(wordCount))}
+              valueLabel={UPSTREAM_TEXT.seedLength.words.replace('{n}', String(wordCount))}
               wordCount={wordCount}
             />
           </View>
 
           <View style={styles.setupActionArea}>
             <Pressable
-              accessibilityLabel={entropyLabEnglish[`seed.method.${seedMethod}`]}
+              accessibilityLabel={SEED_METHOD_COPY[seedMethod].title}
               accessibilityRole="button"
               onPress={() => setActiveView('entry')}
               style={({ pressed }) => [
@@ -333,7 +343,7 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
               testID="open-seed-phrase-entry"
             >
               <Text style={[styles.buttonText, { color: colors.onAccent }]}>
-                {entropyLabEnglish[`seed.method.${seedMethod}`]}
+                {SEED_METHOD_COPY[seedMethod].title}
               </Text>
             </Pressable>
           </View>
@@ -354,10 +364,10 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
             </Pressable>
             <View style={styles.entryHeaderCopy}>
               <Text style={[styles.entryTitle, { color: colors.text }]}>
-                {entropyLabEnglish['mode.seed']}
+                {UPSTREAM_UI_LABELS.keyMode.seed}
               </Text>
               <Text style={[styles.entrySubtitle, { color: colors.muted }]}>
-                {entropyLabEnglish[`seed.method.${seedMethod}`]}
+                {SEED_METHOD_COPY[seedMethod].title}
               </Text>
             </View>
           </View>
@@ -370,15 +380,15 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
               slotCount={wordCount}
               testID="seed-phrase-words"
               words={previewWords}
-              wordSlotsAria={entropyLabEnglish['seed.wordSlotsAria'].replace('{n}', String(wordCount))}
+              wordSlotsAria={UPSTREAM_TEXT.seed.wordSlotsAria.replace('{n}', String(wordCount))}
             />
           </View>
 
           <View style={styles.inputHeader}>
             <Text style={[styles.inputLabel, { color: colors.muted }]}>
               {seedMethod === 'words'
-                ? formatCopy(entropyLabEnglish['seed.wordsLabel'], { words: wordCount })
-                : formatCopy(entropyLabEnglish['seed.numbersLabel'], { words: wordCount })}
+                ? UPSTREAM_UI_FALLBACK_COPY.seedPhrase.wordsLabel(wordCount)
+                : formatCopy(UPSTREAM_TEXT.seed.numbersLabel, { words: wordCount })}
             </Text>
             <Pressable
               accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
@@ -398,23 +408,22 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
           </View>
           <Text style={[styles.inputHelp, { color: colors.muted }]}>
             {seedMethod === 'words'
-              ? formatCopy(entropyLabEnglish['seed.wordsHelp'], {
-                  partialWords: wordCount - 1,
-                  words: wordCount,
-                })
-              : formatCopy(entropyLabEnglish['seed.numbersHelp'], {
-                  range: entropyLabEnglish[zeroIndexed ? 'seed.range0' : 'seed.range1'],
+              ? UPSTREAM_UI_FALLBACK_COPY.seedPhrase.wordsHelp(wordCount, wordCount - 1)
+              : formatCopy(UPSTREAM_TEXT.seed.numbersHelp, {
+                  range: zeroIndexed
+                    ? UPSTREAM_TEXT.seed.range0
+                    : UPSTREAM_TEXT.seed.range1,
                 })}
           </Text>
           {seedMethod === 'words' && (
             <View style={styles.autocompleteToggle}>
               <View style={styles.autocompleteCopy}>
                 <Text style={[styles.autocompleteLabel, { color: colors.text }]}>
-                  {entropyLabEnglish['seed.autocomplete']}
+                  {UPSTREAM_UI_FALLBACK_COPY.seedPhrase.autocomplete}
                 </Text>
               </View>
               <Switch
-                accessibilityLabel={entropyLabEnglish['seed.autocomplete']}
+                accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.seedPhrase.autocomplete}
                 onValueChange={setSeedAutocompleteEnabled}
                 testID="seed-phrase-autocomplete"
                 thumbColor={autocompleteEnabled ? colors.surface : colors.muted}
@@ -427,14 +436,14 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
             <View style={styles.zeroIndexToggle}>
               <View style={styles.zeroIndexCopy}>
                 <Text style={[styles.zeroIndexLabel, { color: colors.text }]}>
-                  {entropyLabEnglish['seed.zeroIndex']}
+                  {UPSTREAM_TEXT.seed.zeroIndex}
                 </Text>
                 <Text style={[styles.zeroIndexNote, { color: colors.muted }]}>
-                  {entropyLabEnglish['seed.zeroIndexNote']}
+                  {UPSTREAM_TEXT.seed.zeroIndexNote}
                 </Text>
               </View>
               <Switch
-                accessibilityLabel={entropyLabEnglish['seed.zeroIndex']}
+                accessibilityLabel={UPSTREAM_TEXT.seed.zeroIndex}
                 onValueChange={setZeroIndexMode}
                 testID="seed-number-zero-index"
                 thumbColor={zeroIndexed ? colors.surface : colors.muted}
@@ -447,8 +456,8 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
             <TextInput
               accessibilityLabel={
                 seedMethod === 'words'
-                  ? formatCopy(entropyLabEnglish['seed.wordsLabel'], { words: wordCount })
-                  : formatCopy(entropyLabEnglish['seed.numbersLabel'], { words: wordCount })
+                  ? UPSTREAM_UI_FALLBACK_COPY.seedPhrase.wordsLabel(wordCount)
+                  : formatCopy(UPSTREAM_TEXT.seed.numbersLabel, { words: wordCount })
               }
               autoCapitalize="none"
               autoComplete="off"
@@ -459,8 +468,10 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
               onSelectionChange={({ nativeEvent }) => setInputSelection(nativeEvent.selection)}
               placeholder={
                 seedMethod === 'words'
-                  ? formatCopy(entropyLabEnglish['seed.placeholder'], { words: wordCount })
-                  : entropyLabEnglish[zeroIndexed ? 'seed.numbersPlaceholder0' : 'seed.numbersPlaceholder1']
+                  ? UPSTREAM_UI_FALLBACK_COPY.seedPhrase.placeholder(wordCount)
+                  : zeroIndexed
+                    ? UPSTREAM_TEXT.seed.numbersPlaceholder0
+                    : UPSTREAM_TEXT.seed.numbersPlaceholder1
               }
               placeholderTextColor={colors.placeholder}
               selection={inputSelection ?? undefined}
@@ -510,7 +521,7 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
             testID="derive-seed-phrase"
           >
             <Text style={[styles.buttonText, { color: colors.onAccent }]}>
-              {entropyLabEnglish['action.derive']}
+              {UPSTREAM_TEXT.action.derive}
             </Text>
           </Pressable>
         </View>
@@ -520,12 +531,12 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
         colors={colors}
         onDismiss={() => setActiveSheet(null)}
         testID="seed-phrase-result-sheet"
-        title={entropyLabEnglish['action.derive']}
+        title={UPSTREAM_TEXT.action.derive}
         visible={activeSheet === 'result' && Boolean(result)}
       >
         <DiceResultPanel
           colors={colors}
-          entropyLabel={entropyLabEnglish['result.entropyHex']}
+          entropyLabel={UPSTREAM_TEXT.result.entropyHex}
           result={result}
         />
       </NativeSheet>

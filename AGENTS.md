@@ -26,19 +26,29 @@ Guidelines for AI coding agents.
 ## Copy and Localization
 
 - All visible and accessibility copy in `example/src/` must first be verified
-  as text rendered by the pinned upstream UI. Prefer the corresponding key from
-  `entropylab/src/locales/en.json`, with only its supported placeholder
-  substitution. When upstream-visible text has no catalog key, copy that exact
-  text downstream; do not introduce Studio-authored visible copy.
-- Store every exact downstream copy that lacks an upstream catalog key in
-  `example/src/features/upstreamUiCopy.ts`. Its provenance test must verify each value is
-  rendered by pinned upstream `app.js` and absent from `en.json`.
-- Never add or alter upstream locale entries. Do not use catalog-only text that
-  is not rendered by the pinned upstream UI.
-- When Studio uses catalog copy, UI tests must derive their expected text from
-  the same upstream locale key. When Studio copies upstream-visible text
-  downstream, UI tests must use the same downstream copy source rather than
-  repeat a separate string literal.
+  as text rendered by the pinned upstream UI. EntropyLab uses content-keyed
+  localization: English source text is the key, and upstream has no `en.json`.
+- `example/src/features/upstreamUiCopy.ts` is Studio's sole source of upstream
+  UI copy. `UPSTREAM_TEXT` provides static semantic aliases,
+  `UPSTREAM_UI_LABELS` owns direct `i18n-labels.js` imports, and
+  `UPSTREAM_UI_FALLBACK_COPY` holds direct `app.js`-derived values and
+  formatters. Elsewhere, import those exports instead of using literal source
+  text or importing upstream labels directly. Do not introduce Studio-authored
+  visible copy.
+- Its synchronization check validates this central module against the current
+  pinned upstream source; its provenance test rejects bypasses and verifies
+  every static alias, label value, fallback value, and dynamic formatter.
+- Never import `entropylab/src/js/i18n.js` or a non-English upstream locale into
+  React Native. The former is browser-specific and imports all locale catalogs;
+  neither is Studio's English source contract.
+- After an intentional EntropyLab update, run `npm run check:upstream-ui-copy`.
+  It statically validates Studio's aliases and label-table values against the
+  pinned upstream source and runs Studio's downstream provenance test. Studio
+  does not execute upstream synchronization scripts, rewrite the submodule, or
+  import Spanish values. Never add or alter upstream locale entries.
+- UI tests must derive expected copy from the same direct upstream source or
+  downstream fallback function used by production code, rather than repeat a
+  separate string literal.
 
 ## Generated Outputs and Dependencies
 

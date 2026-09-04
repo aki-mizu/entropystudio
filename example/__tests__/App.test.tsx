@@ -5,12 +5,12 @@
 import {
   activeMethodList,
   App,
-  entropyLabEnglish,
   React,
   ReactTestRenderer,
   selectDiceMethod,
   selectEntropyTool,
 } from '../test/testSupport';
+import { UPSTREAM_TEXT } from '../src/features/upstreamUiCopy';
 
 test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on the shared setup screen', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
@@ -21,7 +21,7 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
   expect(app!.root.findByProps({ testID: 'dice-setup-view' })).toBeDefined();
   const diceMethodList = activeMethodList(app!);
   expect(diceMethodList.findByProps({ testID: 'key-method-label' }).props.children).toBe(
-    entropyLabEnglish['keys.methodLabel'],
+    UPSTREAM_TEXT.keys.methodLabel,
   );
   expect(diceMethodList).toBeDefined();
   expect(diceMethodList.findByProps({ testID: 'key-method-dice' }).props.accessibilityState).toEqual({

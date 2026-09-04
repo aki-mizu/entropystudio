@@ -1,5 +1,4 @@
-import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
+import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../upstreamUiCopy';
 import {
   EntropyStudioError_Tags,
   PrivateKeyFormat,
@@ -20,48 +19,37 @@ export type BrainWalletOutput = (typeof BRAIN_WALLET_OUTPUTS)[number];
 
 type InputSelection = { readonly end: number; readonly start: number };
 
-const BRAIN_WALLET_EN_JSON_KEYS = {
-  acknowledgement: 'beta.understand',
-  format: {
-    description: 'key.brainDesc',
-    placeholder: 'key.placeholderBrain',
-    title: 'key.brain',
+const PRIVATE_KEY_COPY = {
+  brain: {
+    description: UPSTREAM_TEXT.key.brainDesc,
+    placeholder: UPSTREAM_TEXT.key.placeholderBrain,
+    title: UPSTREAM_TEXT.key.brain,
   },
-} as const;
-
-const PRIVATE_KEY_EN_JSON_KEYS = {
-  brain: BRAIN_WALLET_EN_JSON_KEYS.format,
   hex: {
-    description: 'key.hexDesc',
-    placeholder: 'key.placeholderHex',
-    title: 'key.hex',
+    description: UPSTREAM_TEXT.key.hexDesc,
+    placeholder: UPSTREAM_TEXT.key.placeholderHex,
+    title: UPSTREAM_TEXT.key.hex,
   },
   mini: {
-    description: 'key.miniDesc',
-    placeholder: 'key.placeholderMini',
-    title: 'key.mini',
+    description: UPSTREAM_TEXT.key.miniDesc,
+    placeholder: UPSTREAM_TEXT.key.placeholderMini,
+    title: UPSTREAM_TEXT.key.mini,
   },
   wif: {
-    description: 'key.wifDesc',
-    placeholder: 'key.placeholderWif',
-    title: 'key.wif',
+    description: UPSTREAM_TEXT.key.wifDesc,
+    placeholder: UPSTREAM_TEXT.key.placeholderWif,
+    title: UPSTREAM_TEXT.key.wif,
   },
 } as const;
 
 export function privateKeyFormatCopy(format: PrivateKeyInputFormat) {
-  const keys = PRIVATE_KEY_EN_JSON_KEYS[format];
-  return {
-    description: entropyLabEnglish[keys.description],
-    placeholder: entropyLabEnglish[keys.placeholder],
-    title: entropyLabEnglish[keys.title],
-  };
+  return PRIVATE_KEY_COPY[format];
 }
 
 export function brainWalletLocaleCopy() {
-  const keys = BRAIN_WALLET_EN_JSON_KEYS;
   return {
-    acknowledgement: entropyLabEnglish[keys.acknowledgement],
-    label: entropyLabEnglish[keys.format.title],
+    acknowledgement: UPSTREAM_TEXT.beta.understand,
+    label: PRIVATE_KEY_COPY.brain.title,
   };
 }
 
@@ -152,29 +140,29 @@ export function privateKeyError(error: unknown): string {
       : undefined;
 
   if (tag === EntropyStudioError_Tags.EmptyPrivateKey) {
-    return entropyLabEnglish['error.priv.enter'];
+    return UPSTREAM_TEXT.error.priv.enter;
   }
   if (tag === EntropyStudioError_Tags.InvalidWifPrivateKey) {
-    return entropyLabEnglish['error.priv.wif']
+    return UPSTREAM_TEXT.error.priv.wif
       .replace('{network}', 'Bitcoin mainnet')
       .replace('{hint}', '5/K/L');
   }
   if (tag === EntropyStudioError_Tags.InvalidHexPrivateKey) {
-    return entropyLabEnglish['error.priv.hex'];
+    return UPSTREAM_TEXT.error.priv.hex;
   }
   if (tag === EntropyStudioError_Tags.InvalidMiniPrivateKeyFormat) {
-    return entropyLabEnglish['error.priv.miniFormat'];
+    return UPSTREAM_TEXT.error.priv.miniFormat;
   }
   if (tag === EntropyStudioError_Tags.InvalidMiniPrivateKey) {
-    return entropyLabEnglish['error.priv.miniInvalid'];
+    return UPSTREAM_TEXT.error.priv.miniInvalid;
   }
   if (tag === EntropyStudioError_Tags.InvalidPrivateKeyRange) {
-    return entropyLabEnglish['error.priv.range'];
+    return UPSTREAM_TEXT.error.priv.range;
   }
   if (tag === EntropyStudioError_Tags.EmptyBrainWallet) {
-    return entropyLabEnglish['error.priv.brainEmpty'];
+    return UPSTREAM_TEXT.error.priv.brainEmpty;
   }
-  return entropyLabEnglish['error.generic'];
+  return UPSTREAM_TEXT.error.generic;
 }
 
 function nativePrivateKeyFormat(format: PrivateKeyInputFormat) {

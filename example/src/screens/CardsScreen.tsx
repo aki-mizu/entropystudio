@@ -8,7 +8,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import entropyLabEnglish from '../../../entropylab/src/locales/en.json';
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
 import {
@@ -36,7 +35,7 @@ import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { WordCountSelector } from '../features/dice/components/WordCountSelector';
 import { diceColors } from '../features/dice/diceTheme';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
+import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 type CardView = 'entry' | 'setup';
@@ -213,7 +212,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
             </View>
             <View style={styles.colemanCopy}>
               <Text style={[styles.colemanLabel, { color: colors.text }]}>
-                {entropyLabEnglish['cards.coleman']}
+                {UPSTREAM_TEXT.cards.coleman}
               </Text>
               <Text style={[styles.colemanNote, { color: colors.muted }]}>
                 {UPSTREAM_UI_FALLBACK_COPY.cards.colemanNote}
@@ -302,7 +301,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
             </Pressable>
             <View style={styles.entryHeaderCopy}>
               <Text style={[styles.entryTitle, { color: colors.text }]}>
-                {entropyLabEnglish['mode.seed']}
+                {UPSTREAM_TEXT.mode.seed}
               </Text>
               <Text style={[styles.entrySubtitle, { color: colors.muted }]}>
                 {copy.seedLengthValue}
@@ -327,7 +326,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
               {copy.inputLabel}
             </Text>
             <Pressable
-              accessibilityLabel={entropyLabEnglish['cards.undo']}
+              accessibilityLabel={UPSTREAM_TEXT.cards.undo}
               accessibilityRole="button"
               disabled={!transcript}
               onPress={undoLastEntry}
@@ -338,7 +337,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
               testID="undo-card-entry"
             >
               <Text style={[styles.undoLabel, { color: colors.accent }]}>
-                {entropyLabEnglish['cards.undo']}
+                {UPSTREAM_TEXT.cards.undo}
               </Text>
             </Pressable>
           </View>

@@ -5,13 +5,13 @@
 import {
   activeMethodList,
   App,
-  entropyLabEnglish,
   mockEntropyToMnemonic,
   React,
   ReactTestRenderer,
   ScrollView,
   selectEntropyTool,
 } from '../../test/testSupport';
+import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
 describe('Number Bases / Hexadecimal', () => {
   test('derives entropy through the native BIP39 binding', async () => {
@@ -28,7 +28,7 @@ describe('Number Bases / Hexadecimal', () => {
 
     expect(app!.root.findByProps({ testID: 'number-bases-setup-view' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'number-bases-screen-title' }).props.children).toBe(
-      entropyLabEnglish['mode.hex'],
+      UPSTREAM_TEXT.mode.hex,
     );
     expect(
       activeMethodList(app!).findByProps({ testID: 'key-method-hex' }).props.accessibilityState,
@@ -43,9 +43,9 @@ describe('Number Bases / Hexadecimal', () => {
 
     expect(app!.root.findByProps({ testID: 'number-bases-entry-view' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'number-base-input' }).props.placeholder).toBe(
-      entropyLabEnglish['hex.placeholder']
+      UPSTREAM_TEXT.hex.placeholder
         .replace('{digits}', '32')
-        .replace('{unit}', entropyLabEnglish['hex.unit.hex']),
+        .replace('{unit}', UPSTREAM_TEXT.hex.unit.hex),
     );
     expect(app!.root.findByProps({ testID: 'number-base-input' }).props.showSoftInputOnFocus).toBe(
       false,

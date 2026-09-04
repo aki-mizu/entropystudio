@@ -37,6 +37,7 @@
     "build:ios": "npm run prepare:entropylab && ubrn build ios --config ubrn.config.yaml --release --and-generate",
     "test:rust": "npm run prepare:entropylab && cargo test --manifest-path Cargo.toml --locked",
     "typecheck": "tsc --noEmit",
+    "check:upstream-ui-copy": "node scripts/sync-upstream-ui-copy.mjs && npm --prefix example test -- --runInBand private-key/PrivateKeyCopyProvenance.test.js",
     "test": "npm run test:rust && npm run typecheck"
   },
   "dependencies": {

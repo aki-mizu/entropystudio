@@ -5,13 +5,13 @@
 import {
   activeMethodList,
   App,
-  entropyLabEnglish,
   mockEntropyToMnemonic,
   mockMnemonicToEntropy,
   React,
   ReactTestRenderer,
   selectEntropyTool,
 } from '../../test/testSupport';
+import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
 describe('Seed Phrase / Words', () => {
   test('validates a typed Seed Phrase through the native BIP39 binding', async () => {
@@ -34,7 +34,7 @@ describe('Seed Phrase / Words', () => {
 
     expect(app!.root.findByProps({ testID: 'seed-phrase-setup-view' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'seed-phrase-screen-title' }).props.children).toBe(
-      entropyLabEnglish['mode.seed'],
+      UPSTREAM_TEXT.mode.seed,
     );
     expect(
       activeMethodList(app!).findByProps({ testID: 'key-method-seed' }).props.accessibilityState,

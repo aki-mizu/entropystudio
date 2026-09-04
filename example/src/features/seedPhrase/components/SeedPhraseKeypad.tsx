@@ -1,8 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import entropyLabEnglish from '../../../../../entropylab/src/locales/en.json';
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
+import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../../upstreamUiCopy';
 
 export type SeedPhraseEntryMethod = 'numbers' | 'words';
 
@@ -24,7 +23,7 @@ export function SeedPhraseKeypad({
   if (method === 'numbers') {
     return (
       <View
-        accessibilityLabel={entropyLabEnglish['seed.numberKeypadAria']}
+        accessibilityLabel={UPSTREAM_TEXT.seed.numberKeypadAria}
         style={styles.numberKeypad}
         testID="seed-number-keypad"
       >
@@ -35,10 +34,10 @@ export function SeedPhraseKeypad({
                 const enabled = canInsert(character);
                 return (
                   <Pressable
-                      accessibilityLabel={entropyLabEnglish['seed.enterDigit'].replace(
-                        '{n}',
-                        character,
-                      )}
+                    accessibilityLabel={UPSTREAM_TEXT.seed.enterDigit.replace(
+                      '{n}',
+                      character,
+                    )}
                     accessibilityRole="button"
                     disabled={!enabled}
                     key={character}
@@ -61,7 +60,7 @@ export function SeedPhraseKeypad({
           ))}
         </View>
         <Pressable
-          accessibilityLabel={entropyLabEnglish['seed.nextWord']}
+          accessibilityLabel={UPSTREAM_TEXT.seed.nextWord}
           accessibilityRole="button"
           disabled={!canInsertSpace}
           onPress={() => onInsert(' ')}
@@ -76,7 +75,7 @@ export function SeedPhraseKeypad({
           testID="seed-number-next-word"
         >
           <Text style={[styles.nextWordLabel, { color: colors.text }]}>
-            {entropyLabEnglish['seed.nextWord']}
+            {UPSTREAM_TEXT.seed.nextWord}
           </Text>
         </Pressable>
       </View>

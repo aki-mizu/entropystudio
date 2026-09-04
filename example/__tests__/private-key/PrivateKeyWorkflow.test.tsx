@@ -5,7 +5,6 @@
 import {
   activeMethodList,
   App,
-  entropyLabEnglish,
   mockEntropyToMnemonic,
   mockPrivateKeyEntropy,
   mockPrivateKeyInputState,
@@ -18,7 +17,7 @@ import {
   BRAIN_WALLET_WARNING_COPY,
   brainWalletOutputCopy,
 } from '../../src/features/privateKey/privateKey';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
+import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
 const WIF = 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn';
 
@@ -33,7 +32,7 @@ describe('Private Key', () => {
 
     expect(app!.root.findByProps({ testID: 'private-key-setup-view' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'private-key-screen-title' }).props.children).toBe(
-      entropyLabEnglish['mode.key'],
+      UPSTREAM_TEXT.mode.key,
     );
     expect(
       activeMethodList(app!).findByProps({ testID: 'key-method-key' }).props.accessibilityState,
@@ -47,7 +46,7 @@ describe('Private Key', () => {
     });
 
     expect(app!.root.findByProps({ testID: 'private-key-input' }).props.placeholder).toBe(
-      entropyLabEnglish['key.placeholderWif'],
+      UPSTREAM_TEXT.key.placeholderWif,
     );
     expect(app!.root.findByProps({ testID: 'private-key-input' }).props.showSoftInputOnFocus).toBe(
       false,
@@ -102,7 +101,7 @@ describe('Private Key', () => {
     });
 
     expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
-      entropyLabEnglish['result.privateKey'],
+      UPSTREAM_TEXT.result.privateKey,
     );
     expect(app!.root.findByProps({ testID: 'entropy-output' }).props.children).toBe('0'.repeat(64));
   });
@@ -400,7 +399,7 @@ describe('Private Key', () => {
     });
     expect(mockEntropyToMnemonic).not.toHaveBeenCalled();
     expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
-      entropyLabEnglish['result.privateKey'],
+      UPSTREAM_TEXT.result.privateKey,
     );
     expect(app!.root.findAllByProps({ testID: 'private-key-brain-seed-words' })).toHaveLength(0);
 
@@ -430,7 +429,7 @@ describe('Private Key', () => {
       'word24',
     );
     expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
-      entropyLabEnglish['result.entropyHex'],
+      UPSTREAM_TEXT.result.entropyHex,
     );
   });
 
@@ -459,7 +458,7 @@ describe('Private Key', () => {
     });
 
     expect(app!.root.findByProps({ testID: 'private-key-status' }).props.children).toBe(
-      entropyLabEnglish['error.priv.wif']
+      UPSTREAM_TEXT.error.priv.wif
         .replace('{network}', 'Bitcoin mainnet')
         .replace('{hint}', '5/K/L'),
     );

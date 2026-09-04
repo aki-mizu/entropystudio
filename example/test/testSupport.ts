@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 import { ScrollView } from 'react-native';
-import entropyLabEnglish from '../../entropylab/src/locales/en.json';
 import type {
   HashedCardState,
   NumberBaseAnalysis,
@@ -224,7 +223,7 @@ export const { DiceGrid } = require('../src/features/dice/components/DiceGrid');
 export const { DiceWordList } = require('../src/features/dice/components/DirectDicePreview');
 export const { diceScreenCopy } = require('../src/features/dice/dice');
 
-export { React, ReactTestRenderer, ScrollView, entropyLabEnglish };
+export { React, ReactTestRenderer, ScrollView };
 
 export function expectPlaceholderSeedGrid(
   app: ReactTestRenderer.ReactTestRenderer,

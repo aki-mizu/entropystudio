@@ -5,7 +5,6 @@
 import {
   App,
   diceScreenCopy,
-  entropyLabEnglish,
   expectEnabledDiceFaces,
   mockDirectDiceState,
   mockMnemonicToEntropy,
@@ -14,11 +13,11 @@ import {
   ReactTestRenderer,
   selectDiceMethod,
 } from '../../test/testSupport';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
+import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
 test('uses EntropyLab BitBox help copy', () => {
   expect(diceScreenCopy('bitbox', 24).inputHelp).toBe(
-    entropyLabEnglish['dice.help.bitbox'].replace('{partialWords}', '23'),
+    UPSTREAM_TEXT.dice.help.bitbox.replace('{partialWords}', '23'),
   );
 });
 
@@ -271,17 +270,17 @@ test('derives a BitBox direct-dice phrase from a selected checksum word', async 
   });
 
   expect(app!.root.findByProps({ testID: 'dice-method-bitbox-title' }).props.children).toBe(
-    entropyLabEnglish['dice.bitbox.title'],
+    UPSTREAM_TEXT.dice.bitbox.title,
   );
   expect(app!.root.findByProps({ testID: 'dice-method-bitbox-description' }).props.children).toBe(
-    entropyLabEnglish['dice.bitbox.desc']
+    UPSTREAM_TEXT.dice.bitbox.desc
       .replace('{partialWords}', '11')
       .replace('{candidates}', '128'),
   );
 
   await openDiceEntry(app!);
   expect(app!.root.findByProps({ testID: 'dice-input-label' }).props.children).toBe(
-    entropyLabEnglish['dice.label.bitbox'],
+    UPSTREAM_TEXT.dice.label.bitbox,
   );
   expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.placeholder).toBe(
     '111111 222224…',
@@ -291,7 +290,7 @@ test('derives a BitBox direct-dice phrase from a selected checksum word', async 
   });
 
   expect(app!.root.findByProps({ testID: 'direct-final-word-label' }).props.children).toBe(
-    entropyLabEnglish['seed.lastWordLabel'].replace('{n}', '1'),
+    UPSTREAM_TEXT.seed.lastWordLabel.replace('{n}', '1'),
   );
 
   await ReactTestRenderer.act(async () => {

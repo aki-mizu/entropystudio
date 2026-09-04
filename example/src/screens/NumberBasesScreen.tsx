@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import entropyLabEnglish from '../../../entropylab/src/locales/en.json';
+
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
 import { entropyToMnemonic } from '../native/entropyStudio';
@@ -27,7 +27,7 @@ import {
   numberBaseFormatConfig,
 } from '../features/numberBases/numberBases';
 import type { NumberBaseFormat } from '../features/numberBases/numberBases';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
+import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '../features/upstreamUiCopy';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
@@ -69,29 +69,25 @@ function numberBaseInputHelp(
 ): string {
   const remainder = config.remainderBits
     ? config.binaryRemainder
-      ? formatCopy(entropyLabEnglish['hex.remainderBinary'], {
-          fullDigits: config.fullDigits,
-          n: config.remainderBits,
-          shortLabel: config.shortLabel,
-        })
-      : formatCopy(entropyLabEnglish['hex.remainderMixed'], {
-          chars: [...config.finalCharacters].join(', '),
-          n: config.remainderBits,
-        })
+      ? UPSTREAM_UI_FALLBACK_COPY.numberBases.remainderBinary(
+          config.fullDigits,
+          config.shortLabel,
+          config.remainderBits,
+        )
+      : UPSTREAM_UI_FALLBACK_COPY.numberBases.mixedRemainder(
+          config.remainderBits,
+          [...config.finalCharacters].join(', '),
+        )
     : '';
 
-  const helpTemplate = entropyLabEnglish['hex.help'].replace(
-    'bit(s)',
-    config.bitsPerDigit === 1 ? 'bit' : 'bits',
-  );
-  return formatCopy(helpTemplate, {
-    bits: config.bitsPerDigit,
-    digits: config.digits,
-    except: config.binaryRemainder ? '' : entropyLabEnglish['hex.exceptMixed'],
+  return UPSTREAM_UI_FALLBACK_COPY.numberBases.help(
+    config.shortLabel,
+    config.bitsPerDigit,
+    config.binaryRemainder ? '' : UPSTREAM_UI_FALLBACK_COPY.numberBases.exceptMixed,
+    config.digits,
+    format === 'bin' ? UPSTREAM_UI_FALLBACK_COPY.numberBases.spacesBin : '',
     remainder,
-    shortLabel: config.shortLabel,
-    spaces: format === 'bin' ? entropyLabEnglish['hex.spacesBin'] : '',
-  });
+  );
 }
 
 function inputStatus(
@@ -113,50 +109,42 @@ function inputStatus(
     : 0;
   let status = coinPhase
     ? analysis.isReady
-      ? formatCopy(entropyLabEnglish['hex.meta.coinReady'], {
-          digits: config.fullDigits,
-          have: coinFlipsEntered,
-          n: config.remainderBits,
-          shortLabel: config.shortLabel,
-        })
-      : formatCopy(entropyLabEnglish['hex.meta.coinNext'], {
-          digits: config.fullDigits,
-          have: Math.min(config.remainderBits, coinFlipsEntered + 1),
-          n: config.remainderBits,
-          shortLabel: config.shortLabel,
-        })
-    : formatCopy(entropyLabEnglish['hex.meta.progress'], {
-        filled: previewWordCount,
-        have: analysis.digitCount,
-        limit: config.digits,
-        unit: config.unit,
-        words: wordCount,
-      });
+      ? UPSTREAM_UI_FALLBACK_COPY.numberBases.coinReady(
+          config.fullDigits,
+          config.shortLabel,
+          coinFlipsEntered,
+          config.remainderBits,
+        )
+      : UPSTREAM_UI_FALLBACK_COPY.numberBases.coinNext(
+          config.fullDigits,
+          config.shortLabel,
+          Math.min(config.remainderBits, coinFlipsEntered + 1),
+          config.remainderBits,
+        )
+    : UPSTREAM_UI_FALLBACK_COPY.numberBases.progress(
+        analysis.digitCount,
+        config.digits,
+        config.unit,
+        previewWordCount,
+        wordCount,
+      );
 
   if (analysis.invalidCharacterCount) {
-    const invalidTemplate = entropyLabEnglish['hex.meta.invalid'].replace(
-      '(s)',
-      analysis.invalidCharacterCount === 1 ? '' : 's',
-    );
-    status += formatCopy(invalidTemplate, { n: analysis.invalidCharacterCount });
+    status += UPSTREAM_UI_FALLBACK_COPY.numberBases.invalid(analysis.invalidCharacterCount);
   }
   if (analysis.finalInvalid) {
     status += config.binaryRemainder
-      ? formatCopy(entropyLabEnglish['hex.meta.finalBits'], {
-          n: config.remainderBits,
-        })
-      : formatCopy(entropyLabEnglish['hex.meta.finalChar'], {
-          chars: [...config.finalCharacters].join(', '),
-          n: config.remainderBits,
-        });
+      ? UPSTREAM_UI_FALLBACK_COPY.numberBases.finalBits(config.remainderBits)
+      : UPSTREAM_UI_FALLBACK_COPY.numberBases.finalCharacter(
+          config.remainderBits,
+          [...config.finalCharacters].join(', '),
+        );
   }
   if (analysis.excessDigitCount) {
-    status += formatCopy(entropyLabEnglish['hex.meta.excess'], {
-      n: analysis.excessDigitCount,
-    });
+    status += UPSTREAM_UI_FALLBACK_COPY.numberBases.excess(analysis.excessDigitCount);
   }
   if (analysis.isReady) {
-    status += entropyLabEnglish['hex.meta.ready'];
+    status += UPSTREAM_UI_FALLBACK_COPY.numberBases.ready;
   }
   return status;
 }
@@ -193,10 +181,10 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
     !/\s$/u.test(input) &&
     analysis.digitCount < analysis.config.digits;
   const inputHelp = numberBaseInputHelp(format, analysis.config);
-  const inputLabel = formatCopy(entropyLabEnglish['hex.entropyLabel'], {
-    label: analysis.config.label,
-    words: wordCount,
-  });
+  const inputLabel = UPSTREAM_UI_FALLBACK_COPY.numberBases.entropyLabel(
+    analysis.config.label,
+    wordCount,
+  );
   let words = [...analysis.previewWords];
 
   if (entropy) {
@@ -279,7 +267,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
         mnemonic: entropyToMnemonic(entropy),
       });
     } catch {
-      setResult({ error: entropyLabEnglish['error.generic'] });
+      setResult({ error: UPSTREAM_TEXT.error.generic });
     }
     setActiveSheet('result');
   }
@@ -305,7 +293,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
           <View style={styles.header}>
             <View style={styles.headerCopy}>
               <Text style={[styles.title, { color: colors.text }]} testID="number-bases-screen-title">
-                {entropyLabEnglish['mode.hex']}
+                {UPSTREAM_UI_LABELS.keyMode.hex}
               </Text>
             </View>
           </View>
@@ -318,7 +306,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
           />
 
           <View style={styles.setupSettings} testID="number-bases-setup-settings">
-            <Text style={[styles.label, { color: colors.muted }]}>{entropyLabEnglish['hex.heading']}</Text>
+            <Text style={[styles.label, { color: colors.muted }]}>{UPSTREAM_TEXT.hex.heading}</Text>
             <View style={styles.formatRows}>
               {NUMBER_BASE_FORMATS.map(option => {
                 const selected = option === format;
@@ -350,13 +338,13 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
               })}
             </View>
             <Text style={[styles.formatDescription, { color: colors.muted }]}>
-              {entropyLabEnglish[`hex.desc.${format}`]}
+              {UPSTREAM_UI_LABELS.hexFormat[format].desc}
             </Text>
             <WordCountSelector
               colors={colors}
-              label={entropyLabEnglish['seedLength.label']}
+              label={UPSTREAM_TEXT.seedLength.label}
               onSelect={selectWordCount}
-              valueLabel={entropyLabEnglish['seedLength.words'].replace('{n}', String(wordCount))}
+              valueLabel={UPSTREAM_UI_FALLBACK_COPY.common.seedLengthWords(wordCount)}
               wordCount={wordCount}
             />
           </View>
@@ -394,7 +382,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
             </Pressable>
             <View style={styles.entryHeaderCopy}>
               <Text style={[styles.entryTitle, { color: colors.text }]}>
-                {entropyLabEnglish['mode.seed']}
+                {UPSTREAM_UI_LABELS.keyMode.seed}
               </Text>
               <Text style={[styles.entrySubtitle, { color: colors.muted }]}>
                 {analysis.config.label}
@@ -409,7 +397,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
               slotCount={wordCount}
               testID="number-base-words"
               words={words}
-              wordSlotsAria={entropyLabEnglish['seed.wordSlotsAria'].replace('{n}', String(wordCount))}
+              wordSlotsAria={UPSTREAM_TEXT.seed.wordSlotsAria.replace('{n}', String(wordCount))}
             />
           </View>
 
@@ -469,7 +457,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
               numberOfLines={2}
               onChangeText={updateInput}
               onSelectionChange={({ nativeEvent }) => setInputSelection(nativeEvent.selection)}
-              placeholder={formatCopy(entropyLabEnglish['hex.placeholder'], {
+              placeholder={formatCopy(UPSTREAM_TEXT.hex.placeholder, {
                 digits: analysis.config.digits,
                 unit: analysis.config.unit,
               })}
@@ -539,7 +527,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
             testID="derive-number-base-phrase"
           >
             <Text style={[styles.buttonText, { color: colors.onAccent }]}>
-              {entropyLabEnglish['action.derive']}
+              {UPSTREAM_TEXT.action.derive}
             </Text>
           </Pressable>
         </View>
@@ -549,12 +537,12 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
         colors={colors}
         onDismiss={() => setActiveSheet(null)}
         testID="number-base-result-sheet"
-        title={entropyLabEnglish['action.derive']}
+        title={UPSTREAM_TEXT.action.derive}
         visible={activeSheet === 'result' && Boolean(result)}
       >
         <DiceResultPanel
           colors={colors}
-          entropyLabel={entropyLabEnglish['result.entropyHex']}
+          entropyLabel={UPSTREAM_TEXT.result.entropyHex}
           result={result}
         />
       </NativeSheet>

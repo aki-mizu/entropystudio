@@ -18,8 +18,7 @@ import type {
   DirectDiceState,
   HashedDiceState,
 } from '../../native/entropyStudio';
-import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
+import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../upstreamUiCopy';
 
 export const DICE_FACES = ['1', '2', '3', '4', '5', '6'] as const;
 export const D8_D16_FACES = [
@@ -45,22 +44,33 @@ export const DIRECT_DICE_METHODS = ['bitbox', 'd8d16'] as const;
 export const DICE_METHODS = [...HASHED_DICE_METHODS, ...DIRECT_DICE_METHODS] as const;
 export const WORD_COUNTS = [12, 15, 18, 21, 24] as const;
 
-const DICE_METHOD_COPY_KEYS = {
+const DICE_METHOD_COPY = {
   bitbox: {
-    description: 'dice.bitbox.desc',
-    title: 'dice.bitbox.title',
+    description: UPSTREAM_TEXT.dice.bitbox.desc,
+    title: UPSTREAM_TEXT.dice.bitbox.title,
   },
   coldcard: {
-    description: 'dice.coldcard.desc',
-    title: 'dice.coldcard.title',
+    description: UPSTREAM_TEXT.dice.coldcard.desc,
+    title: UPSTREAM_TEXT.dice.coldcard.title,
   },
   coleman: {
-    description: 'dice.coleman.desc',
-    title: 'dice.coleman.title',
+    description: UPSTREAM_TEXT.dice.coleman.desc,
+    title: UPSTREAM_TEXT.dice.coleman.title,
   },
   d8d16: {
-    description: 'dice.dplus.desc',
-    title: 'dice.dplus.title',
+    description: UPSTREAM_TEXT.dice.dplus.desc,
+    title: UPSTREAM_TEXT.dice.dplus.title,
+  },
+} as const;
+
+const HASHED_DICE_COPY = {
+  coldcard: {
+    help: UPSTREAM_TEXT.dice.help.coldcard,
+    title: UPSTREAM_TEXT.dice.method.coldcard,
+  },
+  coleman: {
+    help: UPSTREAM_TEXT.dice.help.coleman,
+    title: UPSTREAM_TEXT.dice.coleman.title,
   },
 } as const;
 
@@ -103,8 +113,8 @@ export function diceMethodCopy(
   wordCount: WordCount,
   info = getDiceMethodInfo(wordCount),
 ) {
-  const keys = DICE_METHOD_COPY_KEYS[method];
-  const description = formatCopy(entropyLabEnglish[keys.description], {
+  const copy = DICE_METHOD_COPY[method];
+  const description = formatCopy(copy.description, {
     bits: info.entropyBits,
     candidates: info.checksumCandidates,
     final: d8D16FinalDescription(info.finalSteps),
@@ -114,7 +124,7 @@ export function diceMethodCopy(
   });
 
   return {
-    title: entropyLabEnglish[keys.title],
+    title: copy.title,
     description,
   };
 }
@@ -127,14 +137,14 @@ export function diceProgressCopy(
   const estimatedBits = state.estimatedEntropyBits.toFixed(1);
 
   if (rollCount === 0) {
-    return formatCopy(entropyLabEnglish['dice.meta.empty'], {
-      method: entropyLabEnglish[`dice.method.${method}`],
+    return formatCopy(UPSTREAM_TEXT.dice.meta.empty, {
+      method: HASHED_DICE_COPY[method].title,
       n: requiredRolls,
     });
   }
 
   if (rollCount < requiredRolls) {
-    return formatCopy(entropyLabEnglish['dice.meta.missing'], {
+    return formatCopy(UPSTREAM_TEXT.dice.meta.missing, {
       bits: estimatedBits,
       have: rollCount,
       missing: requiredRolls - rollCount,
@@ -142,7 +152,7 @@ export function diceProgressCopy(
     });
   }
 
-  const ready = formatCopy(entropyLabEnglish['dice.meta.ready'], {
+  const ready = formatCopy(UPSTREAM_TEXT.dice.meta.ready, {
     bits: estimatedBits,
     have: rollCount,
   });
@@ -150,7 +160,7 @@ export function diceProgressCopy(
     return ready;
   }
 
-  return `${ready}${formatCopy(entropyLabEnglish['dice.meta.extra'], {
+  return `${ready}${formatCopy(UPSTREAM_TEXT.dice.meta.extra, {
     n: rollCount - requiredRolls,
   })}`;
 }
@@ -161,7 +171,7 @@ export function directDiceProgress(state: DirectDiceState): number {
 
 export function directDiceSelectionCopy(state: DirectDiceState) {
   return {
-    finalWordLabel: formatCopy(entropyLabEnglish['seed.lastWordLabel'], {
+    finalWordLabel: formatCopy(UPSTREAM_TEXT.seed.lastWordLabel, {
       n: state.candidates.length,
     }),
   };
@@ -173,34 +183,34 @@ export function directDiceProgressCopy(
   wordCount: WordCount,
 ): string {
   const extra = state.extraCount
-    ? formatCopy(entropyLabEnglish['dice.meta.extraIgnored'], { n: state.extraCount })
+    ? formatCopy(UPSTREAM_TEXT.dice.meta.extraIgnored, { n: state.extraCount })
     : '';
 
   if (method === 'bitbox') {
     const progress = state.canDerive
-      ? formatCopy(entropyLabEnglish['seed.meta.ready'], {
-          progress: formatCopy(entropyLabEnglish['seed.count'], {
+      ? formatCopy(UPSTREAM_TEXT.seed.meta.ready, {
+          progress: formatCopy(UPSTREAM_TEXT.seed.count, {
             entered: wordCount,
             words: wordCount,
           }),
         })
       : state.step === DirectDiceStep.BitboxFinalWord
-        ? formatCopy(entropyLabEnglish['dice.bitbox.lastWord'], { n: state.words.length })
+        ? formatCopy(UPSTREAM_TEXT.dice.bitbox.lastWord, { n: state.words.length })
         : state.step === DirectDiceStep.BitboxCoin
-          ? formatCopy(entropyLabEnglish['dice.bitbox.coin'], {
+          ? formatCopy(UPSTREAM_TEXT.dice.bitbox.coin, {
               partial: state.partialWords,
               word: state.activeWord,
             })
-          : formatCopy(entropyLabEnglish['dice.bitbox.die'], {
+          : formatCopy(UPSTREAM_TEXT.dice.bitbox.die, {
               die: state.activeRoll,
               partial: state.partialWords,
               word: state.activeWord,
             });
     const skipped = state.skippedCount
       ? ` ${formatCopy(
-          entropyLabEnglish[
-            state.skippedCount === 1 ? 'note.bitboxSkippedOne' : 'note.bitboxSkippedMany'
-          ],
+          state.skippedCount === 1
+            ? UPSTREAM_TEXT.note.bitboxSkippedOne
+            : UPSTREAM_TEXT.note.bitboxSkippedMany,
           { n: state.skippedCount },
         )}`
       : '';
@@ -212,25 +222,25 @@ export function directDiceProgressCopy(
     state.partialWords,
     state.activeWord,
   );
-  const completeGroups = formatCopy(entropyLabEnglish['dice.dplus.rollsComplete'], {
-    partial: state.partialWords,
-  });
+  const completeGroups = UPSTREAM_UI_FALLBACK_COPY.dice.d8d16.rollsComplete(
+    state.partialWords,
+  );
   const progress =
     state.step === DirectDiceStep.D8D16WordD8
-      ? `${groups} · ${entropyLabEnglish['dice.dplus.roll.d8']}${entropyLabEnglish['dice.dplus.range.d8']}`
+      ? `${groups} · ${UPSTREAM_TEXT.dice.dplus.roll.d8}${UPSTREAM_TEXT.dice.dplus.range.d8}`
       : state.step === DirectDiceStep.D8D16WordD16First
-        ? `${groups} · ${entropyLabEnglish['dice.dplus.roll.d16first']}${entropyLabEnglish['dice.dplus.range.d16']}`
+        ? `${groups} · ${UPSTREAM_TEXT.dice.dplus.roll.d16first}${UPSTREAM_TEXT.dice.dplus.range.d16}`
         : state.step === DirectDiceStep.D8D16WordD16Second
-          ? `${groups} · ${entropyLabEnglish['dice.dplus.roll.d16second']}${entropyLabEnglish['dice.dplus.range.d16']}`
+          ? `${groups} · ${UPSTREAM_TEXT.dice.dplus.roll.d16second}${UPSTREAM_TEXT.dice.dplus.range.d16}`
           : state.step === DirectDiceStep.D8D16ChecksumD8
-            ? `${completeGroups} · ${entropyLabEnglish['dice.dplus.roll.checksumD8']}${entropyLabEnglish['dice.dplus.range.d8']}`
+            ? `${completeGroups} · ${UPSTREAM_TEXT.dice.dplus.roll.checksumD8}${UPSTREAM_TEXT.dice.dplus.range.d8}`
             : state.step === DirectDiceStep.D8D16ChecksumD16
-              ? `${completeGroups} · ${entropyLabEnglish['dice.dplus.roll.checksumD16']}${entropyLabEnglish['dice.dplus.range.d16']}`
+              ? `${completeGroups} · ${UPSTREAM_TEXT.dice.dplus.roll.checksumD16}${UPSTREAM_TEXT.dice.dplus.range.d16}`
               : state.step === DirectDiceStep.D8D16ChecksumCoin
-                ? `${completeGroups} · ${entropyLabEnglish['dice.dplus.roll.checksumCoin']}${entropyLabEnglish['dice.dplus.range.coin']}`
+                ? `${completeGroups} · ${UPSTREAM_TEXT.dice.dplus.roll.checksumCoin}${UPSTREAM_TEXT.dice.dplus.range.coin}`
                 : state.step === DirectDiceStep.D8D16Complete
-                  ? formatCopy(entropyLabEnglish['dice.dplus.ready'], { words: wordCount })
-                  : `${groups}${formatCopy(entropyLabEnglish['dice.meta.invalid'], {
+                  ? formatCopy(UPSTREAM_TEXT.dice.dplus.ready, { words: wordCount })
+                  : `${groups}${formatCopy(UPSTREAM_TEXT.dice.meta.invalid, {
                       n: state.invalidCount,
                     })}`;
   return `${progress}${extra}`;
@@ -243,22 +253,22 @@ export function diceScreenCopy(
 ) {
   const inputLabel =
     method === 'bitbox'
-      ? entropyLabEnglish['dice.label.bitbox']
+      ? UPSTREAM_TEXT.dice.label.bitbox
       : method === 'd8d16'
-        ? formatCopy(entropyLabEnglish['dice.label.dplus'], {
+        ? formatCopy(UPSTREAM_TEXT.dice.label.dplus, {
             final: d8D16FinalDescription(info.finalSteps),
           })
-        : entropyLabEnglish['dice.label.hashed'];
+        : UPSTREAM_TEXT.dice.label.hashed;
   const inputHelp =
     method === 'bitbox'
-      ? formatCopy(entropyLabEnglish['dice.help.bitbox'], {
+      ? formatCopy(UPSTREAM_TEXT.dice.help.bitbox, {
           partialWords: info.partialWords,
         })
       : method === 'd8d16'
-        ? formatCopy(entropyLabEnglish['dice.help.dplus'], {
+        ? formatCopy(UPSTREAM_TEXT.dice.help.dplus, {
             finalHelp: d8D16FinalHelp(info.finalSteps),
           })
-        : formatCopy(entropyLabEnglish[`dice.help.${method}`], {
+        : formatCopy(HASHED_DICE_COPY[method].help, {
             hashRolls: info.recommendedRolls,
           });
   const inputPlaceholder =
@@ -269,20 +279,20 @@ export function diceScreenCopy(
         : UPSTREAM_UI_FALLBACK_COPY.dice.placeholders.hashed;
 
   return {
-    deriveAction: entropyLabEnglish['action.derive'],
-    how: formatCopy(entropyLabEnglish['dice.how'], { words: wordCount }),
+    deriveAction: UPSTREAM_TEXT.action.derive,
+    how: formatCopy(UPSTREAM_TEXT.dice.how, { words: wordCount }),
     inputLabel,
     inputHelp,
     inputPlaceholder,
-    lastWordAria: formatCopy(entropyLabEnglish['seed.lastWordAria'], { n: wordCount }),
-    lastWordPlaceholder: entropyLabEnglish['seed.lastWordPlaceholder'],
-    mode: entropyLabEnglish['mode.dice'],
-    resultEntropy: entropyLabEnglish['result.entropyHex'],
-    seedLengthLabel: entropyLabEnglish['seedLength.label'],
-    seedLengthValue: formatCopy(entropyLabEnglish['seedLength.words'], {
+    lastWordAria: formatCopy(UPSTREAM_TEXT.seed.lastWordAria, { n: wordCount }),
+    lastWordPlaceholder: UPSTREAM_TEXT.seed.lastWordPlaceholder,
+    mode: UPSTREAM_TEXT.mode.dice,
+    resultEntropy: UPSTREAM_TEXT.result.entropyHex,
+    seedLengthLabel: UPSTREAM_TEXT.seedLength.label,
+    seedLengthValue: formatCopy(UPSTREAM_TEXT.seedLength.words, {
       n: wordCount,
     }),
-    wordSlotsAria: formatCopy(entropyLabEnglish['seed.wordSlotsAria'], { n: wordCount }),
+    wordSlotsAria: formatCopy(UPSTREAM_TEXT.seed.wordSlotsAria, { n: wordCount }),
   };
 }
 
@@ -329,7 +339,7 @@ export function deriveDirectDiceResult(
   state: DirectDiceState,
 ): DiceResult {
   if (!state.canDerive || !state.mnemonic) {
-    return { error: entropyLabEnglish['error.generic'] };
+    return { error: UPSTREAM_TEXT.error.generic };
   }
 
   try {
@@ -339,19 +349,19 @@ export function deriveDirectDiceResult(
       mnemonic: state.mnemonic,
     };
   } catch {
-    return { error: entropyLabEnglish['error.generic'] };
+    return { error: UPSTREAM_TEXT.error.generic };
   }
 }
 
 function d8D16FinalDescription(steps: readonly DiceFinalStep[]): string {
   const labels = steps.map(d8D16StepLabel);
   if (labels.length === 1) {
-    return formatCopy(entropyLabEnglish['dice.dplus.rollOnceMore'], { die: labels[0] });
+    return formatCopy(UPSTREAM_TEXT.dice.dplus.rollOnceMore, { die: labels[0] });
   }
   if (labels[0] === labels[1]) {
-    return formatCopy(entropyLabEnglish['dice.dplus.rollTwice'], { die: labels[0] });
+    return formatCopy(UPSTREAM_TEXT.dice.dplus.rollTwice, { die: labels[0] });
   }
-  return formatCopy(entropyLabEnglish['dice.dplus.rollAnd'], {
+  return formatCopy(UPSTREAM_TEXT.dice.dplus.rollAnd, {
     a: labels[0],
     b: labels[1],
   });
@@ -360,30 +370,30 @@ function d8D16FinalDescription(steps: readonly DiceFinalStep[]): string {
 function d8D16FinalHelp(steps: readonly DiceFinalStep[]): string {
   const labels = steps.map(d8D16HelpStepLabel);
   if (labels.length === 1) {
-    return formatCopy(entropyLabEnglish['dice.dplus.helpOne'], { die: labels[0] });
+    return formatCopy(UPSTREAM_TEXT.dice.dplus.helpOne, { die: labels[0] });
   }
   if (labels[0] === labels[1]) {
-    return formatCopy(entropyLabEnglish['dice.dplus.helpTwoSame'], { die: labels[0] });
+    return formatCopy(UPSTREAM_TEXT.dice.dplus.helpTwoSame, { die: labels[0] });
   }
-  return formatCopy(entropyLabEnglish['dice.dplus.helpTwo'], {
+  return formatCopy(UPSTREAM_TEXT.dice.dplus.helpTwo, {
     a: labels[0],
     b: labels[1],
-    coin: labels.includes(entropyLabEnglish['dice.dplus.coinFlip'])
-      ? entropyLabEnglish['dice.dplus.coinNote']
+    coin: labels.includes(UPSTREAM_TEXT.dice.dplus.coinFlip)
+      ? UPSTREAM_TEXT.dice.dplus.coinNote
       : '',
   });
 }
 
 function d8D16StepLabel(step: DiceFinalStep): string {
   if (step === DiceFinalStep.Coin) {
-    return entropyLabEnglish['dice.dplus.aCoinFlip'];
+    return UPSTREAM_TEXT.dice.dplus.aCoinFlip;
   }
   return step === DiceFinalStep.D8 ? 'D8' : 'D16';
 }
 
 function d8D16HelpStepLabel(step: DiceFinalStep): string {
   if (step === DiceFinalStep.Coin) {
-    return entropyLabEnglish['dice.dplus.coinFlip'];
+    return UPSTREAM_TEXT.dice.dplus.coinFlip;
   }
   return step === DiceFinalStep.D8 ? 'D8' : 'D16';
 }
@@ -408,17 +418,16 @@ function upstreamDiceError(error: unknown, state: HashedDiceState): string {
       : undefined;
 
   if (tag === EntropyStudioError_Tags.InvalidDiceRolls) {
-    return entropyLabEnglish['error.diceFaces'].replace(
-      '{chars}',
+    return UPSTREAM_UI_FALLBACK_COPY.dice.errors.invalidFaces(
       JSON.stringify(state.invalidFaces.slice(0, 24)),
     );
   }
 
   if (tag === EntropyStudioError_Tags.NoDiceRolls) {
-    return entropyLabEnglish['error.diceEmpty'];
+    return UPSTREAM_UI_FALLBACK_COPY.dice.errors.empty;
   }
 
-  return entropyLabEnglish['error.generic'];
+  return UPSTREAM_TEXT.error.generic;
 }
 
 function nativeDiceInputMethod(method: DiceMethod) {

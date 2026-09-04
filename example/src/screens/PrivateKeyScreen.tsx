@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import type { TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import entropyLabEnglish from '../../../entropylab/src/locales/en.json';
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
@@ -18,7 +17,7 @@ import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { diceColors } from '../features/dice/diceTheme';
 import { PrivateKeyKeypad } from '../features/privateKey/components/PrivateKeyKeypad';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
+import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
 import { entropyToMnemonic } from '../native/entropyStudio';
 import {
   BRAIN_WALLET_OUTPUTS,
@@ -297,7 +296,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
       }
     } catch {
       setResult({
-        error: entropyLabEnglish['error.generic'],
+        error: UPSTREAM_TEXT.error.generic,
         kind: 'error',
       });
     }
@@ -325,10 +324,10 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
           <View style={styles.header}>
             <View style={styles.headerCopy}>
               <Text style={[styles.title, { color: colors.text }]} testID="private-key-screen-title">
-                {entropyLabEnglish['mode.key']}
+                {UPSTREAM_TEXT.mode.key}
               </Text>
               <Text style={[styles.subtitle, { color: colors.muted }]}>
-                {entropyLabEnglish['key.inputHelp']}
+                {UPSTREAM_TEXT.key.inputHelp}
               </Text>
             </View>
           </View>
@@ -342,7 +341,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
 
           <View style={styles.setupSettings}>
             <Text style={[styles.label, { color: colors.muted }]}>
-              {entropyLabEnglish['key.formatHeading']}
+              {UPSTREAM_TEXT.key.formatHeading}
             </Text>
             <View style={styles.formatOptions}>
               {PRIVATE_KEY_FORMATS.map(option => {
@@ -407,7 +406,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
             </Pressable>
             <View style={styles.entryHeaderCopy}>
               <Text style={[styles.entryTitle, { color: colors.text }]}>
-                {entropyLabEnglish['mode.key']}
+                {UPSTREAM_TEXT.mode.key}
               </Text>
               <Text style={[styles.entrySubtitle, { color: colors.muted }]}>{formatCopy.title}</Text>
             </View>
@@ -483,7 +482,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
             <>
               <View style={styles.inputHeader}>
                 <Text style={[styles.inputLabel, { color: colors.muted }]}>
-                  {entropyLabEnglish['key.inputLabel']}
+                  {UPSTREAM_TEXT.key.inputLabel}
                 </Text>
                 <Pressable
                   accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
@@ -511,7 +510,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
               )}
               <View style={[styles.inputSurface, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <TextInput
-                  accessibilityLabel={entropyLabEnglish['key.inputLabel']}
+                  accessibilityLabel={UPSTREAM_TEXT.key.inputLabel}
                   autoCapitalize="none"
                   autoComplete="off"
                   autoCorrect={false}
@@ -572,7 +571,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
             testID="derive-private-key"
           >
             <Text style={[styles.buttonText, { color: colors.onAccent }]}>
-              {entropyLabEnglish['action.derive']}
+              {UPSTREAM_TEXT.action.derive}
             </Text>
           </Pressable>
         </View>
@@ -582,7 +581,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
         colors={colors}
         onDismiss={() => setActiveSheet(null)}
         testID="private-key-result-sheet"
-        title={entropyLabEnglish['action.derive']}
+        title={UPSTREAM_TEXT.action.derive}
         visible={activeSheet === 'result' && Boolean(result)}
       >
         {result?.kind === 'brain-wallet-hd' ? (
@@ -593,18 +592,18 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
               slotCount={24}
               testID="private-key-brain-seed-words"
               words={result.mnemonic.split(' ')}
-              wordSlotsAria={entropyLabEnglish['seed.wordSlotsAria'].replace('{n}', '24')}
+              wordSlotsAria={UPSTREAM_TEXT.seed.wordSlotsAria.replace('{n}', '24')}
             />
             <DiceResultPanel
               colors={colors}
-              entropyLabel={entropyLabEnglish['result.entropyHex']}
+              entropyLabel={UPSTREAM_TEXT.result.entropyHex}
               result={{ entropy: result.entropy }}
             />
           </>
         ) : (
           <DiceResultPanel
             colors={colors}
-            entropyLabel={entropyLabEnglish['result.privateKey']}
+            entropyLabel={UPSTREAM_TEXT.result.privateKey}
             result={
               result?.kind === 'error'
                 ? { error: result.error }

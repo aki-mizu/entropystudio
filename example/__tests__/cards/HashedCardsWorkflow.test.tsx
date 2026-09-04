@@ -4,7 +4,6 @@
 
 import {
   App,
-  entropyLabEnglish,
   mockCardTranscriptToEntropy,
   mockEntropyToMnemonic,
   openCardsEntry,
@@ -12,7 +11,7 @@ import {
   ReactTestRenderer,
   selectEntropyTool,
 } from '../../test/testSupport';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
+import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
 describe('Hashed cards', () => {
   test('derives a hashed card transcript through the native binding', async () => {
@@ -31,12 +30,12 @@ describe('Hashed cards', () => {
 
     await selectEntropyTool(app!, 'cards');
     expect(app!.root.findByProps({ testID: 'cards-screen-title' }).props.children).toBe(
-      entropyLabEnglish['mode.cards'],
+      UPSTREAM_TEXT.mode.cards,
     );
     await openCardsEntry(app!);
     expect(app!.root.findByProps({ testID: 'cards-entry-view' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'card-input-label' }).props.children).toBe(
-      entropyLabEnglish['cards.transcript'],
+      UPSTREAM_TEXT.cards.transcript,
     );
     expect(app!.root.findByProps({ testID: 'card-transcript-input' }).props.showSoftInputOnFocus).toBe(
       false,
