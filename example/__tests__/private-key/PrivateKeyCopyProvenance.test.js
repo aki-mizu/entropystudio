@@ -26,8 +26,11 @@ const renderedUpstreamUiSources = [
 ].join('\n');
 
 describe('Upstream UI copy provenance', () => {
-  test('limits Studio-authored app-shell copy to settings navigation', () => {
+  test('limits Studio-authored navigation copy to approved actions', () => {
     expect(STUDIO_UI_TEXT).toEqual({
+      actions: {
+        start: 'Start',
+      },
       navigation: {
         settings: 'Settings',
       },

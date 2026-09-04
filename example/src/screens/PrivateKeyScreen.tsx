@@ -22,6 +22,7 @@ import {
   useRegisterCurrentEntropySyncRequest,
 } from '../features/entropySync';
 import { PrivateKeyKeypad } from '../features/privateKey/components/PrivateKeyKeypad';
+import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
 import { entropyToMnemonic } from '../native/entropyStudio';
 import {
@@ -431,7 +432,7 @@ export function PrivateKeyScreen({
 
           <View style={styles.setupActionArea}>
             <Pressable
-              accessibilityLabel={formatCopy.title}
+              accessibilityLabel={STUDIO_UI_TEXT.actions.start}
               accessibilityRole="button"
               onPress={openPrivateKeyEntry}
               style={({ pressed }) => [
@@ -440,7 +441,9 @@ export function PrivateKeyScreen({
               ]}
               testID="open-private-key-entry"
             >
-              <Text style={[styles.buttonText, { color: colors.onAccent }]}>{formatCopy.title}</Text>
+              <Text style={[styles.buttonText, { color: colors.onAccent }]}>
+                {STUDIO_UI_TEXT.actions.start}
+              </Text>
             </Pressable>
           </View>
         </ScrollView>

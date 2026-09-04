@@ -24,6 +24,7 @@ import {
   useRegisterCurrentEntropySyncRequest,
 } from '../features/entropySync';
 import { NumberBaseKeypad } from '../features/numberBases/components/NumberBaseKeypad';
+import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import {
   NUMBER_BASE_FORMATS,
   analyzeNumberBaseInput,
@@ -380,7 +381,7 @@ export function NumberBasesScreen({
 
           <View style={styles.setupActionArea}>
             <Pressable
-              accessibilityLabel={analysis.config.label}
+              accessibilityLabel={STUDIO_UI_TEXT.actions.start}
               accessibilityRole="button"
               onPress={() => setActiveView('entry')}
               style={({ pressed }) => [
@@ -390,7 +391,7 @@ export function NumberBasesScreen({
               testID="open-number-bases-entry"
             >
               <Text style={[styles.buttonText, { color: colors.onAccent }]}>
-                {analysis.config.label}
+                {STUDIO_UI_TEXT.actions.start}
               </Text>
             </Pressable>
           </View>

@@ -22,6 +22,7 @@ import {
   useEntropySync,
   useRegisterCurrentEntropySyncRequest,
 } from '../features/entropySync';
+import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { SeedPhraseKeypad } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import type { SeedPhraseEntryMethod } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '../features/upstreamUiCopy';
@@ -360,7 +361,7 @@ export function SeedPhraseScreen({
 
           <View style={styles.setupActionArea}>
             <Pressable
-              accessibilityLabel={SEED_METHOD_COPY[seedMethod].title}
+              accessibilityLabel={STUDIO_UI_TEXT.actions.start}
               accessibilityRole="button"
               onPress={() => setActiveView('entry')}
               style={({ pressed }) => [
@@ -370,7 +371,7 @@ export function SeedPhraseScreen({
               testID="open-seed-phrase-entry"
             >
               <Text style={[styles.buttonText, { color: colors.onAccent }]}>
-                {SEED_METHOD_COPY[seedMethod].title}
+                {STUDIO_UI_TEXT.actions.start}
               </Text>
             </Pressable>
           </View>

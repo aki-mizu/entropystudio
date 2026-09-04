@@ -14,6 +14,7 @@ import {
 } from '../test/testSupport';
 import { EntropySyncSource } from '../src/native/entropyStudio';
 import type { EntropySyncSnapshot } from '../src/native/entropyStudio';
+import { STUDIO_UI_TEXT } from '../src/features/studioUiCopy';
 import { UPSTREAM_TEXT } from '../src/features/upstreamUiCopy';
 
 const SYNCED_ZERO_ENTROPY_SNAPSHOT: EntropySyncSnapshot = {
@@ -38,6 +39,12 @@ const SYNCED_ZERO_ENTROPY_SNAPSHOT: EntropySyncSnapshot = {
   wifPrivateKey: '',
 };
 
+function expectStartAction(app: ReactTestRenderer.ReactTestRenderer, testID: string) {
+  const button = app.root.findByProps({ testID });
+  expect(button.props.accessibilityLabel).toBe(STUDIO_UI_TEXT.actions.start);
+  expect(button.props.children.props.children).toBe(STUDIO_UI_TEXT.actions.start);
+}
+
 test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on the shared setup screen', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
@@ -45,6 +52,7 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
   });
 
   expect(app!.root.findByProps({ testID: 'dice-setup-view' })).toBeDefined();
+  expectStartAction(app!, 'open-dice-entry');
   const diceMethodList = activeMethodList(app!);
   expect(diceMethodList.findByProps({ testID: 'key-method-label' }).props.children).toBe(
     UPSTREAM_TEXT.keys.methodLabel,
@@ -70,6 +78,7 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
   await selectEntropyTool(app!, 'cards');
   expect(app!.root.findByProps({ testID: 'cards-screen-title' })).toBeDefined();
   expect(app!.root.findByProps({ testID: 'cards-setup-view' })).toBeDefined();
+  expectStartAction(app!, 'open-cards-entry');
   expect(app!.root.findAllByProps({ testID: 'cards-entry-view' })).toHaveLength(0);
   expect(
     activeMethodList(app!).findByProps({ testID: 'key-method-cards' }).props.accessibilityState,
@@ -79,6 +88,15 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'card-method-direct' }).props.onPress();
   });
+
+  await selectEntropyTool(app!, 'hex');
+  expectStartAction(app!, 'open-number-bases-entry');
+
+  await selectEntropyTool(app!, 'seed');
+  expectStartAction(app!, 'open-seed-phrase-entry');
+
+  await selectEntropyTool(app!, 'key');
+  expectStartAction(app!, 'open-private-key-entry');
 
   await selectEntropyTool(app!, 'dice');
 

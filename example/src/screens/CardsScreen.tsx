@@ -39,6 +39,7 @@ import {
   useEntropySync,
   useRegisterCurrentEntropySyncRequest,
 } from '../features/entropySync';
+import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
@@ -285,7 +286,7 @@ export function CardsScreen({
 
           <View style={styles.setupActionArea}>
             <Pressable
-              accessibilityLabel={copy.inputLabel}
+              accessibilityLabel={STUDIO_UI_TEXT.actions.start}
               accessibilityRole="button"
               onPress={() => setActiveView('entry')}
               style={({ pressed }) => [
@@ -297,7 +298,9 @@ export function CardsScreen({
               ]}
               testID="open-cards-entry"
             >
-              <Text style={[styles.buttonText, { color: colors.onAccent }]}>{copy.inputLabel}</Text>
+              <Text style={[styles.buttonText, { color: colors.onAccent }]}>
+                {STUDIO_UI_TEXT.actions.start}
+              </Text>
             </Pressable>
           </View>
         </View>

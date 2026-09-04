@@ -27,7 +27,7 @@ Guidelines for AI coding agents.
 
 - All visible and accessibility copy in `example/src/` must first be verified
   as text rendered by the pinned upstream UI, except the narrowly scoped
-  Studio app-shell navigation copy in `example/src/features/studioUiCopy.ts`.
+  Studio navigation copy in `example/src/features/studioUiCopy.ts`.
   EntropyLab uses content-keyed localization: English source text is the key,
   and upstream has no `en.json`.
 - `example/src/features/upstreamUiCopy.ts` is Studio's sole source of upstream
@@ -37,9 +37,9 @@ Guidelines for AI coding agents.
   formatters. Elsewhere, import those exports instead of using literal source
   text or importing upstream labels directly.
 - `example/src/features/studioUiCopy.ts` is the sole approved exception for
-  Studio-authored app-shell navigation. It currently permits only the
-  `Settings` tab label; do not use it for workflow, domain, or accessibility
-  copy outside that tab.
+  Studio-authored navigation. It currently permits only the `Settings` tab
+  label and the `Start` setup-to-input action. Do not use it for domain or
+  other workflow copy.
 - Its synchronization check validates this central module against the current
   pinned upstream source; its provenance test rejects bypasses and verifies
   every static alias, label value, fallback value, and dynamic formatter.
