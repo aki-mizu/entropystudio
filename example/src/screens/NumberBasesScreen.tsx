@@ -95,6 +95,34 @@ function numberBaseInputHelp(
   );
 }
 
+function numberBaseSetupRequirement(
+  wordCount: WordCount,
+  config: ReturnType<typeof numberBaseFormatConfig>,
+): string {
+  const requirement = UPSTREAM_UI_FALLBACK_COPY.numberBases.requirement(
+    wordCount,
+    config.digits,
+    config.unit,
+  );
+
+  if (!config.remainderBits) {
+    return requirement;
+  }
+
+  return `${requirement}${
+    config.binaryRemainder
+      ? UPSTREAM_UI_FALLBACK_COPY.numberBases.setupRemainderBinary(
+          config.fullDigits,
+          config.shortLabel,
+          config.remainderBits,
+        )
+      : UPSTREAM_UI_FALLBACK_COPY.numberBases.setupRemainderMixed(
+          config.remainderBits,
+          [...config.finalCharacters].join(', '),
+        )
+  }`;
+}
+
 function inputStatus(
   analysis: ReturnType<typeof analyzeNumberBaseInput>,
   previewWordCount: number,
@@ -196,6 +224,7 @@ export function NumberBasesScreen({
     analysis.config.label,
     wordCount,
   );
+  const formatRequirement = numberBaseSetupRequirement(wordCount, analysis.config);
   let words = [...analysis.previewWords];
 
   if (entropy) {
@@ -376,6 +405,12 @@ export function NumberBasesScreen({
             </View>
             <Text style={[styles.formatDescription, { color: colors.muted }]}>
               {UPSTREAM_UI_LABELS.hexFormat[format].desc}
+            </Text>
+            <Text
+              style={[styles.formatRequirement, { color: colors.muted }]}
+              testID="number-base-format-requirement"
+            >
+              {formatRequirement}
             </Text>
           </View>
 
@@ -626,6 +661,11 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   formatDescription: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 8,
+  },
+  formatRequirement: {
     fontSize: 12,
     lineHeight: 17,
     marginTop: 8,

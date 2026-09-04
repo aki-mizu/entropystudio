@@ -11,7 +11,7 @@ mod private_key;
 mod seed_phrase;
 mod wipe;
 
-pub use bip39::{entropy_to_mnemonic, mnemonic_to_entropy};
+pub use bip39::{bip39_entropy_bits, entropy_to_mnemonic, mnemonic_to_entropy};
 pub use cards::{
 	card_key_allowed, card_transcript_to_entropy, hashed_card_state, normalize_card_token,
 	normalize_direct_card_transcript, CardHashMethod, CardInputMethod, HashedCardInstruction,

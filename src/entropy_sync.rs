@@ -1,13 +1,10 @@
-use crate::bip39::{bip39_word, entropy_to_mnemonic, mnemonic_to_entropy};
+use crate::bip39::{bip39_entropy_bits, bip39_word, entropy_to_mnemonic, mnemonic_to_entropy};
 use crate::cards::{
     card_transcript_to_entropy, hashed_card_state, is_card_separator, CardHashMethod,
 };
 use crate::direct_dice::{direct_dice_input_state, DirectDiceMethod};
 use crate::error::EntropyStudioError;
-use crate::hashed_dice::{
-    dice_entropy_length, dice_rolls_to_entropy, hashed_dice_state, is_dice_separator,
-    DiceRollMethod,
-};
+use crate::hashed_dice::{dice_rolls_to_entropy, hashed_dice_state, is_dice_separator, DiceRollMethod};
 use crate::number_bases::{number_base_bits, number_base_value_from_bits, NumberBaseFormat};
 use crate::private_key::{private_key_entropy, PrivateKeyFormat};
 use crate::seed_phrase::{seed_phrase_state, seed_phrase_words_to_numbers, SeedPhraseInputMethod};
@@ -515,7 +512,7 @@ fn snapshot_from_bits(
 }
 
 fn target_entropy_bits(target_words: u8) -> Result<usize, EntropyStudioError> {
-    Ok(dice_entropy_length(target_words)? * 8)
+    Ok(usize::from(bip39_entropy_bits(target_words)?))
 }
 
 fn seed_values(

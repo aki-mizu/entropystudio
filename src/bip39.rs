@@ -2,6 +2,11 @@ use crate::error::EntropyStudioError;
 use crate::wipe::{wipe_bytes, wipe_string};
 
 #[uniffi::export]
+pub fn bip39_entropy_bits(target_words: u8) -> Result<u16, EntropyStudioError> {
+    Ok((bip39_entropy_bytes(target_words)? * 8) as u16)
+}
+
+#[uniffi::export]
 pub fn mnemonic_to_entropy(mut normalized_phrase: String) -> Result<Vec<u8>, EntropyStudioError> {
     let mut entropy = [0u8; 32];
     let length = unsafe {
@@ -47,6 +52,17 @@ pub fn entropy_to_mnemonic(mut entropy: Vec<u8>) -> Result<String, EntropyStudio
         .map_err(|_| EntropyStudioError::InvalidEntropy);
     wipe_bytes(&mut phrase);
     result
+}
+
+pub(crate) fn bip39_entropy_bytes(target_words: u8) -> Result<usize, EntropyStudioError> {
+    match target_words {
+        12 => Ok(16),
+        15 => Ok(20),
+        18 => Ok(24),
+        21 => Ok(28),
+        24 => Ok(32),
+        _ => Err(EntropyStudioError::UnsupportedDiceWordCount),
+    }
 }
 
 pub(crate) fn bip39_word(index: usize) -> Result<String, EntropyStudioError> {

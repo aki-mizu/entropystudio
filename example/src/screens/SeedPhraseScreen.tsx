@@ -69,6 +69,19 @@ function formatCopy(template: string, values: Record<string, number | string>): 
   );
 }
 
+function seedPhraseMethodRequirement(
+  method: SeedPhraseEntryMethod,
+  wordCount: WordCount,
+  zeroIndexed: boolean,
+): string {
+  return method === 'numbers'
+    ? UPSTREAM_UI_FALLBACK_COPY.seedPhrase.requirementNumbers(
+        wordCount,
+        zeroIndexed ? UPSTREAM_TEXT.seed.range0 : UPSTREAM_TEXT.seed.range1,
+      )
+    : UPSTREAM_UI_FALLBACK_COPY.seedPhrase.requirementWords(wordCount);
+}
+
 function entropyHex(entropy: ArrayBuffer): string {
   return Array.from(new Uint8Array(entropy), byte => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -110,6 +123,7 @@ export function SeedPhraseScreen({
     () => analyzeSeedPhrase(input, seedMethod, wordCount, zeroIndexed),
     [input, seedMethod, wordCount, zeroIndexed],
   );
+  const methodRequirement = seedPhraseMethodRequirement(seedMethod, wordCount, zeroIndexed);
   const canDeleteInput = selectedInput.end > selectedInput.start || selectedInput.start > 0;
   const activePhrase = analysis.phrase;
   const previewWords = analysis.words;
@@ -357,6 +371,12 @@ export function SeedPhraseScreen({
                 );
               })}
             </View>
+            <Text
+              style={[styles.methodRequirement, { color: colors.muted }]}
+              testID="seed-phrase-method-requirement"
+            >
+              {methodRequirement}
+            </Text>
           </View>
 
           <View style={styles.setupActionArea}>
@@ -692,6 +712,10 @@ const styles = StyleSheet.create({
   methodOptions: {
     gap: 8,
     marginBottom: 16,
+  },
+  methodRequirement: {
+    fontSize: 12,
+    lineHeight: 17,
   },
   methodTitle: {
     fontSize: 14,

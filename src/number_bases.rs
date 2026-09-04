@@ -1,6 +1,5 @@
-use crate::bip39::bip39_word;
+use crate::bip39::{bip39_entropy_bytes, bip39_word};
 use crate::error::EntropyStudioError;
-use crate::hashed_dice::dice_entropy_length;
 use crate::wipe::wipe_string;
 
 #[derive(Debug, Clone, Copy, uniffi::Enum)]
@@ -228,7 +227,7 @@ fn number_base_config(
             6,
         ),
     };
-    let entropy_bytes = dice_entropy_length(target_words)?;
+    let entropy_bytes = bip39_entropy_bytes(target_words)?;
     let entropy_bits = entropy_bytes * 8;
     let full_digits = entropy_bits / usize::from(bits_per_digit);
     let remainder_bits = (entropy_bits % usize::from(bits_per_digit)) as u8;

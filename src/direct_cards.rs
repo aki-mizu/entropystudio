@@ -1,7 +1,6 @@
-use crate::bip39::bip39_word;
+use crate::bip39::{bip39_entropy_bytes, bip39_word};
 use crate::cards::is_card_separator;
 use crate::error::EntropyStudioError;
-use crate::hashed_dice::dice_entropy_length;
 use crate::wipe::wipe_string;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -173,7 +172,7 @@ fn direct_card_state_inner(
 }
 
 fn direct_card_partial_words(target_words: u8) -> Result<u8, EntropyStudioError> {
-    dice_entropy_length(target_words)?;
+    bip39_entropy_bytes(target_words)?;
     Ok(target_words - 1)
 }
 

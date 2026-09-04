@@ -223,6 +223,9 @@ export function DiceRollsScreen({
               method={method}
               onSelect={changeMethod}
             />
+            <Text style={[styles.methodHelp, { color: colors.muted }]} testID="dice-method-requirement">
+              {copy.methodRequirement}
+            </Text>
           </View>
 
           <View style={styles.setupActionArea}>

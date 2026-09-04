@@ -1,9 +1,8 @@
 use std::sync::OnceLock;
 
-use crate::bip39::{bip39_word, mnemonic_to_entropy};
+use crate::bip39::{bip39_entropy_bytes, bip39_word, mnemonic_to_entropy};
 use crate::error::EntropyStudioError;
 use crate::hash::sha256;
-use crate::hashed_dice::dice_entropy_length;
 use crate::wipe::{wipe_bytes, wipe_string};
 
 const BIP39_WORD_COUNT: usize = 2048;
@@ -562,7 +561,7 @@ fn final_word_candidates(
     prefix_indices: &[usize],
     target_words: u8,
 ) -> Result<Vec<String>, EntropyStudioError> {
-    let entropy_bits = dice_entropy_length(target_words)? * 8;
+    let entropy_bits = bip39_entropy_bytes(target_words)? * 8;
     let checksum_bits = entropy_bits / 32;
     let suffix_bits = entropy_bits.saturating_sub(prefix_indices.len() * 11);
     let mut candidates = Vec::with_capacity(1usize << suffix_bits);
@@ -748,5 +747,5 @@ fn wipe_strings(strings: &mut [String]) {
 }
 
 fn validate_target_words(target_words: u8) -> Result<(), EntropyStudioError> {
-    dice_entropy_length(target_words).map(|_| ())
+    bip39_entropy_bytes(target_words).map(|_| ())
 }

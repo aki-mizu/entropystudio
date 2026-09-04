@@ -8,7 +8,7 @@ import {
   ReactTestRenderer,
   selectEntropyTool,
 } from '../../test/testSupport';
-import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
+import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
 
 describe('Number Bases / Binary', () => {
   test('enters binary entropy through the on-screen keypad', async () => {
@@ -18,6 +18,9 @@ describe('Number Bases / Binary', () => {
     });
 
     await selectEntropyTool(app!, 'hex');
+    expect(
+      app!.root.findByProps({ testID: 'number-base-format-requirement' }).props.children,
+    ).toBe(UPSTREAM_UI_FALLBACK_COPY.numberBases.requirement(24, 256, 'binary digits'));
     const numberBasesSetup = app!.root.findByProps({ testID: 'number-bases-setup-view' });
     await ReactTestRenderer.act(async () => {
       numberBasesSetup.findByProps({ testID: 'number-base-format-bin' }).props.onPress();

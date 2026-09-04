@@ -56,6 +56,11 @@ describe('Upstream UI copy provenance', () => {
         template:
           /<option value="12">12 words<\/option><option value="15">15 words<\/option><option value="18">18 words<\/option><option value="21">21 words<\/option><option value="24" selected="selected">24 words<\/option>/,
       },
+      'common.seedLengthEntropy': {
+        source: upstreamAppJs,
+        template:
+          /hodlTText\("\{words\} words use \{bits\} bits of BIP39 entropy\.", \{ words: config\.words, bits: config\.bits \}\)/,
+      },
       'cards.dealN': {
         source: upstreamAppJs,
         template: /deal \$\{needed\.first\} unique cards without putting them back/,
@@ -69,6 +74,11 @@ describe('Upstream UI copy provenance', () => {
         source: upstreamAppJs,
         template:
           /For each of the first \$\{config\.partialWords\} words, shuffle and draw from A\\u20138 three times, then A\\u20134 once\./,
+      },
+      'cards.directRequirement': {
+        source: upstreamAppJs,
+        template:
+          /"\{words\} words use \{partial\} complete 11-bit rank selections plus \{final\} final rank draw\(s\)\."/,
       },
       'cards.directProgress': {
         source: upstreamAppJs,
@@ -99,6 +109,11 @@ describe('Upstream UI copy provenance', () => {
           template:
             /Each valid card updates a deterministic test seed\. For real security, \$\{config\.words === 24 \? "deal all 52 unique cards, shuffle again, then deal 6 more" : `deal \$\{needed\.first\} unique cards without putting them back`\}\. SHA-256 hashes the ASCII transcript \(As 2c Td\)\./,
         },
+      'cards.hashedRequirement': {
+        source: upstreamAppJs,
+        template:
+          /"\{words\} words need \{bits\} bits\. Deal \{first\} unique cards from one shuffled deck\."/,
+      },
       'cards.invalidRank': {
         source: upstreamAppJs,
         template:
@@ -195,6 +210,21 @@ describe('Upstream UI copy provenance', () => {
         template:
           /\$\{analysis\.count\} of \$\{analysis\.limit\} \$\{definition\.unit\} \\xB7 \$\{words\.length\} of \$\{config\.words\} seed words filled/,
       },
+      'numberBases.requirement': {
+        source: upstreamAppJs,
+        template:
+          /hodlTText\("\{words\} words require exactly \{digits\} \{unit\}\.", \{ words: config\.words, digits: format\.digits, unit: format\.unit \}\)/,
+      },
+      'numberBases.setupRemainderBinary': {
+        source: upstreamAppJs,
+        template:
+          /Enter \{fullDigits\} complete \{shortLabel\} characters followed by \{n\} coin flip\(s\), using Heads \(0\) or Tails \(1\)\./,
+      },
+      'numberBases.setupRemainderMixed': {
+        source: upstreamAppJs,
+        template:
+          /The final character contributes \{n\} bit\(s\) and must be one of \{chars\}\./,
+      },
       'numberBases.remainderBinary': {
         source: upstreamAppJs,
         template:
@@ -270,6 +300,14 @@ describe('Upstream UI copy provenance', () => {
       'seedPhrase.placeholder': {
         source: upstreamAppJs,
         template: /placeholder="Enter exactly \$\{config\.words\} BIP39 words"/,
+      },
+      'seedPhrase.requirementNumbers': {
+        source: upstreamAppJs,
+        template: /Enter exactly \{words\} BIP39 word numbers using \{range\}\./,
+      },
+      'seedPhrase.requirementWords': {
+        source: upstreamAppJs,
+        template: /Enter exactly \{words\} BIP39 words\. Extended keys ignore this selection\./,
       },
       'seedPhrase.wordsHelp': {
         source: upstreamAppJs,

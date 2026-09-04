@@ -236,6 +236,8 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
     back: 'Back',
     cancel: 'Cancel',
     seedLengthWords: (wordCount: number) => `${wordCount} words`,
+    seedLengthEntropy: (wordCount: number, bitCount: number) =>
+      `${wordCount} words use ${bitCount} bits of BIP39 entropy.`,
   },
   cards: {
     colemanNote: '(show and hash A♠ 2♣ instead of As 2c)',
@@ -245,6 +247,8 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
       `${entered} of ${needed} rank draws entered · checksum-valid ${wordCount}-word seed ready to derive`,
     directHelp: (partialWords: number) =>
       `For each of the first ${partialWords} words, shuffle and draw from A–8 three times, then A–4 once. Each four-character group selects one word; spaces separate the groups. The shorter final group supplies the remaining entropy bits, and EntropyLab calculates the BIP39 checksum bits.`,
+    directRequirement: (wordCount: number, partialWords: number, finalDraws: number) =>
+      `${wordCount} words use ${partialWords} complete 11-bit rank selections plus ${finalDraws} final rank draw(s).`,
     directProgress: (entered: number, needed: number, step: string) =>
       `${entered} of ${needed} rank draws entered · ${step}`,
     directTranscript: 'Rank-only draw transcript',
@@ -255,6 +259,10 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
       `Cards use rank then suit, like AS, 10H, or TD. Ignored: ${ignored}`,
     hashedInputHelp: (deal: string) =>
       `Each valid card updates a deterministic test seed. For real security, ${deal}. SHA-256 hashes the ASCII transcript (As 2c Td).`,
+    hashedRequirement: (wordCount: number, bitCount: number, firstShuffleCards: number) =>
+      `${wordCount} words need ${bitCount} bits. Deal ${firstShuffleCards} unique cards from one shuffled deck.`,
+    hashedRequirement24:
+      '24 words need 256 bits. One deck is about 225.6 bits, so deal 52 unique cards, shuffle again, then deal 6 more.',
     invalidRank: (count: number) => `${count} invalid rank highlighted`,
     invalidRanks: (count: number) => `${count} invalid ranks highlighted`,
     extraCard: (count: number) => `${count} extra card highlighted`,
@@ -334,7 +342,13 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
       filled: number,
       wordCount: number,
     ) => `${entered} of ${limit} ${unit} · ${filled} of ${wordCount} seed words filled`,
+    requirement: (wordCount: number, digits: number, unit: string) =>
+      `${wordCount} words require exactly ${digits} ${unit}.`,
     ready: ' · ready to derive',
+    setupRemainderBinary: (fullDigits: number, shortLabel: string, bitCount: number) =>
+      ` Enter ${fullDigits} complete ${shortLabel} characters followed by ${bitCount} coin flip(s), using Heads (0) or Tails (1).`,
+    setupRemainderMixed: (bitCount: number, characters: string) =>
+      ` The final character contributes ${bitCount} bit(s) and must be one of ${characters}.`,
     remainderBinary: (fullDigits: number, shortLabel: string, bitCount: number) =>
       ` Enter ${fullDigits} complete ${shortLabel} characters; the controls and progress message then switch to ${bitCount} coin flip(s), using Heads (0) or Tails (1).`,
     spacesBin: ' Spaces are added every 11 bits.',
@@ -389,6 +403,10 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
     noFinalPrefix: (progress: string, prefix: string) =>
       `${progress} · No valid checksum word starts with "${prefix}".`,
     placeholder: (wordCount: number) => `Enter exactly ${wordCount} BIP39 words`,
+    requirementNumbers: (wordCount: number, range: string) =>
+      `Enter exactly ${wordCount} BIP39 word numbers using ${range}.`,
+    requirementWords: (wordCount: number) =>
+      `Enter exactly ${wordCount} BIP39 words. Extended keys ignore this selection.`,
     finalPrefix: (progress: string, count: number, prefix: string) =>
       `${progress} · ${count} valid checksum word(s) start with "${prefix}".`,
     wordsHelp: (wordCount: number, partialWords: number) =>

@@ -286,6 +286,10 @@ export function diceScreenCopy(
     inputPlaceholder,
     lastWordAria: formatCopy(UPSTREAM_TEXT.seed.lastWordAria, { n: wordCount }),
     lastWordPlaceholder: UPSTREAM_TEXT.seed.lastWordPlaceholder,
+    methodRequirement: UPSTREAM_UI_FALLBACK_COPY.common.seedLengthEntropy(
+      wordCount,
+      info.entropyBits,
+    ),
     mode: UPSTREAM_TEXT.mode.dice,
     resultEntropy: UPSTREAM_TEXT.result.entropyHex,
     seedLengthLabel: UPSTREAM_TEXT.seedLength.label,

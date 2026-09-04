@@ -282,6 +282,14 @@ export function CardsScreen({
 
           <View style={styles.setupSettings} testID="cards-setup-settings">
             {renderCardMethodSelector()}
+            {copy.methodRequirement ? (
+              <Text
+                style={[styles.methodHelp, { color: colors.muted }]}
+                testID="cards-method-requirement"
+              >
+                {copy.methodRequirement}
+              </Text>
+            ) : null}
           </View>
 
           <View style={styles.setupActionArea}>

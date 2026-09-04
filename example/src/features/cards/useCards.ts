@@ -76,7 +76,7 @@ export function useCards(options: UseCardsOptions = {}) {
   const canDerive = isHashedCardMethod(method)
     ? Boolean(hashedState && hasHashedCardInput(hashedState))
     : Boolean(directState?.complete);
-  const copy = cardScreenCopy(method, wordCount, matchesIanColeman);
+  const copy = cardScreenCopy(method, wordCount, matchesIanColeman, directState);
   const instruction = cardInstruction(method, wordCount, hashedState, directState);
 
   useEffect(() => {

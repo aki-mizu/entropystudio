@@ -1,6 +1,6 @@
+use crate::bip39::bip39_entropy_bytes;
 use crate::error::EntropyStudioError;
 use crate::hash::sha256;
-use crate::hashed_dice::dice_entropy_length;
 use crate::wipe::{wipe_bytes, wipe_string};
 
 #[derive(Debug, Clone, Copy, uniffi::Enum)]
@@ -113,7 +113,7 @@ fn card_transcript_to_entropy_inner(
     method: CardHashMethod,
     target_words: u8,
 ) -> Result<Vec<u8>, EntropyStudioError> {
-    let entropy_length = dice_entropy_length(target_words)?;
+    let entropy_length = bip39_entropy_bytes(target_words)?;
     let mut cards = parse_card_transcript(transcript, target_words)?;
 
     if cards.is_empty() {
@@ -223,7 +223,7 @@ fn hashed_card_state_inner(
 }
 
 pub(crate) fn card_counts_needed(target_words: u8) -> Result<(usize, usize), EntropyStudioError> {
-    let target_bits = dice_entropy_length(target_words)? * 8;
+    let target_bits = bip39_entropy_bytes(target_words)? * 8;
 
     for first in 1..=52 {
         if cards_without_replacement_bits(first) >= target_bits as f64 {

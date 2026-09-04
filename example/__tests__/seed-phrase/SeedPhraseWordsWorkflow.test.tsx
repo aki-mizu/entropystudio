@@ -12,7 +12,7 @@ import {
   selectEntropyTool,
   selectSeedPhraseLength,
 } from '../../test/testSupport';
-import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
+import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
 
 describe('Seed Phrase / Words', () => {
   test('validates a typed Seed Phrase through the native BIP39 binding', async () => {
@@ -33,6 +33,10 @@ describe('Seed Phrase / Words', () => {
 
     await selectEntropyTool(app!, 'seed');
 
+    expect(app!.root.findByProps({ testID: 'seed-phrase-method-requirement' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.seedPhrase.requirementWords(24),
+    );
+
     expect(app!.root.findByProps({ testID: 'seed-phrase-setup-view' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'seed-phrase-screen-title' }).props.children).toBe(
       UPSTREAM_TEXT.mode.seed,
@@ -42,6 +46,9 @@ describe('Seed Phrase / Words', () => {
     ).toEqual({ selected: true });
 
     await selectSeedPhraseLength(app!, 12);
+    expect(app!.root.findByProps({ testID: 'seed-phrase-method-requirement' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.seedPhrase.requirementWords(12),
+    );
     await ReactTestRenderer.act(async () => {
       app!
         .root.findByProps({ testID: 'seed-phrase-setup-view' })

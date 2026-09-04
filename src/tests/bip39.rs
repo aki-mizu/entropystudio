@@ -1,6 +1,13 @@
 use super::*;
 
 #[test]
+fn bip39_entropy_bits_matches_supported_seed_lengths() {
+    for (word_count, expected_bits) in [(12, 128), (15, 160), (18, 192), (21, 224), (24, 256)] {
+        assert_eq!(bip39_entropy_bits(word_count).unwrap(), expected_bits);
+    }
+}
+
+#[test]
 fn sha256_uses_entropylab_implementation() {
     assert_eq!(
         sha256(b"abc".to_vec()),

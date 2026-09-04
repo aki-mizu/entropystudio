@@ -10,10 +10,36 @@ import {
   React,
   ReactTestRenderer,
   selectEntropyTool,
+  selectSeedPhraseLength,
 } from '../../test/testSupport';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
 describe('Hashed cards', () => {
+  test('shows target-specific guidance for hashed and direct card methods', async () => {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+
+    await selectEntropyTool(app!, 'cards');
+    expect(app!.root.findByProps({ testID: 'cards-method-requirement' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.cards.hashedRequirement24,
+    );
+
+    await selectSeedPhraseLength(app!, 12);
+    expect(app!.root.findByProps({ testID: 'cards-method-requirement' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.cards.hashedRequirement(12, 128, 25),
+    );
+
+    await selectSeedPhraseLength(app!, 24);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'card-method-direct' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'cards-method-requirement' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.cards.directRequirement(24, 23, 1),
+    );
+  });
+
   test('derives a hashed card transcript through the native binding', async () => {
     const entropy = new Uint8Array(16).buffer;
     const mnemonic =

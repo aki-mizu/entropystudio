@@ -10,6 +10,7 @@ import {
   selectEntropyTool,
   selectSeedPhraseLength,
 } from '../../test/testSupport';
+import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
 
 describe('Seed Phrase / Numbers', () => {
   test('converts BIP39 word numbers through the on-screen keypad', async () => {
@@ -34,7 +35,13 @@ describe('Seed Phrase / Numbers', () => {
         .root.findByProps({ testID: 'seed-phrase-setup-view' })
         .findByProps({ testID: 'seed-method-numbers' }).props.onPress();
     });
+    expect(app!.root.findByProps({ testID: 'seed-phrase-method-requirement' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.seedPhrase.requirementNumbers(24, UPSTREAM_TEXT.seed.range1),
+    );
     await selectSeedPhraseLength(app!, 12);
+    expect(app!.root.findByProps({ testID: 'seed-phrase-method-requirement' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.seedPhrase.requirementNumbers(12, UPSTREAM_TEXT.seed.range1),
+    );
     await ReactTestRenderer.act(async () => {
       app!
         .root.findByProps({ testID: 'seed-phrase-setup-view' })

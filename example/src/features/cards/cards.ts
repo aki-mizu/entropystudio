@@ -3,6 +3,7 @@ import {
   CardInputMethod,
   DirectCardStep,
   HashedCardInstruction,
+  bip39EntropyBits,
   cardKeyAllowed as nativeCardKeyAllowed,
   cardTranscriptToEntropy,
   directCardState as nativeDirectCardState,
@@ -88,6 +89,7 @@ export function cardScreenCopy(
   method: CardMethod,
   wordCount: WordCount,
   matchesIanColeman: boolean,
+  directState: DirectCardState | null,
 ) {
   const isDirect = method === 'direct';
   const deal =
@@ -109,12 +111,39 @@ export function cardScreenCopy(
       : matchesIanColeman
         ? UPSTREAM_UI_FALLBACK_COPY.cards.placeholders.ianColeman
         : UPSTREAM_UI_FALLBACK_COPY.cards.placeholders.standard,
+    methodRequirement: cardMethodRequirement(method, wordCount, directState),
     mode: UPSTREAM_TEXT.mode.cards,
       resultEntropy: UPSTREAM_TEXT.result.entropyHex,
     seedLengthLabel: UPSTREAM_TEXT.seedLength.label,
     seedLengthValue: UPSTREAM_UI_FALLBACK_COPY.common.seedLengthWords(wordCount),
     wordSlotsAria: formatCopy(UPSTREAM_TEXT.seed.wordSlotsAria, { n: wordCount }),
   };
+}
+
+function cardMethodRequirement(
+  method: CardMethod,
+  wordCount: WordCount,
+  directState: DirectCardState | null,
+): string {
+  if (method === 'direct') {
+    return directState
+      ? UPSTREAM_UI_FALLBACK_COPY.cards.directRequirement(
+          wordCount,
+          directState.partialWords,
+          directState.finalDraws,
+        )
+      : '';
+  }
+
+  if (wordCount === 24) {
+    return UPSTREAM_UI_FALLBACK_COPY.cards.hashedRequirement24;
+  }
+
+  return UPSTREAM_UI_FALLBACK_COPY.cards.hashedRequirement(
+    wordCount,
+    bip39EntropyBits(wordCount),
+    getHashedCardState('', wordCount).firstShuffleCards,
+  );
 }
 
 export function hashedCardsNeeded(wordCount: WordCount): number {

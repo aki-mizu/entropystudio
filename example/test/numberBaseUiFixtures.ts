@@ -10,6 +10,23 @@ type NumberBaseUiMockSetters = {
 };
 
 const NUMBER_BASE_EMPTY_ANALYSES: Record<string, NumberBaseAnalysis> = {
+  '0:12': {
+    alphabet: '01',
+    binaryRemainder: false,
+    bitsPerDigit: 1,
+    digitCount: 0,
+    digits: 128,
+    entropyBits: 128,
+    entropyBytes: 16,
+    excessDigitCount: 0,
+    finalCharacters: '01',
+    finalInvalid: false,
+    fullDigits: 128,
+    invalidCharacterCount: 0,
+    isReady: false,
+    previewWords: [],
+    remainderBits: 0,
+  },
   '0:24': {
     alphabet: '01',
     binaryRemainder: false,

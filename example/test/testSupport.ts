@@ -9,6 +9,7 @@ import type {
   EntropySyncSnapshot,
 } from '../src/native/entropyStudio';
 import { installCardUiFixtures } from './cardUiFixtures';
+import { installBip39UiFixtures } from './bip39UiFixtures';
 import { installDiceUiFixtures } from './diceUiFixtures';
 import { installNumberBaseUiFixtures } from './numberBaseUiFixtures';
 import { installPrivateKeyUiFixtures } from './privateKeyUiFixtures';
@@ -36,6 +37,7 @@ export const mockMnemonicToEntropy = jest.fn<ArrayBuffer, [string]>();
 export const mockNormalizeCardToken = jest.fn<string, [string]>();
 export const mockNormalizeDirectCardTranscript = jest.fn<string, [string]>();
 export const mockAnalyzeNumberBaseInput = jest.fn<NumberBaseAnalysis, [string, number, number]>();
+export const mockBip39EntropyBits = jest.fn<number, [number]>();
 export const mockNumberBaseEntropy = jest.fn<ArrayBuffer, [string, number, number]>();
 export const mockPrivateKeyEntropy = jest.fn<ArrayBuffer, [string, number]>();
 export const mockPrivateKeyInputState = jest.fn<PrivateKeyInputState, [string, number]>();
@@ -177,6 +179,7 @@ jest.mock('entropystudio', () => ({
   cardTranscriptToEntropy: mockCardTranscriptToEntropy,
   cardKeyAllowed: mockCardKeyAllowed,
   analyzeNumberBaseInput: mockAnalyzeNumberBaseInput,
+  bip39EntropyBits: mockBip39EntropyBits,
   diceMethodInfo: mockDiceMethodInfo,
   directCardState: mockDirectCardState,
   directDiceInputState: mockDirectDiceInputState,
@@ -203,8 +206,12 @@ jest.mock('entropystudio', () => ({
   translateSeedNumberIndices: mockTranslateSeedNumberIndices,
 }));
 
+installBip39UiFixtures({
+  setBip39EntropyBits: implementation => mockBip39EntropyBits.mockImplementation(implementation),
+});
 installCardUiFixtures({
   setCardKeyAllowed: implementation => mockCardKeyAllowed.mockImplementation(implementation),
+  setDirectCardState: implementation => mockDirectCardState.mockImplementation(implementation),
   setHashedCardState: implementation => mockHashedCardState.mockImplementation(implementation),
   setNormalizeCardToken: implementation => mockNormalizeCardToken.mockImplementation(implementation),
   setNormalizeDirectCardTranscript: implementation =>

@@ -1,6 +1,6 @@
-use crate::bip39::bip39_word;
+use crate::bip39::{bip39_entropy_bytes, bip39_word};
 use crate::error::EntropyStudioError;
-use crate::hashed_dice::{dice_entropy_length, is_dice_separator, recommended_dice_rolls};
+use crate::hashed_dice::{is_dice_separator, recommended_dice_rolls};
 use crate::wipe::{wipe_bytes, wipe_string};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -94,7 +94,7 @@ pub fn direct_dice_input_state(
 
 #[uniffi::export]
 pub fn dice_method_info(target_words: u8) -> Result<DiceMethodInfo, EntropyStudioError> {
-    let entropy_bits = dice_entropy_length(target_words)? * 8;
+    let entropy_bits = bip39_entropy_bytes(target_words)? * 8;
     let checksum_bits = entropy_bits / 32;
     let final_steps = d8_d16_final_steps(target_words)?
         .iter()
@@ -468,7 +468,7 @@ fn format_d8_d16_transcript(rolls: &str, target_words: u8) -> String {
 }
 
 fn direct_dice_partial_words(target_words: u8) -> Result<u8, EntropyStudioError> {
-    dice_entropy_length(target_words)?;
+    bip39_entropy_bytes(target_words)?;
     Ok(target_words - 1)
 }
 
