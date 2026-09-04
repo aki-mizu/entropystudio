@@ -30,6 +30,9 @@ Guidelines for AI coding agents.
   `entropylab/src/locales/en.json`, with only its supported placeholder
   substitution. When upstream-visible text has no catalog key, copy that exact
   text downstream; do not introduce Studio-authored visible copy.
+- Store every exact downstream copy that lacks an upstream catalog key in
+  `example/src/features/upstreamUiCopy.ts`. Its provenance test must verify each value is
+  rendered by pinned upstream `app.js` and absent from `en.json`.
 - Never add or alter upstream locale entries. Do not use catalog-only text that
   is not rendered by the pinned upstream UI.
 - When Studio uses catalog copy, UI tests must derive their expected text from

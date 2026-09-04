@@ -1,4 +1,5 @@
 import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
 import {
   EntropyStudioError_Tags,
   PrivateKeyFormat,
@@ -11,20 +12,7 @@ import type { PrivateKeyInputState as NativePrivateKeyInputState } from '../../n
 
 export const PRIVATE_KEY_FORMATS = ['wif', 'hex', 'mini', 'brain'] as const;
 export const BRAIN_WALLET_OUTPUTS = ['scalar', 'hd'] as const;
-export const BRAIN_WALLET_WARNING_COPY = {
-  acknowledgementDescription: 'Required once this session, in page memory only.',
-  hdLines: [
-    'The 24-word count is not the strength; the text is.',
-    'A valid mnemonic does not mean it is the same wallet as hashing the text as a private-key scalar.',
-  ],
-  lines: [
-    'SHA-256(text) is unsalted and fast. Guessable phrases are stolen coins.',
-    'Strength is the entropy of this text, nothing more.',
-    'This is not a BIP39 passphrase.',
-    'This is not a Bitcoin Core hdseed or address-key backup of the same wallet.',
-  ],
-  title: 'Brain wallet warning — read before use',
-} as const;
+export const BRAIN_WALLET_WARNING_COPY = UPSTREAM_UI_FALLBACK_COPY.brainWallet.warning;
 
 export type PrivateKeyInputFormat = (typeof PRIVATE_KEY_FORMATS)[number];
 export type PrivateKeyInputState = NativePrivateKeyInputState;
@@ -32,12 +20,17 @@ export type BrainWalletOutput = (typeof BRAIN_WALLET_OUTPUTS)[number];
 
 type InputSelection = { readonly end: number; readonly start: number };
 
-const PRIVATE_KEY_COPY_KEYS = {
-  brain: {
+const BRAIN_WALLET_EN_JSON_KEYS = {
+  acknowledgement: 'beta.understand',
+  format: {
     description: 'key.brainDesc',
     placeholder: 'key.placeholderBrain',
     title: 'key.brain',
   },
+} as const;
+
+const PRIVATE_KEY_EN_JSON_KEYS = {
+  brain: BRAIN_WALLET_EN_JSON_KEYS.format,
   hex: {
     description: 'key.hexDesc',
     placeholder: 'key.placeholderHex',
@@ -55,20 +48,8 @@ const PRIVATE_KEY_COPY_KEYS = {
   },
 } as const;
 
-const BRAIN_WALLET_OUTPUT_COPY = {
-  hd: {
-    description:
-      'The digest is 256-bit BIP39 entropy for a 24-word seed. Not the same wallet as the single key pair.',
-    title: 'HD wallet with seed phrase',
-  },
-  scalar: {
-    description: 'The digest is the private key. One address, the original brain-wallet behaviour.',
-    title: 'Single key pair',
-  },
-} as const;
-
 export function privateKeyFormatCopy(format: PrivateKeyInputFormat) {
-  const keys = PRIVATE_KEY_COPY_KEYS[format];
+  const keys = PRIVATE_KEY_EN_JSON_KEYS[format];
   return {
     description: entropyLabEnglish[keys.description],
     placeholder: entropyLabEnglish[keys.placeholder],
@@ -76,8 +57,16 @@ export function privateKeyFormatCopy(format: PrivateKeyInputFormat) {
   };
 }
 
+export function brainWalletLocaleCopy() {
+  const keys = BRAIN_WALLET_EN_JSON_KEYS;
+  return {
+    acknowledgement: entropyLabEnglish[keys.acknowledgement],
+    label: entropyLabEnglish[keys.format.title],
+  };
+}
+
 export function brainWalletOutputCopy(output: BrainWalletOutput) {
-  return BRAIN_WALLET_OUTPUT_COPY[output];
+  return UPSTREAM_UI_FALLBACK_COPY.brainWallet.outputs[output];
 }
 
 export function privateKeyEntropy(value: string, format: PrivateKeyInputFormat): ArrayBuffer {

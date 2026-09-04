@@ -22,6 +22,7 @@ import { entropyToMnemonic } from '../native/entropyStudio';
 import {
   BRAIN_WALLET_OUTPUTS,
   BRAIN_WALLET_WARNING_COPY,
+  brainWalletLocaleCopy,
   brainWalletOutputCopy,
   PRIVATE_KEY_FORMATS,
   privateKeyEntropy,
@@ -87,6 +88,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
   const [result, setResult] = useState<PrivateKeyResult | null>(null);
   const [selectionRequestId, setSelectionRequestId] = useState(0);
   const colors = diceColors(isDarkMode);
+  const brainWalletLocale = brainWalletLocaleCopy();
   const formatCopy = privateKeyFormatCopy(format);
   const brainWalletWarningAcknowledged = brainWalletWarningAcknowledgements[brainWalletOutput];
   const brainWalletWarningLines = [
@@ -192,7 +194,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
           </Text>
         ))}
         <Pressable
-          accessibilityLabel={entropyLabEnglish['beta.understand']}
+          accessibilityLabel={brainWalletLocale.acknowledgement}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: brainWalletWarningAcknowledged }}
           onPress={toggleBrainWalletWarningAcknowledgement}
@@ -223,7 +225,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
           </View>
           <View style={styles.brainWalletAcknowledgementCopy}>
             <Text style={[styles.brainWalletAcknowledgementTitle, { color: colors.text }]}>
-              {entropyLabEnglish['beta.understand']}
+              {brainWalletLocale.acknowledgement}
             </Text>
             <Text
               style={[styles.brainWalletAcknowledgementDescription, { color: colors.muted }]}
@@ -409,7 +411,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
           </View>
           {format === 'brain' && (
             <View style={styles.brainWalletSection} testID="brain-wallet-output-options">
-              <Text style={[styles.label, { color: colors.muted }]}>{entropyLabEnglish['key.brain']}</Text>
+              <Text style={[styles.label, { color: colors.muted }]}>{brainWalletLocale.label}</Text>
               <View style={styles.brainWalletOptions}>
                 {BRAIN_WALLET_OUTPUTS.map(option => {
                   const selected = option === brainWalletOutput;
