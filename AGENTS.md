@@ -41,11 +41,14 @@ Guidelines for AI coding agents.
 - Never import `entropylab/src/js/i18n.js` or a non-English upstream locale into
   React Native. The former is browser-specific and imports all locale catalogs;
   neither is Studio's English source contract.
-- After an intentional EntropyLab update, run `npm run check:upstream-ui-copy`.
-  It statically validates Studio's aliases and label-table values against the
-  pinned upstream source and runs Studio's downstream provenance test. Studio
-  does not execute upstream synchronization scripts, rewrite the submodule, or
-  import Spanish values. Never add or alter upstream locale entries.
+- `npm run update:entropylab` automatically runs
+  `npm run check:upstream-ui-copy` when it changes the checked-out EntropyLab
+  revision. After manually changing the submodule gitlink, run the check
+  yourself. It statically validates Studio's aliases and label-table values
+  against the pinned upstream source and runs Studio's downstream provenance
+  test. Studio does not execute upstream synchronization scripts, rewrite the
+  submodule, or import Spanish values. Never add or alter upstream locale
+  entries.
 - UI tests must derive expected copy from the same direct upstream source or
   downstream fallback function used by production code, rather than repeat a
   separate string literal.

@@ -30,7 +30,7 @@
   ],
   "scripts": {
     "clean": "node scripts/clean.mjs",
-    "update:entropylab": "git submodule update --init --remote --checkout entropylab",
+    "update:entropylab": "node scripts/update-entropylab.mjs",
     "prepare:entropylab": "node scripts/enable-entropylab-rlib.mjs entropylab",
     "build:android": "npm run update:entropylab && npm run prepare:entropylab && ubrn build android --config ubrn.config.yaml --release --and-generate",
     "install:android": "npm run build:android && cd example/android && ./gradlew :app:installDebug",

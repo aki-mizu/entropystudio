@@ -116,19 +116,20 @@ Run the Rust contract tests:
 npm test
 ```
 
-After intentionally updating the EntropyLab submodule, synchronize Studio's
-selected upstream UI copy with the pinned source:
+Update the EntropyLab submodule and automatically validate Studio's selected
+upstream UI copy whenever its checked-out revision changes:
 
 ```sh
-npm run check:upstream-ui-copy
+npm run update:entropylab
 ```
 
-This statically validates Studio's aliases in
+The automatic check statically validates Studio's aliases in
 `example/src/features/upstreamUiCopy.ts` against pinned upstream source files
 and runs Studio's copy-provenance test. It does not execute or rewrite upstream
 synchronization code, and it never imports non-English locale values into React
 Native. Callers only import aliases from that module, so this is the sole Studio
-file validated against upstream text.
+file validated against upstream text. Run `npm run check:upstream-ui-copy`
+directly after manually changing the EntropyLab gitlink.
 
 Build native artifacts and regenerate bindings for a mobile platform:
 
