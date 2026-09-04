@@ -26,15 +26,20 @@ Guidelines for AI coding agents.
 ## Copy and Localization
 
 - All visible and accessibility copy in `example/src/` must first be verified
-  as text rendered by the pinned upstream UI. EntropyLab uses content-keyed
-  localization: English source text is the key, and upstream has no `en.json`.
+  as text rendered by the pinned upstream UI, except the narrowly scoped
+  Studio app-shell navigation copy in `example/src/features/studioUiCopy.ts`.
+  EntropyLab uses content-keyed localization: English source text is the key,
+  and upstream has no `en.json`.
 - `example/src/features/upstreamUiCopy.ts` is Studio's sole source of upstream
   UI copy. `UPSTREAM_TEXT` provides static semantic aliases,
   `UPSTREAM_UI_LABELS` owns direct `i18n-labels.js` imports, and
   `UPSTREAM_UI_FALLBACK_COPY` holds direct `app.js`-derived values and
   formatters. Elsewhere, import those exports instead of using literal source
-  text or importing upstream labels directly. Do not introduce Studio-authored
-  visible copy.
+  text or importing upstream labels directly.
+- `example/src/features/studioUiCopy.ts` is the sole approved exception for
+  Studio-authored app-shell navigation. It currently permits only the
+  `Settings` tab label; do not use it for workflow, domain, or accessibility
+  copy outside that tab.
 - Its synchronization check validates this central module against the current
   pinned upstream source; its provenance test rejects bypasses and verifies
   every static alias, label value, fallback value, and dynamic formatter.
@@ -49,9 +54,10 @@ Guidelines for AI coding agents.
   test. Studio does not execute upstream synchronization scripts, rewrite the
   submodule, or import Spanish values. Never add or alter upstream locale
   entries.
-- UI tests must derive expected copy from the same direct upstream source or
-  downstream fallback function used by production code, rather than repeat a
-  separate string literal.
+- UI tests must derive expected upstream copy from the same direct upstream
+  source or downstream fallback function used by production code, rather than
+  repeat a separate string literal. Tests for the approved Studio app-shell
+  exception must import `studioUiCopy.ts` and pin its allowlist.
 
 ## Generated Outputs and Dependencies
 

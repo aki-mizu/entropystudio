@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   cardInstruction,
   cardScreenCopy,
@@ -17,8 +17,23 @@ import {
 } from './cards';
 import type { CardMethod, CardResult } from './cards';
 import type { WordCount } from '../dice/dice';
+import type { EntropySyncSnapshot } from '../../native/entropyStudio';
 
-export function useCards() {
+type CardsInputChange = {
+  readonly matchesIanColeman: boolean;
+  readonly method: CardMethod;
+  readonly transcript: string;
+  readonly wordCount: WordCount;
+};
+
+type UseCardsOptions = {
+  readonly onInputChange?: (change: CardsInputChange) => void;
+  readonly snapshot?: EntropySyncSnapshot | null;
+  readonly targetWords?: WordCount;
+};
+
+export function useCards(options: UseCardsOptions = {}) {
+  const { onInputChange, snapshot: syncSnapshot, targetWords: syncTargetWords } = options;
   const [hashedTranscript, setHashedTranscript] = useState('');
   const [directTranscript, setDirectTranscript] = useState('');
   const [method, setMethod] = useState<CardMethod>('hashed');
@@ -64,13 +79,39 @@ export function useCards() {
   const copy = cardScreenCopy(method, wordCount, matchesIanColeman);
   const instruction = cardInstruction(method, wordCount, hashedState, directState);
 
+  useEffect(() => {
+    if (syncTargetWords === undefined) {
+      return;
+    }
+
+    if (syncSnapshot) {
+      setDirectTranscript(syncSnapshot.directCards);
+      setResult(null);
+    }
+    setWordCount(syncTargetWords);
+  }, [syncSnapshot, syncTargetWords]);
+
+  function notifyInputChange(nextTranscript: string, nextMatchesIanColeman = matchesIanColeman) {
+    onInputChange?.({
+      matchesIanColeman: nextMatchesIanColeman,
+      method,
+      transcript: nextTranscript,
+      wordCount,
+    });
+  }
+
   function updateTranscript(value: string) {
+    const nextTranscript =
+      method === 'direct'
+        ? normalizeDirectCardTranscript(value)
+        : formatCardTranscript(value, matchesIanColeman);
     if (method === 'direct') {
-      setDirectTranscript(normalizeDirectCardTranscript(value));
+      setDirectTranscript(nextTranscript);
     } else {
-      setHashedTranscript(formatCardTranscript(value, matchesIanColeman));
+      setHashedTranscript(nextTranscript);
     }
     setResult(null);
+    notifyInputChange(nextTranscript);
   }
 
   function appendCard(card: string) {
@@ -78,27 +119,34 @@ export function useCards() {
     const formattedCard = isHashedCardMethod(method)
       ? formatCardTranscript(card, matchesIanColeman)
       : card;
-    setHashedTranscript(`${trimmed}${trimmed ? ' ' : ''}${formattedCard}`);
+    const nextTranscript = `${trimmed}${trimmed ? ' ' : ''}${formattedCard}`;
+    setHashedTranscript(nextTranscript);
     setResult(null);
+    notifyInputChange(nextTranscript);
   }
 
   function appendDirectRank(rank: string) {
-    setDirectTranscript(`${normalizeDirectCardTranscript(directTranscript)}${rank}`);
+    const nextTranscript = `${normalizeDirectCardTranscript(directTranscript)}${rank}`;
+    setDirectTranscript(nextTranscript);
     setResult(null);
+    notifyInputChange(nextTranscript);
   }
 
   function undoLastEntry() {
+    const nextTranscript =
+      method === 'direct'
+        ? normalizeDirectCardTranscript(directTranscript).slice(0, -1)
+        : hashedTranscript
+            .trimEnd()
+            .replace(/[^\s,.;:_|/-]+$/, '')
+            .trimEnd();
     if (method === 'direct') {
-      setDirectTranscript(normalizeDirectCardTranscript(directTranscript).slice(0, -1));
+      setDirectTranscript(nextTranscript);
     } else {
-      setHashedTranscript(
-        hashedTranscript
-          .trimEnd()
-          .replace(/[^\s,.;:_|/-]+$/, '')
-          .trimEnd(),
-      );
+      setHashedTranscript(nextTranscript);
     }
     setResult(null);
+    notifyInputChange(nextTranscript);
   }
 
   function selectMethod(value: CardMethod) {
@@ -107,14 +155,11 @@ export function useCards() {
   }
 
   function selectIanColemanMatch(value: boolean) {
+    const nextTranscript = formatCardTranscript(hashedTranscript, value);
     setMatchesIanColeman(value);
-    setHashedTranscript(current => formatCardTranscript(current, value));
+    setHashedTranscript(nextTranscript);
     setResult(null);
-  }
-
-  function selectWordCount(value: WordCount) {
-    setWordCount(value);
-    setResult(null);
+    notifyInputChange(nextTranscript, value);
   }
 
   function derivePhrase() {
@@ -144,7 +189,6 @@ export function useCards() {
     result: isHashedCardMethod(method) ? hashedResult : result,
     selectIanColemanMatch,
     selectMethod,
-    selectWordCount,
     transcript,
     undoLastEntry,
     updateTranscript,

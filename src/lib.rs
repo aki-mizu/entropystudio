@@ -2,6 +2,7 @@ mod bip39;
 mod cards;
 mod direct_cards;
 mod direct_dice;
+mod entropy_sync;
 mod error;
 mod hash;
 mod hashed_dice;
@@ -22,6 +23,7 @@ pub use direct_dice::{
 	DiceFinalStep, DiceInputMethod, DiceMethodInfo, DirectDiceMethod, DirectDiceState,
 	DirectDiceStep,
 };
+pub use entropy_sync::{synchronize_entropy, EntropySyncSnapshot, EntropySyncSource};
 pub use error::EntropyStudioError;
 pub use hash::sha256;
 pub use hashed_dice::{dice_rolls_to_entropy, hashed_dice_state, DiceRollMethod, HashedDiceState};

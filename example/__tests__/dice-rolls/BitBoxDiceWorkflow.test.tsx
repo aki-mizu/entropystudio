@@ -12,6 +12,7 @@ import {
   React,
   ReactTestRenderer,
   selectDiceMethod,
+  selectSeedPhraseLength,
 } from '../../test/testSupport';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
@@ -262,12 +263,7 @@ test('derives a BitBox direct-dice phrase from a selected checksum word', async 
   });
 
   await selectDiceMethod(app!, 'dice-method-bitbox');
-
-  await ReactTestRenderer.act(async () => {
-    app!.root
-      .findByProps({ testID: 'dice-setup-view' })
-      .findByProps({ testID: 'word-count-12' }).props.onPress();
-  });
+  await selectSeedPhraseLength(app!, 12);
 
   expect(app!.root.findByProps({ testID: 'dice-method-bitbox-title' }).props.children).toBe(
     UPSTREAM_TEXT.dice.bitbox.title,

@@ -1,3 +1,5 @@
+import type { PrivateKeyInputState } from '../src/native/entropyStudio';
+
 type PrivateKeyUiMockSetters = {
   readonly setPrivateKeyEntropy: (
     implementation: (value: string, format: number) => ArrayBuffer,
@@ -12,7 +14,7 @@ type PrivateKeyUiMockSetters = {
     ) => boolean,
   ) => void;
   readonly setPrivateKeyInputState: (
-    implementation: (value: string, format: number) => unknown,
+    implementation: (value: string, format: number) => PrivateKeyInputState,
   ) => void;
 };
 
@@ -41,7 +43,7 @@ const PRIVATE_KEY_KEY_ALLOWED_FIXTURES: Record<string, boolean> = {
   '3::0:0: ': true,
 };
 
-const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, unknown> = {
+const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
   '0:': {
     canDerive: false,
     enteredCount: 0,

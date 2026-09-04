@@ -19,10 +19,14 @@ import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceTranscriptInput } from '../features/dice/components/DiceTranscriptInput';
 import type { DiceTranscriptSelection } from '../features/dice/components/DiceTranscriptInput';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
-import { WordCountSelector } from '../features/dice/components/WordCountSelector';
 import { D8_D16_FACES } from '../features/dice/dice';
 import type { DiceInputFace } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
+import {
+  diceEntropySyncSource,
+  useEntropySync,
+  useRegisterCurrentEntropySyncRequest,
+} from '../features/entropySync';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_UI_LABELS } from '../features/upstreamUiCopy';
 import { useDiceRolls } from '../features/dice/useDiceRolls';
 
@@ -37,13 +41,19 @@ type Props = {
   readonly onSelectTool: (tool: EntropyTool) => void;
 };
 
-export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: Props) {
+export function DiceRollsScreen({
+  activeTool,
+  isActive,
+  isDarkMode,
+  onSelectTool,
+}: Props) {
   const { height: windowHeight } = useWindowDimensions();
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<DiceView>('setup');
   const [transcriptSelection, setTranscriptSelection] =
     useState<DiceTranscriptSelection | null>(null);
   const [selectionRequestId, setSelectionRequestId] = useState(0);
+  const entropySync = useEntropySync();
   const {
     appendFace,
     bitboxCopy,
@@ -64,10 +74,21 @@ export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool
     selectedFinalWord,
     selectFinalWord,
     selectMethod,
-    selectWordCount,
     updateRolls,
     wordCount,
-  } = useDiceRolls();
+  } = useDiceRolls({
+    onInputChange: change => {
+      entropySync.publish({
+        selectedFinalWord: change.selectedFinalWord,
+        source: diceEntropySyncSource(change.method),
+        targetWords: change.wordCount,
+        value: change.rolls,
+        zeroIndexed: false,
+      });
+    },
+    snapshot: entropySync.snapshot,
+    targetWords: entropySync.targetWords,
+  });
   const colors = diceColors(isDarkMode);
   const isCompactHeight = windowHeight < 700;
   const maxTileSize =
@@ -78,6 +99,14 @@ export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool
       : [];
   const canChooseFinalWord =
     method === 'bitbox' && Boolean(directState && directCopy && directState.candidates.length > 0);
+
+  useRegisterCurrentEntropySyncRequest(isActive, {
+    selectedFinalWord,
+    source: diceEntropySyncSource(method),
+    targetWords: wordCount,
+    value: rolls,
+    zeroIndexed: false,
+  });
 
   useEffect(() => {
     if (!isActive || activeView === 'setup') {
@@ -147,7 +176,7 @@ export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool
 
   return (
     <SafeAreaView
-      edges={['top', 'bottom']}
+      edges={['top']}
       importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
       pointerEvents={isActive ? 'auto' : 'none'}
       style={[
@@ -192,13 +221,6 @@ export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool
               colors={colors}
               method={method}
               onSelect={changeMethod}
-            />
-            <WordCountSelector
-              colors={colors}
-              label={copy.seedLengthLabel}
-              onSelect={selectWordCount}
-              valueLabel={copy.seedLengthValue}
-              wordCount={wordCount}
             />
           </View>
 

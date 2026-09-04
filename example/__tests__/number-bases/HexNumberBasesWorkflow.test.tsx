@@ -10,6 +10,7 @@ import {
   ReactTestRenderer,
   ScrollView,
   selectEntropyTool,
+  selectSeedPhraseLength,
 } from '../../test/testSupport';
 import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
@@ -34,11 +35,16 @@ describe('Number Bases / Hexadecimal', () => {
       activeMethodList(app!).findByProps({ testID: 'key-method-hex' }).props.accessibilityState,
     ).toEqual({ selected: true });
 
-    const numberBasesSetup = app!.root.findByProps({ testID: 'number-bases-setup-view' });
     await ReactTestRenderer.act(async () => {
-      numberBasesSetup.findByProps({ testID: 'number-base-format-hex' }).props.onPress();
-      numberBasesSetup.findByProps({ testID: 'word-count-12' }).props.onPress();
-      numberBasesSetup.findByProps({ testID: 'open-number-bases-entry' }).props.onPress();
+      app!
+        .root.findByProps({ testID: 'number-bases-setup-view' })
+        .findByProps({ testID: 'number-base-format-hex' }).props.onPress();
+    });
+    await selectSeedPhraseLength(app!, 12);
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'number-bases-setup-view' })
+        .findByProps({ testID: 'open-number-bases-entry' }).props.onPress();
     });
 
     expect(app!.root.findByProps({ testID: 'number-bases-entry-view' })).toBeDefined();

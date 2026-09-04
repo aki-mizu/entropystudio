@@ -15,9 +15,13 @@ import type { EntropyTool } from '../components/EntropyMethodList';
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
-import { WordCountSelector } from '../features/dice/components/WordCountSelector';
 import type { DiceResult, WordCount } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
+import {
+  seedEntropySyncSource,
+  useEntropySync,
+  useRegisterCurrentEntropySyncRequest,
+} from '../features/entropySync';
 import { SeedPhraseKeypad } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import type { SeedPhraseEntryMethod } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '../features/upstreamUiCopy';
@@ -81,7 +85,12 @@ function replaceInputSelection(value: string, selection: InputSelection, inserte
   return `${value.slice(0, selection.start)}${inserted}${value.slice(selection.end)}`;
 }
 
-export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectTool }: Props) {
+export function SeedPhraseScreen({
+  activeTool,
+  isActive,
+  isDarkMode,
+  onSelectTool,
+}: Props) {
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<SeedPhraseView>('setup');
   const [autocompleteEnabled, setAutocompleteEnabled] = useState(true);
@@ -92,6 +101,7 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
   const [wordInput, setWordInput] = useState('');
   const [wordCount, setWordCount] = useState<WordCount>(24);
   const [zeroIndexed, setZeroIndexed] = useState(false);
+  const entropySync = useEntropySync();
   const colors = diceColors(isDarkMode);
   const input = seedMethod === 'words' ? wordInput : numberInput;
   const selectedInput = normalizedInputSelection(input, inputSelection);
@@ -119,6 +129,28 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
     }
   }
 
+  useRegisterCurrentEntropySyncRequest(isActive, {
+    selectedFinalWord: '',
+    source: seedEntropySyncSource(seedMethod),
+    targetWords: wordCount,
+    value: input,
+    zeroIndexed,
+  });
+
+  useEffect(() => {
+    if (entropySync.snapshot) {
+      setInputSelection(null);
+      setNumberInput(
+        zeroIndexed
+          ? entropySync.snapshot.seedNumbersZeroIndexed
+          : entropySync.snapshot.seedNumbersOneIndexed,
+      );
+      setResult(null);
+      setWordInput(entropySync.snapshot.seedWords);
+    }
+    setWordCount(entropySync.targetWords);
+  }, [entropySync.snapshot, entropySync.targetWords, zeroIndexed]);
+
   useEffect(() => {
     if (!isActive || activeView === 'setup') {
       return undefined;
@@ -144,6 +176,13 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
       setNumberInput(normalized);
     }
     setResult(null);
+    entropySync.publish({
+      selectedFinalWord: '',
+      source: seedEntropySyncSource(seedMethod),
+      targetWords: wordCount,
+      value: normalized,
+      zeroIndexed,
+    });
     return normalized;
   }
 
@@ -230,11 +269,6 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
     setSeedMethod(method);
   }
 
-  function selectWordCount(value: WordCount) {
-    setWordCount(value);
-    setResult(null);
-  }
-
   function setZeroIndexMode(nextZeroIndexed: boolean) {
     if (nextZeroIndexed === zeroIndexed) {
       return;
@@ -260,7 +294,7 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
 
   return (
     <SafeAreaView
-      edges={['top', 'bottom']}
+      edges={['top']}
       importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
       pointerEvents={isActive ? 'auto' : 'none'}
       style={[
@@ -322,13 +356,6 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
                 );
               })}
             </View>
-            <WordCountSelector
-              colors={colors}
-              label={UPSTREAM_TEXT.seedLength.label}
-              onSelect={selectWordCount}
-              valueLabel={UPSTREAM_TEXT.seedLength.words.replace('{n}', String(wordCount))}
-              wordCount={wordCount}
-            />
           </View>
 
           <View style={styles.setupActionArea}>

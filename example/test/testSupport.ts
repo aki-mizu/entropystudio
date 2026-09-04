@@ -1,10 +1,12 @@
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 import { ScrollView } from 'react-native';
+import type { WordCount } from '../src/features/dice/dice';
 import type {
   HashedCardState,
   NumberBaseAnalysis,
   PrivateKeyInputState,
+  EntropySyncSnapshot,
 } from '../src/native/entropyStudio';
 import { installCardUiFixtures } from './cardUiFixtures';
 import { installDiceUiFixtures } from './diceUiFixtures';
@@ -38,6 +40,10 @@ export const mockNumberBaseEntropy = jest.fn<ArrayBuffer, [string, number, numbe
 export const mockPrivateKeyEntropy = jest.fn<ArrayBuffer, [string, number]>();
 export const mockPrivateKeyInputState = jest.fn<PrivateKeyInputState, [string, number]>();
 export const mockPrivateKeyKeyAllowed = jest.fn<boolean, [string, number, number, string, number]>();
+export const mockSynchronizeEntropy = jest.fn<
+  EntropySyncSnapshot,
+  [string, number, number, boolean, string]
+>();
 
 jest.mock('entropystudio', () => ({
   CardHashMethod: {
@@ -100,6 +106,27 @@ jest.mock('entropystudio', () => ({
     Final: 1,
     Correction: 2,
     Complete: 3,
+  },
+  EntropySyncSource: {
+    DiceColdcard: 0,
+    DiceColeman: 1,
+    DiceBitbox: 2,
+    DiceD8d16: 3,
+    CardsHashedAscii: 4,
+    CardsHashedColeman: 5,
+    CardsDirect: 6,
+    NumberBaseBin: 7,
+    NumberBaseBase4: 8,
+    NumberBaseBase8: 9,
+    NumberBaseHex: 10,
+    NumberBaseBase32: 11,
+    NumberBaseBase64: 12,
+    SeedWords: 13,
+    SeedNumbers: 14,
+    PrivateKeyWif: 15,
+    PrivateKeyHex: 16,
+    PrivateKeyMiniKey: 17,
+    PrivateKeyBrainWallet: 18,
   },
   NumberBaseFormat: {
     Bin: 0,
@@ -172,6 +199,7 @@ jest.mock('entropystudio', () => ({
   seedPhraseSpaceAllowed: mockSeedPhraseSpaceAllowed,
   seedPhraseState: mockSeedPhraseState,
   seedPhraseWordsToNumbers: mockSeedPhraseWordsToNumbers,
+  synchronizeEntropy: mockSynchronizeEntropy,
   translateSeedNumberIndices: mockTranslateSeedNumberIndices,
 }));
 
@@ -272,6 +300,21 @@ export async function selectEntropyTool(
 ) {
   await ReactTestRenderer.act(async () => {
     activeMethodList(app).findByProps({ testID: `key-method-${tool}` }).props.onPress();
+  });
+}
+
+export async function selectSeedPhraseLength(
+  app: ReactTestRenderer.ReactTestRenderer,
+  wordCount: WordCount,
+) {
+  await ReactTestRenderer.act(async () => {
+    app.root.findByProps({ testID: 'app-tab-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app.root.findByProps({ testID: `word-count-${wordCount}` }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app.root.findByProps({ testID: 'app-tab-method' }).props.onPress();
   });
 }
 

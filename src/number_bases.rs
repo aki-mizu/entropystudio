@@ -80,6 +80,68 @@ pub fn number_base_entropy(
     Ok(entropy)
 }
 
+pub(crate) fn number_base_bits(
+    value: &str,
+    format: NumberBaseFormat,
+    target_words: u8,
+) -> Result<String, EntropyStudioError> {
+    let mut parsed = parse_number_base_input(value, format, target_words)?;
+    let valid = parsed.analysis.invalid_character_count == 0
+        && parsed.analysis.excess_digit_count == 0
+        && !parsed.analysis.final_invalid;
+
+    if !valid {
+        wipe_string(&mut parsed.bits);
+        return Err(EntropyStudioError::InvalidNumberBaseInput);
+    }
+
+    Ok(parsed.bits)
+}
+
+pub(crate) fn number_base_value_from_bits(
+    bits: &str,
+    format: NumberBaseFormat,
+    target_words: u8,
+) -> Result<String, EntropyStudioError> {
+    let config = number_base_config(format, target_words)?;
+    let source = &bits[..bits.len().min(config.entropy_bits)];
+    let mut value = String::with_capacity(config.digits);
+    let mut offset = 0;
+
+    while offset + usize::from(config.bits_per_digit) <= source.len()
+        && value.len() < config.full_digits
+    {
+        let digit = bits_value(&source.as_bytes()[offset..offset + usize::from(config.bits_per_digit)]);
+        value.push(config.alphabet.as_bytes()[digit] as char);
+        offset += usize::from(config.bits_per_digit);
+    }
+
+    if value.len() == config.full_digits
+        && config.remainder_bits > 0
+        && source.len() - offset >= usize::from(config.remainder_bits)
+    {
+        let final_bits = &source.as_bytes()[offset..offset + usize::from(config.remainder_bits)];
+        if config.binary_remainder {
+            value.push_str(std::str::from_utf8(final_bits).expect("validated binary entropy bits"));
+        } else {
+            value.push(config.alphabet.as_bytes()[bits_value(final_bits)] as char);
+        }
+    }
+
+    if matches!(format, NumberBaseFormat::Bin) {
+        let mut grouped = String::with_capacity(value.len() + value.len() / 11);
+        for (index, bit) in value.chars().enumerate() {
+            if index > 0 && index % 11 == 0 {
+                grouped.push(' ');
+            }
+            grouped.push(bit);
+        }
+        return Ok(grouped);
+    }
+
+    Ok(value)
+}
+
 fn parse_number_base_input(
     value: &str,
     format: NumberBaseFormat,
@@ -242,6 +304,12 @@ fn digits_to_bits(digits: &[char], config: &NumberBaseConfig) -> String {
     }
     bits.truncate(config.entropy_bits);
     bits
+}
+
+fn bits_value(bits: &[u8]) -> usize {
+    bits.iter().fold(0usize, |value, bit| {
+        (value << 1) + usize::from(*bit == b'1')
+    })
 }
 
 fn preview_words(bits: &str, target_words: u8) -> Result<Vec<String>, EntropyStudioError> {

@@ -16,9 +16,13 @@ import { entropyToMnemonic } from '../native/entropyStudio';
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
-import { WordCountSelector } from '../features/dice/components/WordCountSelector';
 import type { DiceResult, WordCount } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
+import {
+  numberBaseEntropySyncSource,
+  useEntropySync,
+  useRegisterCurrentEntropySyncRequest,
+} from '../features/entropySync';
 import { NumberBaseKeypad } from '../features/numberBases/components/NumberBaseKeypad';
 import {
   NUMBER_BASE_FORMATS,
@@ -162,7 +166,12 @@ function replaceInputSelection(value: string, selection: InputSelection, inserte
   return `${value.slice(0, selection.start)}${inserted}${value.slice(selection.end)}`;
 }
 
-export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTool }: Props) {
+export function NumberBasesScreen({
+  activeTool,
+  isActive,
+  isDarkMode,
+  onSelectTool,
+}: Props) {
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<NumberBasesView>('setup');
   const [format, setFormat] = useState<NumberBaseFormat>('bin');
@@ -170,6 +179,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
   const [result, setResult] = useState<DiceResult | null>(null);
   const [wordCount, setWordCount] = useState<WordCount>(24);
+  const entropySync = useEntropySync();
   const colors = diceColors(isDarkMode);
   const input = inputValues[format];
   const analysis = analyzeNumberBaseInput(input, format, wordCount);
@@ -195,6 +205,30 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
     }
   }
 
+  useRegisterCurrentEntropySyncRequest(isActive, {
+    selectedFinalWord: '',
+    source: numberBaseEntropySyncSource(format),
+    targetWords: wordCount,
+    value: input,
+    zeroIndexed: false,
+  });
+
+  useEffect(() => {
+    if (entropySync.snapshot) {
+      setInputSelection(null);
+      setInputValues({
+        base4: entropySync.snapshot.base4,
+        base8: entropySync.snapshot.base8,
+        base32: entropySync.snapshot.base32,
+        base64: entropySync.snapshot.base64,
+        bin: entropySync.snapshot.bin,
+        hex: entropySync.snapshot.hex,
+      });
+      setResult(null);
+    }
+    setWordCount(entropySync.targetWords);
+  }, [entropySync.snapshot, entropySync.targetWords]);
+
   useEffect(() => {
     if (!isActive || activeView === 'setup') {
       return undefined;
@@ -210,6 +244,13 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
   function updateInput(value: string) {
     setInputValues(previous => ({ ...previous, [format]: value }));
     setResult(null);
+    entropySync.publish({
+      selectedFinalWord: '',
+      source: numberBaseEntropySyncSource(format),
+      targetWords: wordCount,
+      value,
+      zeroIndexed: false,
+    });
   }
 
   function canInsertInputCharacter(character: string): boolean {
@@ -251,11 +292,6 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
     setResult(null);
   }
 
-  function selectWordCount(value: WordCount) {
-    setWordCount(value);
-    setResult(null);
-  }
-
   function showResult() {
     if (!entropy) {
       return;
@@ -274,7 +310,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
 
   return (
     <SafeAreaView
-      edges={['top', 'bottom']}
+      edges={['top']}
       importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
       pointerEvents={isActive ? 'auto' : 'none'}
       style={[
@@ -340,13 +376,6 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
             <Text style={[styles.formatDescription, { color: colors.muted }]}>
               {UPSTREAM_UI_LABELS.hexFormat[format].desc}
             </Text>
-            <WordCountSelector
-              colors={colors}
-              label={UPSTREAM_TEXT.seedLength.label}
-              onSelect={selectWordCount}
-              valueLabel={UPSTREAM_UI_FALLBACK_COPY.common.seedLengthWords(wordCount)}
-              wordCount={wordCount}
-            />
           </View>
 
           <View style={styles.setupActionArea}>

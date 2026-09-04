@@ -16,6 +16,11 @@ import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { diceColors } from '../features/dice/diceTheme';
+import {
+  privateKeyEntropySyncSource,
+  useEntropySync,
+  useRegisterCurrentEntropySyncRequest,
+} from '../features/entropySync';
 import { PrivateKeyKeypad } from '../features/privateKey/components/PrivateKeyKeypad';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
 import { entropyToMnemonic } from '../native/entropyStudio';
@@ -47,12 +52,20 @@ type PrivateKeyResult =
   | { readonly kind: 'private-key'; readonly entropy: string }
   | { readonly kind: 'brain-wallet-hd'; readonly entropy: string; readonly mnemonic: string }
   | { readonly kind: 'error'; readonly error: string };
+type PrivateKeyInputValues = Record<PrivateKeyInputFormat, string>;
 
 type Props = {
   readonly activeTool: EntropyTool;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onSelectTool: (tool: EntropyTool) => void;
+};
+
+const EMPTY_PRIVATE_KEY_INPUT_VALUES: PrivateKeyInputValues = {
+  brain: '',
+  hex: '',
+  mini: '',
+  wif: '',
 };
 
 function entropyHex(entropy: ArrayBuffer): string {
@@ -72,7 +85,12 @@ function replaceInputSelection(value: string, selection: InputSelection, inserte
   return `${value.slice(0, selection.start)}${inserted}${value.slice(selection.end)}`;
 }
 
-export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectTool }: Props) {
+export function PrivateKeyScreen({
+  activeTool,
+  isActive,
+  isDarkMode,
+  onSelectTool,
+}: Props) {
   const inputRef = useRef<TextInputInstance>(null);
   const appliedSelectionRequestId = useRef(0);
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
@@ -83,11 +101,15 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
   const [brainWalletWarningVisible, setBrainWalletWarningVisible] = useState(false);
   const [brainWalletOutput, setBrainWalletOutput] = useState<BrainWalletOutput>('scalar');
   const [format, setFormat] = useState<PrivateKeyInputFormat>('wif');
-  const [input, setInput] = useState('');
+  const [inputValues, setInputValues] = useState<PrivateKeyInputValues>(
+    EMPTY_PRIVATE_KEY_INPUT_VALUES,
+  );
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
   const [result, setResult] = useState<PrivateKeyResult | null>(null);
   const [selectionRequestId, setSelectionRequestId] = useState(0);
+  const entropySync = useEntropySync();
   const colors = diceColors(isDarkMode);
+  const input = inputValues[format];
   const brainWalletLocale = brainWalletLocaleCopy();
   const formatCopy = privateKeyFormatCopy(format);
   const brainWalletWarningAcknowledged = brainWalletWarningAcknowledgements[brainWalletOutput];
@@ -119,6 +141,29 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
     entropy !== null &&
     (format !== 'brain' || brainWalletWarningAcknowledged);
 
+  useRegisterCurrentEntropySyncRequest(isActive, {
+    selectedFinalWord: '',
+    source: privateKeyEntropySyncSource(format),
+    targetWords: entropySync.targetWords,
+    value: input,
+    zeroIndexed: false,
+  });
+
+  useEffect(() => {
+    const snapshot = entropySync.snapshot;
+    if (!snapshot) {
+      return;
+    }
+
+    setInputSelection(null);
+    setInputValues(previous => ({
+      ...previous,
+      hex: snapshot.hexPrivateKey,
+      wif: snapshot.wifPrivateKey,
+    }));
+    setResult(null);
+  }, [entropySync.snapshot]);
+
   useEffect(() => {
     if (!isActive || activeView === 'setup') {
       return undefined;
@@ -142,7 +187,9 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
 
   function selectFormat(value: PrivateKeyInputFormat) {
     setFormat(value);
-    setInput('');
+    if (!entropySync.enabled) {
+      setInputValues(EMPTY_PRIVATE_KEY_INPUT_VALUES);
+    }
     setInputSelection(null);
     setResult(null);
     setBrainWalletWarningVisible(false);
@@ -240,8 +287,15 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
   }
 
   function updateInput(value: string) {
-    setInput(value);
+    setInputValues(previous => ({ ...previous, [format]: value }));
     setResult(null);
+    entropySync.publish({
+      selectedFinalWord: '',
+      source: privateKeyEntropySyncSource(format),
+      targetWords: entropySync.targetWords,
+      value,
+      zeroIndexed: false,
+    });
   }
 
   function requestInputSelection(selection: InputSelection) {
@@ -305,7 +359,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
 
   return (
     <SafeAreaView
-      edges={['top', 'bottom']}
+      edges={['top']}
       importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
       pointerEvents={isActive ? 'auto' : 'none'}
       style={[

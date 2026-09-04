@@ -15,7 +15,7 @@ import type {
 } from '../../native/entropyStudio';
 import type { WordCount } from '../dice/dice';
 import type { SeedPhraseEntryMethod } from './components/SeedPhraseKeypad';
-import { UPSTREAM_TEXT } from '../upstreamUiCopy';
+import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
 
 type InputSelection = { readonly end: number; readonly start: number };
 

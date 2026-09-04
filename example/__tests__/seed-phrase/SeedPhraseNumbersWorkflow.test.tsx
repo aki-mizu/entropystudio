@@ -8,6 +8,7 @@ import {
   React,
   ReactTestRenderer,
   selectEntropyTool,
+  selectSeedPhraseLength,
 } from '../../test/testSupport';
 
 describe('Seed Phrase / Numbers', () => {
@@ -28,11 +29,16 @@ describe('Seed Phrase / Numbers', () => {
     });
 
     await selectEntropyTool(app!, 'seed');
-    const seedPhraseSetup = app!.root.findByProps({ testID: 'seed-phrase-setup-view' });
     await ReactTestRenderer.act(async () => {
-      seedPhraseSetup.findByProps({ testID: 'seed-method-numbers' }).props.onPress();
-      seedPhraseSetup.findByProps({ testID: 'word-count-12' }).props.onPress();
-      seedPhraseSetup.findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
+      app!
+        .root.findByProps({ testID: 'seed-phrase-setup-view' })
+        .findByProps({ testID: 'seed-method-numbers' }).props.onPress();
+    });
+    await selectSeedPhraseLength(app!, 12);
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'seed-phrase-setup-view' })
+        .findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
     });
 
     expect(app!.root.findByProps({ testID: 'seed-number-input' }).props.showSoftInputOnFocus).toBe(

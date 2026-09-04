@@ -33,8 +33,12 @@ import type {
 import { useCards } from '../features/cards/useCards';
 import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
-import { WordCountSelector } from '../features/dice/components/WordCountSelector';
 import { diceColors } from '../features/dice/diceTheme';
+import {
+  cardEntropySyncSource,
+  useEntropySync,
+  useRegisterCurrentEntropySyncRequest,
+} from '../features/entropySync';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
@@ -55,11 +59,17 @@ type Props = {
   readonly onSelectTool: (tool: EntropyTool) => void;
 };
 
-export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: Props) {
+export function CardsScreen({
+  activeTool,
+  isActive,
+  isDarkMode,
+  onSelectTool,
+}: Props) {
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<CardView>('setup');
   const [selectedRank, setSelectedRank] = useState<CardRank | null>(null);
   const [selectedSuit, setSelectedSuit] = useState<CardSuit | null>(null);
+  const entropySync = useEntropySync();
   const {
     appendCard,
     appendDirectRank,
@@ -76,12 +86,23 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
     result,
     selectIanColemanMatch,
     selectMethod,
-    selectWordCount,
     transcript,
     undoLastEntry,
     updateTranscript,
     wordCount,
-  } = useCards();
+  } = useCards({
+    onInputChange: change => {
+      entropySync.publish({
+        selectedFinalWord: '',
+        source: cardEntropySyncSource(change.method, change.matchesIanColeman),
+        targetWords: change.wordCount,
+        value: change.transcript,
+        zeroIndexed: false,
+      });
+    },
+    snapshot: entropySync.snapshot,
+    targetWords: entropySync.targetWords,
+  });
   const colors = diceColors(isDarkMode);
   const isDirect = method === 'direct';
   const displayedTranscript = isHashedCardMethod(method)
@@ -97,6 +118,14 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
     : result?.mnemonic
       ? result.mnemonic.split(' ')
       : [];
+
+  useRegisterCurrentEntropySyncRequest(isActive, {
+    selectedFinalWord: '',
+    source: cardEntropySyncSource(method, matchesIanColeman),
+    targetWords: wordCount,
+    value: transcript,
+    zeroIndexed: false,
+  });
 
   useEffect(() => {
     if (!isActive || activeView === 'setup') {
@@ -119,12 +148,6 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
     setSelectedRank(null);
     setSelectedSuit(null);
     selectMethod(value);
-  }
-
-  function changeWordCount(value: typeof wordCount) {
-    setSelectedRank(null);
-    setSelectedSuit(null);
-    selectWordCount(value);
   }
 
   function commitCard(card: string) {
@@ -226,7 +249,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
 
   return (
     <SafeAreaView
-      edges={['top', 'bottom']}
+      edges={['top']}
       importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
       pointerEvents={isActive ? 'auto' : 'none'}
       style={[
@@ -258,13 +281,6 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
 
           <View style={styles.setupSettings} testID="cards-setup-settings">
             {renderCardMethodSelector()}
-            <WordCountSelector
-              colors={colors}
-              label={copy.seedLengthLabel}
-              onSelect={changeWordCount}
-              valueLabel={copy.seedLengthValue}
-              wordCount={wordCount}
-            />
           </View>
 
           <View style={styles.setupActionArea}>

@@ -10,6 +10,7 @@ const {
   UPSTREAM_UI_FALLBACK_COPY,
   UPSTREAM_UI_LABELS,
 } = require('../../src/features/upstreamUiCopy');
+const { STUDIO_UI_TEXT } = require('../../src/features/studioUiCopy');
 
 const upstreamAppJs = readFileSync(
   resolve(__dirname, '../../../entropylab/src/js/app.js'),
@@ -25,6 +26,14 @@ const renderedUpstreamUiSources = [
 ].join('\n');
 
 describe('Upstream UI copy provenance', () => {
+  test('limits Studio-authored app-shell copy to settings navigation', () => {
+    expect(STUDIO_UI_TEXT).toEqual({
+      navigation: {
+        settings: 'Settings',
+      },
+    });
+  });
+
   test('centralizes only text rendered by the current upstream UI', () => {
     const copiedText = collectStrings({
       fallback: UPSTREAM_UI_FALLBACK_COPY,
@@ -267,6 +276,10 @@ describe('Upstream UI copy provenance', () => {
       'seedPhrase.wordsLabel': {
         source: upstreamAppJs,
         template: /Your \$\{config\.words\}-word seed phrase/,
+      },
+      'sync.shortfall': {
+        source: upstreamAppJs,
+        template: /\{n\} bits of entropy · under \{min\}/,
       },
     };
 

@@ -51,7 +51,6 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
     ).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'dice-screen-safe-area' }).props.edges).toEqual([
       'top',
-      'bottom',
     ]);
     expect(app!.root.findByProps({ testID: 'dice-setup-view' })).toBeDefined();
     expect(app!.root.findAllByType(DiceGrid)).toHaveLength(0);
@@ -61,14 +60,26 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
     expect(app!.root.findByProps({ testID: 'dice-method-coldcard-title' }).props.children).toBe(
       UPSTREAM_TEXT.dice.coldcard.title,
     );
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'app-tab-settings' }).props.onPress();
+    });
     expect(
       app!
         .root
-        .findByProps({ testID: 'dice-setup-view' })
+        .findByProps({ testID: 'entropy-sync-settings-screen' })
         .findByProps({ testID: 'seed-length-value' }).props.children,
     ).toBe(
       UPSTREAM_TEXT.seedLength.words.replace('{n}', '24'),
     );
+    expect(
+      app!
+        .root
+        .findByProps({ testID: 'entropy-sync-settings-screen' })
+        .findByProps({ testID: 'seed-length-label' }).props.children,
+    ).toBe(UPSTREAM_TEXT.seedLength.label);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'app-tab-method' }).props.onPress();
+    });
     await openDiceEntry(app!);
     expect(app!.root.findByProps({ testID: 'dice-rolls-view' })).toBeDefined();
     expect(app!.root.findByType(DiceGrid).props.columns).toBe(6);
@@ -88,14 +99,6 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
         .replace('{bits}', '256')
         .replace('{words}', '24')
         .replace('{hashRolls}', '99'),
-    );
-    expect(
-      app!
-        .root
-        .findByProps({ testID: 'dice-setup-view' })
-        .findByProps({ testID: 'seed-length-label' }).props.children,
-    ).toBe(
-      UPSTREAM_TEXT.seedLength.label,
     );
     await openDiceEntry(app!);
     expect(app!.root.findByProps({ testID: 'dice-method-help' }).props.children).toBe(

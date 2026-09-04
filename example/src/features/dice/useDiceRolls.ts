@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   directDiceCanDerive,
   directDiceProgress,
@@ -16,8 +16,23 @@ import {
   isHashedDiceMethod,
 } from './dice';
 import type { DiceInputFace, DiceMethod, DiceResult, WordCount } from './dice';
+import type { EntropySyncSnapshot } from '../../native/entropyStudio';
 
-export function useDiceRolls() {
+type DiceInputChange = {
+  readonly method: DiceMethod;
+  readonly rolls: string;
+  readonly selectedFinalWord: string;
+  readonly wordCount: WordCount;
+};
+
+type UseDiceRollsOptions = {
+  readonly onInputChange?: (change: DiceInputChange) => void;
+  readonly snapshot?: EntropySyncSnapshot | null;
+  readonly targetWords?: WordCount;
+};
+
+export function useDiceRolls(options: UseDiceRollsOptions = {}) {
+  const { onInputChange, snapshot: syncSnapshot, targetWords: syncTargetWords } = options;
   const [hashedRolls, setHashedRolls] = useState('');
   const [bitboxRolls, setBitboxRolls] = useState('');
   const [d8D16Rolls, setD8D16Rolls] = useState('');
@@ -70,6 +85,32 @@ export function useDiceRolls() {
   const d8D16Copy = diceMethodCopy('d8d16', wordCount, methodInfo);
   const copy = diceScreenCopy(method, wordCount, methodInfo);
 
+  useEffect(() => {
+    if (syncTargetWords === undefined) {
+      return;
+    }
+
+    if (syncSnapshot) {
+      const syncedWords = syncSnapshot.seedWords.split(' ');
+      setBitboxRolls(syncSnapshot.bitboxDice);
+      setD8D16Rolls(syncSnapshot.d8D16Dice);
+      setResult(null);
+      setSelectedFinalWord(
+        syncedWords.length === syncTargetWords ? syncedWords[syncedWords.length - 1] ?? '' : '',
+      );
+    }
+    setWordCount(syncTargetWords);
+  }, [syncSnapshot, syncTargetWords]);
+
+  function notifyInputChange(nextRolls: string, nextSelectedFinalWord: string) {
+    onInputChange?.({
+      method,
+      rolls: nextRolls,
+      selectedFinalWord: nextSelectedFinalWord,
+      wordCount,
+    });
+  }
+
   function updateRolls(value: string) {
     if (isHashedDiceMethod(method)) {
       setHashedRolls(value);
@@ -80,6 +121,7 @@ export function useDiceRolls() {
     }
     setResult(null);
     setSelectedFinalWord('');
+    notifyInputChange(value, '');
   }
 
   function appendFace(
@@ -99,15 +141,10 @@ export function useDiceRolls() {
     setSelectedFinalWord('');
   }
 
-  function selectWordCount(value: WordCount) {
-    setWordCount(value);
-    setResult(null);
-    setSelectedFinalWord('');
-  }
-
   function selectFinalWord(value: string) {
     setSelectedFinalWord(value);
     setResult(null);
+    notifyInputChange(rolls, value);
   }
 
   function derivePhrase() {
@@ -145,7 +182,6 @@ export function useDiceRolls() {
     selectedFinalWord,
     selectFinalWord,
     selectMethod,
-    selectWordCount,
     updateRolls,
     wordCount,
   };

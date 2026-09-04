@@ -9,8 +9,34 @@ import {
   ReactTestRenderer,
   selectDiceMethod,
   selectEntropyTool,
+  selectSeedPhraseLength,
+  mockSynchronizeEntropy,
 } from '../test/testSupport';
+import { EntropySyncSource } from '../src/native/entropyStudio';
+import type { EntropySyncSnapshot } from '../src/native/entropyStudio';
 import { UPSTREAM_TEXT } from '../src/features/upstreamUiCopy';
+
+const SYNCED_ZERO_ENTROPY_SNAPSHOT: EntropySyncSnapshot = {
+  base4: '',
+  base8: '',
+  base32: '',
+  base64: '',
+  bin: '',
+  bitCount: 128,
+  bitboxDice: '',
+  d8D16Dice: '',
+  directCards: '',
+  effectiveEntropyBits: 128,
+  entropyBelowMinimum: false,
+  entropyStrengthUnknown: false,
+  hex: '',
+  hexPrivateKey: '',
+  minimumEntropyBits: 128,
+  seedNumbersOneIndexed: '1 1 1 1 1 1 1 1 1 1 1 4',
+  seedNumbersZeroIndexed: '0 0 0 0 0 0 0 0 0 0 0 3',
+  seedWords: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+  wifPrivateKey: '',
+};
 
 test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on the shared setup screen', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
@@ -102,5 +128,55 @@ test('keeps native workflow trees mounted while changing methods', async () => {
   );
   expect(app!.root.findByProps({ testID: 'cards-screen-safe-area' }).props.pointerEvents).toBe(
     'none',
+  );
+});
+
+test('syncs entropy across methods through the native snapshot', async () => {
+  mockSynchronizeEntropy.mockReset();
+  mockSynchronizeEntropy.mockReturnValue(SYNCED_ZERO_ENTROPY_SNAPSHOT);
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await selectEntropyTool(app!, 'hex');
+  await selectSeedPhraseLength(app!, 12);
+  await ReactTestRenderer.act(async () => {
+    app!
+      .root.findByProps({ testID: 'app-tab-settings' })
+      .props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!
+      .root.findByProps({ testID: 'entropy-sync-settings-toggle' })
+      .props.onValueChange(true);
+  });
+
+  expect(mockSynchronizeEntropy).toHaveBeenLastCalledWith(
+    '',
+    EntropySyncSource.NumberBaseBin,
+    12,
+    false,
+    '',
+  );
+  expect(
+    app!.root.findByProps({ testID: 'entropy-sync-settings-status' }).props.children,
+  ).toBe(UPSTREAM_TEXT.sync.status);
+  expect(app!.root.findAllByProps({ testID: 'entropy-sync-settings-caution' })).toHaveLength(0);
+
+  await ReactTestRenderer.act(async () => {
+    app!
+      .root.findByProps({ testID: 'app-tab-method' })
+      .props.onPress();
+  });
+
+  await selectEntropyTool(app!, 'seed');
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'seed-phrase-input' }).props.value).toBe(
+    SYNCED_ZERO_ENTROPY_SNAPSHOT.seedWords,
   );
 });

@@ -14,6 +14,7 @@ import {
   React,
   ReactTestRenderer,
   selectDiceMethod,
+  selectSeedPhraseLength,
 } from '../../test/testSupport';
 import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
@@ -226,12 +227,7 @@ test('derives a D8/D16 direct-dice phrase from its final roll selection', async 
   });
 
   await selectDiceMethod(app!, 'dice-method-d8d16');
-
-  await ReactTestRenderer.act(async () => {
-    app!.root
-      .findByProps({ testID: 'dice-setup-view' })
-      .findByProps({ testID: 'word-count-12' }).props.onPress();
-  });
+  await selectSeedPhraseLength(app!, 12);
 
   expect(app!.root.findByProps({ testID: 'dice-method-d8d16-title' }).props.children).toBe(
     UPSTREAM_TEXT.dice.dplus.title,

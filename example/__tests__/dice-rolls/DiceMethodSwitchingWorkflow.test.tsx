@@ -11,6 +11,7 @@ import {
   React,
   ReactTestRenderer,
   selectDiceMethod,
+  selectSeedPhraseLength,
 } from '../../test/testSupport';
 
 test('shows placeholders across hashed and direct dice methods', async () => {
@@ -45,11 +46,7 @@ test('shows placeholders across hashed and direct dice methods', async () => {
   await closeDiceEntry(app!);
 
   await selectDiceMethod(app!, 'dice-method-bitbox');
-  await ReactTestRenderer.act(async () => {
-    app!.root
-      .findByProps({ testID: 'dice-setup-view' })
-      .findByProps({ testID: 'word-count-12' }).props.onPress();
-  });
+  await selectSeedPhraseLength(app!, 12);
 
   await openDiceEntry(app!);
   expectPlaceholderSeedGrid(app!, 'direct-dice-words', 12);

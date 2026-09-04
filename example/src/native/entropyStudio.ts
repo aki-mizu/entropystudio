@@ -23,6 +23,7 @@ import {
   diceRollsToEntropy,
   entropyToMnemonic,
   EntropyStudioError_Tags,
+  EntropySyncSource as GeneratedEntropySyncSource,
   formatDiceTranscript,
   hashedCardState,
   hashedDiceState,
@@ -39,6 +40,7 @@ import {
   seedPhraseSpaceAllowed,
   seedPhraseState,
   seedPhraseWordsToNumbers,
+  synchronizeEntropy,
   translateSeedNumberIndices,
 } from 'entropystudio';
 
@@ -52,6 +54,28 @@ export const DiceInputMethod = {
   Coldcard: GeneratedDiceInputMethod.Coldcard,
   Coleman: GeneratedDiceInputMethod.Coleman,
   D8D16: GeneratedDiceInputMethod.D8d16,
+} as const;
+
+export const EntropySyncSource = {
+  CardsDirect: GeneratedEntropySyncSource.CardsDirect,
+  CardsHashedAscii: GeneratedEntropySyncSource.CardsHashedAscii,
+  CardsHashedColeman: GeneratedEntropySyncSource.CardsHashedColeman,
+  DiceBitbox: GeneratedEntropySyncSource.DiceBitbox,
+  DiceColdcard: GeneratedEntropySyncSource.DiceColdcard,
+  DiceColeman: GeneratedEntropySyncSource.DiceColeman,
+  DiceD8D16: GeneratedEntropySyncSource.DiceD8d16,
+  NumberBaseBase4: GeneratedEntropySyncSource.NumberBaseBase4,
+  NumberBaseBase8: GeneratedEntropySyncSource.NumberBaseBase8,
+  NumberBaseBase32: GeneratedEntropySyncSource.NumberBaseBase32,
+  NumberBaseBase64: GeneratedEntropySyncSource.NumberBaseBase64,
+  NumberBaseBin: GeneratedEntropySyncSource.NumberBaseBin,
+  NumberBaseHex: GeneratedEntropySyncSource.NumberBaseHex,
+  PrivateKeyBrainWallet: GeneratedEntropySyncSource.PrivateKeyBrainWallet,
+  PrivateKeyHex: GeneratedEntropySyncSource.PrivateKeyHex,
+  PrivateKeyMiniKey: GeneratedEntropySyncSource.PrivateKeyMiniKey,
+  PrivateKeyWif: GeneratedEntropySyncSource.PrivateKeyWif,
+  SeedNumbers: GeneratedEntropySyncSource.SeedNumbers,
+  SeedWords: GeneratedEntropySyncSource.SeedWords,
 } as const;
 
 export const SeedPhraseInputMethod = {
@@ -141,6 +165,7 @@ export {
   seedPhraseSpaceAllowed,
   seedPhraseState,
   seedPhraseWordsToNumbers,
+  synchronizeEntropy,
   translateSeedNumberIndices,
 };
 
@@ -148,6 +173,7 @@ export type {
   DiceMethodInfo,
   DirectCardState,
   DirectDiceState,
+  EntropySyncSnapshot,
   HashedCardState,
   HashedDiceState,
   NumberBaseAnalysis,

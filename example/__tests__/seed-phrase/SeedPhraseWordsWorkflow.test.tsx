@@ -10,6 +10,7 @@ import {
   React,
   ReactTestRenderer,
   selectEntropyTool,
+  selectSeedPhraseLength,
 } from '../../test/testSupport';
 import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
@@ -40,10 +41,11 @@ describe('Seed Phrase / Words', () => {
       activeMethodList(app!).findByProps({ testID: 'key-method-seed' }).props.accessibilityState,
     ).toEqual({ selected: true });
 
-    const seedPhraseSetup = app!.root.findByProps({ testID: 'seed-phrase-setup-view' });
+    await selectSeedPhraseLength(app!, 12);
     await ReactTestRenderer.act(async () => {
-      seedPhraseSetup.findByProps({ testID: 'word-count-12' }).props.onPress();
-      seedPhraseSetup.findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
+      app!
+        .root.findByProps({ testID: 'seed-phrase-setup-view' })
+        .findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
     });
 
     expect(app!.root.findByProps({ testID: 'seed-phrase-entry-view' })).toBeDefined();
@@ -91,10 +93,11 @@ describe('Seed Phrase / Words', () => {
 
     await selectEntropyTool(app!, 'seed');
     expect(app!.root.findAllByProps({ testID: 'seed-phrase-autocomplete' })).toHaveLength(0);
-    const seedPhraseSetup = app!.root.findByProps({ testID: 'seed-phrase-setup-view' });
+    await selectSeedPhraseLength(app!, 12);
     await ReactTestRenderer.act(async () => {
-      seedPhraseSetup.findByProps({ testID: 'word-count-12' }).props.onPress();
-      seedPhraseSetup.findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
+      app!
+        .root.findByProps({ testID: 'seed-phrase-setup-view' })
+        .findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
     });
 
     await ReactTestRenderer.act(async () => {

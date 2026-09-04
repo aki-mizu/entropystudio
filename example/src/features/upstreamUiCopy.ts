@@ -217,6 +217,12 @@ export const UPSTREAM_TEXT = {
     label: 'Seed phrase length',
     words: '{n} words',
   },
+  sync: {
+    description: '(Keeps non-hashed methods synchronized. Hashed inputs update them one way and are never overwritten.)',
+    entropyUnknown: 'entropy unknown · only as strong as the text',
+    status: 'Key synced',
+    title: 'Sync entropy across methods',
+  },
 } as const;
 
 /** Direct upstream enum label tables used by Studio. */
@@ -373,6 +379,10 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
           `${enteredCount} of ${requiredCount} WIF characters entered · ${remainingCount} remaining`,
       },
     },
+  },
+  sync: {
+    shortfall: (entropyBits: number, minimumEntropyBits: number) =>
+      `${entropyBits} bits of entropy · under ${minimumEntropyBits}`,
   },
   seedPhrase: {
     autocomplete: 'Autocomplete BIP39 words',

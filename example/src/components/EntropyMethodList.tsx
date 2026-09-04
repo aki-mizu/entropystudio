@@ -21,7 +21,12 @@ type Props = {
   readonly onSelect: (tool: EntropyTool) => void;
 };
 
-export function EntropyMethodList({ activeTool, colors, isActive, onSelect }: Props) {
+export function EntropyMethodList({
+  activeTool,
+  colors,
+  isActive,
+  onSelect,
+}: Props) {
   return (
     <View
       accessibilityElementsHidden={!isActive}
