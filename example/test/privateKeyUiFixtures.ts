@@ -26,6 +26,7 @@ const PRIVATE_KEY_FIXTURES: Record<string, { readonly entropy?: ArrayBuffer; rea
   '1:0': { tag: 'InvalidHexPrivateKey' },
   '1:A': { tag: 'InvalidHexPrivateKey' },
   '2:S': { tag: 'InvalidMiniPrivateKeyFormat' },
+  '3:brain wallet text': { entropy: ENTROPY },
 };
 
 const PRIVATE_KEY_KEY_ALLOWED_FIXTURES: Record<string, boolean> = {
@@ -150,6 +151,17 @@ const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, unknown> = {
     remainingCount: 0,
     requiredCount: 0,
     status: 0,
+  },
+  '3:brain wallet text': {
+    canDerive: true,
+    enteredCount: 17,
+    excessCount: 0,
+    invalidCharacterCount: 0,
+    maximumCount: 0,
+    minimumCount: 0,
+    remainingCount: 0,
+    requiredCount: 0,
+    status: 5,
   },
 };
 

@@ -56,7 +56,9 @@ export function NativeSheet({
           testID={testID}
         >
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+            <Text style={[styles.title, { color: colors.text }]} testID={`${testID}-title`}>
+              {title}
+            </Text>
             <Pressable
               accessibilityLabel={`Close ${title}`}
               accessibilityRole="button"

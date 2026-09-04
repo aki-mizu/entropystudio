@@ -25,15 +25,17 @@ Guidelines for AI coding agents.
 
 ## Copy and Localization
 
-- For visible and accessibility copy in `example/src/`, check the pinned
-  upstream catalog at `entropylab/src/locales/en.json`. Reuse an existing
-  upstream key only when it exists in the pinned upstream revision; do not use
-  uncommitted submodule content as a copy source.
-- Never add or alter upstream locale entries. When no suitable upstream key
-  exists, keep the Studio-specific copy local rather than substituting merely
-  similar upstream text.
-- When Studio uses upstream copy, UI tests must derive their expected text from
-  the same upstream locale key rather than repeat a local string literal.
+- All visible and accessibility copy in `example/src/` must first be verified
+  as text rendered by the pinned upstream UI. Prefer the corresponding key from
+  `entropylab/src/locales/en.json`, with only its supported placeholder
+  substitution. When upstream-visible text has no catalog key, copy that exact
+  text downstream; do not introduce Studio-authored visible copy.
+- Never add or alter upstream locale entries. Do not use catalog-only text that
+  is not rendered by the pinned upstream UI.
+- When Studio uses catalog copy, UI tests must derive their expected text from
+  the same upstream locale key. When Studio copies upstream-visible text
+  downstream, UI tests must use the same downstream copy source rather than
+  repeat a separate string literal.
 
 ## Generated Outputs and Dependencies
 

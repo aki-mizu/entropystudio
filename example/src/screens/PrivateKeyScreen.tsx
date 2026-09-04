@@ -14,11 +14,15 @@ import entropyLabEnglish from '../../../entropylab/src/locales/en.json';
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
-import type { EntropyResult } from '../features/dice/components/DiceResultPanel';
+import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { diceColors } from '../features/dice/diceTheme';
 import { PrivateKeyKeypad } from '../features/privateKey/components/PrivateKeyKeypad';
+import { entropyToMnemonic } from '../native/entropyStudio';
 import {
+  BRAIN_WALLET_OUTPUTS,
+  BRAIN_WALLET_WARNING_COPY,
+  brainWalletOutputCopy,
   PRIVATE_KEY_FORMATS,
   privateKeyEntropy,
   privateKeyError,
@@ -28,13 +32,20 @@ import {
   privateKeyKeyAllowed,
   privateKeyProgressText,
 } from '../features/privateKey/privateKey';
-import type { PrivateKeyInputFormat } from '../features/privateKey/privateKey';
+import type {
+  BrainWalletOutput,
+  PrivateKeyInputFormat,
+} from '../features/privateKey/privateKey';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
 type PrivateKeyView = 'entry' | 'setup';
 type SheetName = 'result' | null;
 type InputSelection = { readonly end: number; readonly start: number };
+type PrivateKeyResult =
+  | { readonly kind: 'private-key'; readonly entropy: string }
+  | { readonly kind: 'brain-wallet-hd'; readonly entropy: string; readonly mnemonic: string }
+  | { readonly kind: 'error'; readonly error: string };
 
 type Props = {
   readonly activeTool: EntropyTool;
@@ -65,13 +76,24 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
   const appliedSelectionRequestId = useRef(0);
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<PrivateKeyView>('setup');
+  const [brainWalletWarningAcknowledgements, setBrainWalletWarningAcknowledgements] = useState<
+    Record<BrainWalletOutput, boolean>
+  >({ hd: false, scalar: false });
+  const [brainWalletWarningVisible, setBrainWalletWarningVisible] = useState(false);
+  const [brainWalletOutput, setBrainWalletOutput] = useState<BrainWalletOutput>('scalar');
   const [format, setFormat] = useState<PrivateKeyInputFormat>('wif');
   const [input, setInput] = useState('');
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
-  const [result, setResult] = useState<EntropyResult | null>(null);
+  const [result, setResult] = useState<PrivateKeyResult | null>(null);
   const [selectionRequestId, setSelectionRequestId] = useState(0);
   const colors = diceColors(isDarkMode);
   const formatCopy = privateKeyFormatCopy(format);
+  const brainWalletWarningAcknowledged = brainWalletWarningAcknowledgements[brainWalletOutput];
+  const brainWalletWarningLines = [
+    ...BRAIN_WALLET_WARNING_COPY.lines,
+    ...(brainWalletOutput === 'hd' ? BRAIN_WALLET_WARNING_COPY.hdLines : []),
+  ];
+  const isPrivateKeyEntryVisible = format !== 'brain' || brainWalletWarningAcknowledged;
   const inputState = privateKeyInputState(input, format);
   const inputHasError = privateKeyInputHasError(inputState);
   const inputProgress = privateKeyProgressText(inputState, format);
@@ -90,7 +112,10 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
     }
   }
 
-  const canDerive = inputState.canDerive && entropy !== null;
+  const canDerive =
+    inputState.canDerive &&
+    entropy !== null &&
+    (format !== 'brain' || brainWalletWarningAcknowledged);
 
   useEffect(() => {
     if (!isActive || activeView === 'setup') {
@@ -118,6 +143,29 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
     setInput('');
     setInputSelection(null);
     setResult(null);
+    setBrainWalletWarningVisible(false);
+  }
+
+  function selectBrainWalletOutput(value: BrainWalletOutput) {
+    setBrainWalletOutput(value);
+    setResult(null);
+    setBrainWalletWarningVisible(false);
+  }
+
+  function openPrivateKeyEntry() {
+    setActiveView('entry');
+    setBrainWalletWarningVisible(false);
+  }
+
+  function showBrainWalletWarning() {
+    setBrainWalletWarningVisible(true);
+  }
+
+  function toggleBrainWalletWarningAcknowledgement() {
+    setBrainWalletWarningAcknowledgements(previous => ({
+      ...previous,
+      [brainWalletOutput]: !previous[brainWalletOutput],
+    }));
   }
 
   function updateInput(value: string) {
@@ -162,9 +210,25 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
       return;
     }
 
-    setResult({
-      entropy: entropyHex(entropy),
-    });
+    try {
+      if (format === 'brain' && brainWalletOutput === 'hd') {
+        setResult({
+          entropy: entropyHex(entropy),
+          kind: 'brain-wallet-hd',
+          mnemonic: entropyToMnemonic(entropy),
+        });
+      } else {
+        setResult({
+          entropy: entropyHex(entropy),
+          kind: 'private-key',
+        });
+      }
+    } catch {
+      setResult({
+        error: entropyLabEnglish['error.generic'],
+        kind: 'error',
+      });
+    }
     setActiveSheet('result');
   }
 
@@ -244,7 +308,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
             <Pressable
               accessibilityLabel="Enter private key"
               accessibilityRole="button"
-              onPress={() => setActiveView('entry')}
+              onPress={openPrivateKeyEntry}
               style={({ pressed }) => [
                 styles.startButton,
                 { backgroundColor: colors.accent, opacity: pressed ? 0.82 : 1 },
@@ -274,82 +338,132 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
               <Text style={[styles.entrySubtitle, { color: colors.muted }]}>{formatCopy.title}</Text>
             </View>
           </View>
-
-          <View style={styles.inputHeader}>
-            <Text style={[styles.inputLabel, { color: colors.muted }]}>
-              {entropyLabEnglish['key.inputLabel']}
-            </Text>
-            <Pressable
-              accessibilityLabel={
-                selectedInput.end > selectedInput.start
-                  ? 'Remove selected private-key characters'
-                  : 'Remove private-key character before cursor'
-              }
-              accessibilityRole="button"
-              disabled={!canDeleteInput}
-              onPress={deleteInputCharacter}
-              style={({ pressed }) => [
-                styles.undoButton,
-                { opacity: canDeleteInput ? (pressed ? 0.72 : 1) : 0.38 },
-              ]}
-              testID="private-key-undo"
-            >
-              <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
-            </Pressable>
-          </View>
-          <Text style={[styles.inputHelp, { color: colors.muted }]}>{formatCopy.description}</Text>
           {format === 'brain' && (
-            <Text style={[styles.warning, { color: colors.error }]} testID="private-key-warning">
-              {entropyLabEnglish['note.brainLabFast']}
-            </Text>
+            <View style={styles.brainWalletSection} testID="brain-wallet-output-options">
+              <Text style={[styles.label, { color: colors.muted }]}>{entropyLabEnglish['key.brain']}</Text>
+              <View style={styles.brainWalletOptions}>
+                {BRAIN_WALLET_OUTPUTS.map(option => {
+                  const selected = option === brainWalletOutput;
+                  const copy = brainWalletOutputCopy(option);
+                  return (
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      key={option}
+                      onPress={() => selectBrainWalletOutput(option)}
+                      style={({ pressed }) => [
+                        styles.brainWalletOption,
+                        {
+                          backgroundColor: selected ? colors.surface : 'transparent',
+                          borderColor: selected ? colors.accent : colors.border,
+                          opacity: pressed ? 0.82 : 1,
+                        },
+                      ]}
+                      testID={`brain-wallet-output-${option}`}
+                    >
+                      <Text style={[styles.brainWalletOptionTitle, { color: selected ? colors.text : colors.muted }]}>
+                        {copy.title}
+                      </Text>
+                      <Text style={[styles.brainWalletOptionDescription, { color: colors.muted }]}>
+                        {copy.description}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={showBrainWalletWarning}
+                style={({ pressed }) => [
+                  styles.brainWalletWarningTrigger,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.error,
+                    opacity: pressed ? 0.82 : 1,
+                  },
+                ]}
+                testID="brain-wallet-warning-trigger"
+              >
+                <Text style={[styles.brainWalletWarningTriggerTitle, { color: colors.error }]}>
+                  {BRAIN_WALLET_WARNING_COPY.title}
+                </Text>
+              </Pressable>
+            </View>
           )}
-          <View style={[styles.inputSurface, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <TextInput
-              accessibilityLabel={entropyLabEnglish['key.inputLabel']}
-              autoCapitalize="none"
-              autoComplete="off"
-              autoCorrect={false}
-              importantForAutofill="no"
-              keyboardType="default"
-              multiline
-              onChangeText={updateInput}
-              onSelectionChange={({ nativeEvent }) => setInputSelection(nativeEvent.selection)}
-              placeholder={formatCopy.placeholder}
-              placeholderTextColor={colors.placeholder}
-              ref={inputRef}
-              selectionColor={colors.accent}
-              showSoftInputOnFocus={false}
-              spellCheck={false}
-              style={[styles.input, { color: colors.text }]}
-              testID="private-key-input"
-              textContentType="none"
-              value={input}
-            />
-          </View>
-          <Text
-            style={[
-              styles.progress,
-              { color: inputState.canDerive ? colors.accent : inputHasError ? colors.error : colors.muted },
-            ]}
-            testID="private-key-progress"
-          >
-            {inputProgress}
-          </Text>
-          {inputError && (
-            <Text style={[styles.status, { color: colors.error }]} testID="private-key-status">
-              {inputError}
-            </Text>
-          )}
+          {isPrivateKeyEntryVisible && (
+            <>
+              <View style={styles.inputHeader}>
+                <Text style={[styles.inputLabel, { color: colors.muted }]}>
+                  {entropyLabEnglish['key.inputLabel']}
+                </Text>
+                <Pressable
+                  accessibilityLabel={
+                    selectedInput.end > selectedInput.start
+                      ? 'Remove selected private-key characters'
+                      : 'Remove private-key character before cursor'
+                  }
+                  accessibilityRole="button"
+                  disabled={!canDeleteInput}
+                  onPress={deleteInputCharacter}
+                  style={({ pressed }) => [
+                    styles.undoButton,
+                    { opacity: canDeleteInput ? (pressed ? 0.72 : 1) : 0.38 },
+                  ]}
+                  testID="private-key-undo"
+                >
+                  <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
+                </Pressable>
+              </View>
+              <Text style={[styles.inputHelp, { color: colors.muted }]}>{formatCopy.description}</Text>
+              <View style={[styles.inputSurface, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <TextInput
+                  accessibilityLabel={entropyLabEnglish['key.inputLabel']}
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  autoCorrect={false}
+                  importantForAutofill="no"
+                  keyboardType="default"
+                  multiline
+                  onChangeText={updateInput}
+                  onSelectionChange={({ nativeEvent }) => setInputSelection(nativeEvent.selection)}
+                  placeholder={formatCopy.placeholder}
+                  placeholderTextColor={colors.placeholder}
+                  ref={inputRef}
+                  selectionColor={colors.accent}
+                  showSoftInputOnFocus={false}
+                  spellCheck={false}
+                  style={[styles.input, { color: colors.text }]}
+                  testID="private-key-input"
+                  textContentType="none"
+                  value={input}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.progress,
+                  { color: inputState.canDerive ? colors.accent : inputHasError ? colors.error : colors.muted },
+                ]}
+                testID="private-key-progress"
+              >
+                {inputProgress}
+              </Text>
+              {inputError && (
+                <Text style={[styles.status, { color: colors.error }]} testID="private-key-status">
+                  {inputError}
+                </Text>
+              )}
 
-          <PrivateKeyKeypad
-            canInsert={canInsertInputCharacter}
-            canInsertSpace={canInsertInputSpace}
-            colors={colors}
-            firstCharacter={input.charAt(0)}
-            format={format}
-            label={formatCopy.title}
-            onInsert={insertInputCharacter}
-          />
+              <PrivateKeyKeypad
+                canInsert={canInsertInputCharacter}
+                canInsertSpace={canInsertInputSpace}
+                colors={colors}
+                firstCharacter={input.charAt(0)}
+                format={format}
+                label={formatCopy.title}
+                onInsert={insertInputCharacter}
+              />
+            </>
+          )}
 
           <Pressable
             accessibilityRole="button"
@@ -378,11 +492,97 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
         title={entropyLabEnglish['action.derive']}
         visible={activeSheet === 'result' && Boolean(result)}
       >
-        <DiceResultPanel
-          colors={colors}
-          entropyLabel={entropyLabEnglish['result.privateKey']}
-          result={result}
-        />
+        {result?.kind === 'brain-wallet-hd' ? (
+          <>
+            <DiceWordList
+              compact
+              colors={colors}
+              slotCount={24}
+              testID="private-key-brain-seed-words"
+              words={result.mnemonic.split(' ')}
+              wordSlotsAria={entropyLabEnglish['seed.wordSlotsAria'].replace('{n}', '24')}
+            />
+            <DiceResultPanel
+              colors={colors}
+              entropyLabel={entropyLabEnglish['result.entropyHex']}
+              result={{ entropy: result.entropy }}
+            />
+          </>
+        ) : (
+          <DiceResultPanel
+            colors={colors}
+            entropyLabel={entropyLabEnglish['result.privateKey']}
+            result={
+              result?.kind === 'error'
+                ? { error: result.error }
+                : result
+                  ? { entropy: result.entropy }
+                  : null
+            }
+          />
+        )}
+      </NativeSheet>
+
+      <NativeSheet
+        colors={colors}
+        onDismiss={() => setBrainWalletWarningVisible(false)}
+        testID="brain-wallet-warning-sheet"
+        title={BRAIN_WALLET_WARNING_COPY.title}
+        visible={brainWalletWarningVisible}
+      >
+        <View style={styles.brainWalletWarningContent}>
+          {brainWalletWarningLines.map((line, index) => (
+            <Text
+              key={line}
+              style={[styles.brainWalletWarningLine, { color: colors.error }]}
+              testID={`brain-wallet-warning-line-${index}`}
+            >
+              {`\u2022 ${line}`}
+            </Text>
+          ))}
+          <Pressable
+            accessibilityLabel={entropyLabEnglish['beta.understand']}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: brainWalletWarningAcknowledged }}
+            onPress={toggleBrainWalletWarningAcknowledgement}
+            style={({ pressed }) => [
+              styles.brainWalletAcknowledgement,
+              {
+                backgroundColor: colors.surface,
+                borderColor: brainWalletWarningAcknowledged ? colors.accent : colors.border,
+                opacity: pressed ? 0.82 : 1,
+              },
+            ]}
+            testID="brain-wallet-warning-acknowledge"
+          >
+            <View
+              style={[
+                styles.brainWalletAcknowledgementCheckbox,
+                {
+                  backgroundColor: brainWalletWarningAcknowledged ? colors.accent : 'transparent',
+                  borderColor: colors.accent,
+                },
+              ]}
+            >
+              {brainWalletWarningAcknowledged && (
+                <Text style={[styles.brainWalletAcknowledgementCheckmark, { color: colors.onAccent }]}>
+                  {'\u2713'}
+                </Text>
+              )}
+            </View>
+            <View style={styles.brainWalletAcknowledgementCopy}>
+              <Text style={[styles.brainWalletAcknowledgementTitle, { color: colors.text }]}>
+                {entropyLabEnglish['beta.understand']}
+              </Text>
+              <Text
+                style={[styles.brainWalletAcknowledgementDescription, { color: colors.muted }]}
+                testID="brain-wallet-warning-acknowledgement-description"
+              >
+                {BRAIN_WALLET_WARNING_COPY.acknowledgementDescription}
+              </Text>
+            </View>
+          </Pressable>
+        </View>
       </NativeSheet>
     </SafeAreaView>
   );
@@ -397,6 +597,84 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  brainWalletAcknowledgement: {
+    alignItems: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  brainWalletAcknowledgementCheckbox: {
+    alignItems: 'center',
+    borderRadius: 2,
+    borderWidth: 2,
+    height: 20,
+    justifyContent: 'center',
+    marginRight: 10,
+    width: 20,
+  },
+  brainWalletAcknowledgementCheckmark: {
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+  brainWalletAcknowledgementCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  brainWalletAcknowledgementTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  brainWalletAcknowledgementDescription: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  brainWalletOption: {
+    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  brainWalletOptionDescription: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 3,
+  },
+  brainWalletOptionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  brainWalletOptions: {
+    gap: 8,
+  },
+  brainWalletSection: {
+    marginBottom: 10,
+  },
+  brainWalletWarningContent: {
+    gap: 10,
+  },
+  brainWalletWarningLine: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  brainWalletWarningTrigger: {
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  brainWalletWarningTriggerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 18,
   },
   button: {
     alignItems: 'center',
@@ -544,11 +822,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     lineHeight: 34,
-  },
-  warning: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginBottom: 10,
   },
   undoButton: {
     paddingHorizontal: 4,

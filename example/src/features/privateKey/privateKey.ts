@@ -10,9 +10,25 @@ import {
 import type { PrivateKeyInputState as NativePrivateKeyInputState } from '../../native/entropyStudio';
 
 export const PRIVATE_KEY_FORMATS = ['wif', 'hex', 'mini', 'brain'] as const;
+export const BRAIN_WALLET_OUTPUTS = ['scalar', 'hd'] as const;
+export const BRAIN_WALLET_WARNING_COPY = {
+  acknowledgementDescription: 'Required once this session, in page memory only.',
+  hdLines: [
+    'The 24-word count is not the strength; the text is.',
+    'A valid mnemonic does not mean it is the same wallet as hashing the text as a private-key scalar.',
+  ],
+  lines: [
+    'SHA-256(text) is unsalted and fast. Guessable phrases are stolen coins.',
+    'Strength is the entropy of this text, nothing more.',
+    'This is not a BIP39 passphrase.',
+    'This is not a Bitcoin Core hdseed or address-key backup of the same wallet.',
+  ],
+  title: 'Brain wallet warning — read before use',
+} as const;
 
 export type PrivateKeyInputFormat = (typeof PRIVATE_KEY_FORMATS)[number];
 export type PrivateKeyInputState = NativePrivateKeyInputState;
+export type BrainWalletOutput = (typeof BRAIN_WALLET_OUTPUTS)[number];
 
 type InputSelection = { readonly end: number; readonly start: number };
 
@@ -39,6 +55,17 @@ const PRIVATE_KEY_COPY_KEYS = {
   },
 } as const;
 
+const BRAIN_WALLET_OUTPUT_COPY = {
+  hd: {
+    description: entropyLabEnglish['note.brainLabSha'],
+    title: entropyLabEnglish['result.seedPhraseN'].replace('{n}', '24'),
+  },
+  scalar: {
+    description: entropyLabEnglish['key.brainDesc'],
+    title: entropyLabEnglish['result.singleKicker'],
+  },
+} as const;
+
 export function privateKeyFormatCopy(format: PrivateKeyInputFormat) {
   const keys = PRIVATE_KEY_COPY_KEYS[format];
   return {
@@ -46,6 +73,10 @@ export function privateKeyFormatCopy(format: PrivateKeyInputFormat) {
     placeholder: entropyLabEnglish[keys.placeholder],
     title: entropyLabEnglish[keys.title],
   };
+}
+
+export function brainWalletOutputCopy(output: BrainWalletOutput) {
+  return BRAIN_WALLET_OUTPUT_COPY[output];
 }
 
 export function privateKeyEntropy(value: string, format: PrivateKeyInputFormat): ArrayBuffer {
