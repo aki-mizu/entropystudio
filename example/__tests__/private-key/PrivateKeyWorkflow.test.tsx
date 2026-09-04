@@ -148,13 +148,7 @@ describe('Private Key', () => {
       app!.root.findByProps({ testID: 'open-private-key-entry' }).props.onPress();
     });
     await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'brain-wallet-warning-trigger' }).props.onPress();
-    });
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'brain-wallet-warning-acknowledge' }).props.onPress();
-    });
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'brain-wallet-warning-sheet-close' }).props.onPress();
+      app!.root.findByProps({ testID: 'brain-wallet-warning-inline-acknowledge' }).props.onPress();
     });
 
     expect(app!.root.findByProps({ testID: 'private-key-key-space' }).props.disabled).toBe(false);
@@ -212,11 +206,41 @@ describe('Private Key', () => {
       app!.root.findByProps({ testID: 'open-private-key-entry' }).props.onPress();
     });
 
-    expect(app!.root.findByProps({ testID: 'brain-wallet-warning-trigger' })).toBeDefined();
+    expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-trigger' })).toHaveLength(0);
     expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-sheet-title' })).toHaveLength(0);
+    expect(app!.root.findByProps({ testID: 'brain-wallet-warning-inline' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'brain-wallet-warning-inline-title' }).props.children).toBe(
+      BRAIN_WALLET_WARNING_COPY.title,
+    );
+    BRAIN_WALLET_WARNING_COPY.lines.forEach((line, index) => {
+      expect(
+        app!.root.findByProps({ testID: `brain-wallet-warning-inline-line-${index}` }).props.children,
+      ).toBe(`\u2022 ${line}`);
+    });
+    expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-inline-line-4' })).toHaveLength(0);
+    expect(
+      app!.root.findByProps({ testID: 'brain-wallet-warning-inline-acknowledgement-description' }).props.children,
+    ).toBe(BRAIN_WALLET_WARNING_COPY.acknowledgementDescription);
+    expect(
+      app!.root.findByProps({ testID: 'brain-wallet-warning-inline-acknowledge' }).props.accessibilityState,
+    ).toEqual({ checked: false });
     expect(app!.root.findAllByProps({ testID: 'private-key-input' })).toHaveLength(0);
     expect(app!.root.findAllByProps({ testID: 'private-key-keypad' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(true);
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'brain-wallet-warning-inline-acknowledge' }).props.onPress();
+    });
+
+    expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-inline' })).toHaveLength(0);
+    expect(app!.root.findByProps({ testID: 'brain-wallet-warning-trigger' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'private-key-input' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'private-key-keypad' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(true);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'private-key-input' }).props.onChangeText('brain wallet text');
+    });
+    expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(false);
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'brain-wallet-warning-trigger' }).props.onPress();
@@ -238,76 +262,76 @@ describe('Private Key', () => {
     expect(app!.root.findByProps({ testID: 'brain-wallet-warning-sheet-backdrop' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'brain-wallet-warning-sheet-close' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'brain-wallet-warning-acknowledge' }).props.accessibilityState).toEqual({
-      checked: false,
-    });
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'brain-wallet-warning-acknowledge' }).props.onPress();
-    });
-
-    expect(app!.root.findByProps({ testID: 'brain-wallet-warning-acknowledge' }).props.accessibilityState).toEqual({
       checked: true,
     });
-    expect(app!.root.findByProps({ testID: 'private-key-input' })).toBeDefined();
-    expect(app!.root.findByProps({ testID: 'private-key-keypad' })).toBeDefined();
-    expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(true);
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'private-key-input' }).props.onChangeText('brain wallet text');
-    });
-    expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(false);
-
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'brain-wallet-warning-acknowledge' }).props.onPress();
     });
 
-    expect(app!.root.findByProps({ testID: 'brain-wallet-warning-acknowledge' }).props.accessibilityState).toEqual({
-      checked: false,
-    });
+    expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-sheet-title' })).toHaveLength(0);
+    expect(app!.root.findByProps({ testID: 'brain-wallet-warning-inline' })).toBeDefined();
     expect(app!.root.findAllByProps({ testID: 'private-key-input' })).toHaveLength(0);
     expect(app!.root.findAllByProps({ testID: 'private-key-keypad' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(true);
 
     await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'brain-wallet-warning-acknowledge' }).props.onPress();
-    });
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'brain-wallet-warning-sheet-close' }).props.onPress();
+      app!.root.findByProps({ testID: 'brain-wallet-warning-inline-acknowledge' }).props.onPress();
     });
 
-    expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-sheet-title' })).toHaveLength(0);
-    expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-acknowledge' })).toHaveLength(0);
+    expect(app!.root.findByProps({ testID: 'brain-wallet-warning-trigger' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'private-key-input' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'private-key-keypad' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(false);
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'brain-wallet-output-hd' }).props.onPress();
     });
 
     expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-sheet-title' })).toHaveLength(0);
-  expect(app!.root.findAllByProps({ testID: 'private-key-input' })).toHaveLength(0);
-  expect(app!.root.findAllByProps({ testID: 'private-key-keypad' })).toHaveLength(0);
+    expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-trigger' })).toHaveLength(0);
+    expect(app!.root.findByProps({ testID: 'brain-wallet-warning-inline' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'brain-wallet-warning-inline-acknowledge' }).props.accessibilityState).toEqual({
+      checked: false,
+    });
+    [...BRAIN_WALLET_WARNING_COPY.lines, ...BRAIN_WALLET_WARNING_COPY.hdLines].forEach((line, index) => {
+      expect(
+        app!.root.findByProps({ testID: `brain-wallet-warning-inline-line-${index}` }).props.children,
+      ).toBe(`\u2022 ${line}`);
+    });
+    expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-inline-line-6' })).toHaveLength(0);
+    expect(app!.root.findAllByProps({ testID: 'private-key-input' })).toHaveLength(0);
+    expect(app!.root.findAllByProps({ testID: 'private-key-keypad' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(true);
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'brain-wallet-warning-inline-acknowledge' }).props.onPress();
+    });
+
+    expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-inline' })).toHaveLength(0);
+    expect(app!.root.findByProps({ testID: 'brain-wallet-warning-trigger' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'private-key-input' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'private-key-keypad' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(false);
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'brain-wallet-warning-trigger' }).props.onPress();
     });
 
     expect(app!.root.findByProps({ testID: 'brain-wallet-warning-sheet-title' })).toBeDefined();
-    BRAIN_WALLET_WARNING_COPY.hdLines.forEach((line, index) => {
+    [...BRAIN_WALLET_WARNING_COPY.lines, ...BRAIN_WALLET_WARNING_COPY.hdLines].forEach((line, index) => {
       expect(
-        app!.root.findByProps({
-          testID: `brain-wallet-warning-line-${BRAIN_WALLET_WARNING_COPY.lines.length + index}`,
-        }).props.children,
+        app!.root.findByProps({ testID: `brain-wallet-warning-line-${index}` }).props.children,
       ).toBe(`\u2022 ${line}`);
     });
+    expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-line-6' })).toHaveLength(0);
 
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'brain-wallet-warning-acknowledge' }).props.onPress();
-    });
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'brain-wallet-warning-sheet-close' }).props.onPress();
     });
 
     expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-acknowledge' })).toHaveLength(0);
-  expect(app!.root.findByProps({ testID: 'private-key-input' })).toBeDefined();
-  expect(app!.root.findByProps({ testID: 'private-key-keypad' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'private-key-input' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'private-key-keypad' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(false);
 
     await ReactTestRenderer.act(async () => {
@@ -338,13 +362,7 @@ describe('Private Key', () => {
       app!.root.findByProps({ testID: 'open-private-key-entry' }).props.onPress();
     });
     await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'brain-wallet-warning-trigger' }).props.onPress();
-    });
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'brain-wallet-warning-acknowledge' }).props.onPress();
-    });
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'brain-wallet-warning-sheet-close' }).props.onPress();
+      app!.root.findByProps({ testID: 'brain-wallet-warning-inline-acknowledge' }).props.onPress();
     });
 
     expect(app!.root.findByProps({ testID: 'brain-wallet-output-options' })).toBeDefined();

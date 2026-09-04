@@ -162,10 +162,79 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
   }
 
   function toggleBrainWalletWarningAcknowledgement() {
+    if (brainWalletWarningAcknowledged) {
+      setBrainWalletWarningVisible(false);
+    }
     setBrainWalletWarningAcknowledgements(previous => ({
       ...previous,
       [brainWalletOutput]: !previous[brainWalletOutput],
     }));
+  }
+
+  function renderBrainWalletWarning(testIDPrefix: string, includeTitle: boolean) {
+    return (
+      <View style={styles.brainWalletWarningContent}>
+        {includeTitle && (
+          <Text
+            style={[styles.brainWalletWarningTitle, { color: colors.error }]}
+            testID={`${testIDPrefix}-title`}
+          >
+            {BRAIN_WALLET_WARNING_COPY.title}
+          </Text>
+        )}
+        {brainWalletWarningLines.map((line, index) => (
+          <Text
+            key={line}
+            style={[styles.brainWalletWarningLine, { color: colors.error }]}
+            testID={`${testIDPrefix}-line-${index}`}
+          >
+            {`\u2022 ${line}`}
+          </Text>
+        ))}
+        <Pressable
+          accessibilityLabel={entropyLabEnglish['beta.understand']}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: brainWalletWarningAcknowledged }}
+          onPress={toggleBrainWalletWarningAcknowledgement}
+          style={({ pressed }) => [
+            styles.brainWalletAcknowledgement,
+            {
+              backgroundColor: colors.surface,
+              borderColor: brainWalletWarningAcknowledged ? colors.accent : colors.border,
+              opacity: pressed ? 0.82 : 1,
+            },
+          ]}
+          testID={`${testIDPrefix}-acknowledge`}
+        >
+          <View
+            style={[
+              styles.brainWalletAcknowledgementCheckbox,
+              {
+                backgroundColor: brainWalletWarningAcknowledged ? colors.accent : 'transparent',
+                borderColor: colors.accent,
+              },
+            ]}
+          >
+            {brainWalletWarningAcknowledged && (
+              <Text style={[styles.brainWalletAcknowledgementCheckmark, { color: colors.onAccent }]}>
+                {'\u2713'}
+              </Text>
+            )}
+          </View>
+          <View style={styles.brainWalletAcknowledgementCopy}>
+            <Text style={[styles.brainWalletAcknowledgementTitle, { color: colors.text }]}>
+              {entropyLabEnglish['beta.understand']}
+            </Text>
+            <Text
+              style={[styles.brainWalletAcknowledgementDescription, { color: colors.muted }]}
+              testID={`${testIDPrefix}-acknowledgement-description`}
+            >
+              {BRAIN_WALLET_WARNING_COPY.acknowledgementDescription}
+            </Text>
+          </View>
+        </Pressable>
+      </View>
+    );
   }
 
   function updateInput(value: string) {
@@ -371,23 +440,32 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
                   );
                 })}
               </View>
-              <Pressable
-                accessibilityRole="button"
-                onPress={showBrainWalletWarning}
-                style={({ pressed }) => [
-                  styles.brainWalletWarningTrigger,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.error,
-                    opacity: pressed ? 0.82 : 1,
-                  },
-                ]}
-                testID="brain-wallet-warning-trigger"
-              >
-                <Text style={[styles.brainWalletWarningTriggerTitle, { color: colors.error }]}>
-                  {BRAIN_WALLET_WARNING_COPY.title}
-                </Text>
-              </Pressable>
+              {brainWalletWarningAcknowledged ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={showBrainWalletWarning}
+                  style={({ pressed }) => [
+                    styles.brainWalletWarningTrigger,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.error,
+                      opacity: pressed ? 0.82 : 1,
+                    },
+                  ]}
+                  testID="brain-wallet-warning-trigger"
+                >
+                  <Text style={[styles.brainWalletWarningTriggerTitle, { color: colors.error }]}>
+                    {BRAIN_WALLET_WARNING_COPY.title}
+                  </Text>
+                </Pressable>
+              ) : (
+                <View
+                  style={[styles.brainWalletInlineWarning, { borderColor: colors.error }]}
+                  testID="brain-wallet-warning-inline"
+                >
+                  {renderBrainWalletWarning('brain-wallet-warning-inline', true)}
+                </View>
+              )}
             </View>
           )}
           {isPrivateKeyEntryVisible && (
@@ -528,61 +606,9 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
         onDismiss={() => setBrainWalletWarningVisible(false)}
         testID="brain-wallet-warning-sheet"
         title={BRAIN_WALLET_WARNING_COPY.title}
-        visible={brainWalletWarningVisible}
+        visible={brainWalletWarningVisible && brainWalletWarningAcknowledged}
       >
-        <View style={styles.brainWalletWarningContent}>
-          {brainWalletWarningLines.map((line, index) => (
-            <Text
-              key={line}
-              style={[styles.brainWalletWarningLine, { color: colors.error }]}
-              testID={`brain-wallet-warning-line-${index}`}
-            >
-              {`\u2022 ${line}`}
-            </Text>
-          ))}
-          <Pressable
-            accessibilityLabel={entropyLabEnglish['beta.understand']}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: brainWalletWarningAcknowledged }}
-            onPress={toggleBrainWalletWarningAcknowledgement}
-            style={({ pressed }) => [
-              styles.brainWalletAcknowledgement,
-              {
-                backgroundColor: colors.surface,
-                borderColor: brainWalletWarningAcknowledged ? colors.accent : colors.border,
-                opacity: pressed ? 0.82 : 1,
-              },
-            ]}
-            testID="brain-wallet-warning-acknowledge"
-          >
-            <View
-              style={[
-                styles.brainWalletAcknowledgementCheckbox,
-                {
-                  backgroundColor: brainWalletWarningAcknowledged ? colors.accent : 'transparent',
-                  borderColor: colors.accent,
-                },
-              ]}
-            >
-              {brainWalletWarningAcknowledged && (
-                <Text style={[styles.brainWalletAcknowledgementCheckmark, { color: colors.onAccent }]}>
-                  {'\u2713'}
-                </Text>
-              )}
-            </View>
-            <View style={styles.brainWalletAcknowledgementCopy}>
-              <Text style={[styles.brainWalletAcknowledgementTitle, { color: colors.text }]}>
-                {entropyLabEnglish['beta.understand']}
-              </Text>
-              <Text
-                style={[styles.brainWalletAcknowledgementDescription, { color: colors.muted }]}
-                testID="brain-wallet-warning-acknowledgement-description"
-              >
-                {BRAIN_WALLET_WARNING_COPY.acknowledgementDescription}
-              </Text>
-            </View>
-          </Pressable>
-        </View>
+        {renderBrainWalletWarning('brain-wallet-warning', false)}
       </NativeSheet>
     </SafeAreaView>
   );
@@ -657,12 +683,22 @@ const styles = StyleSheet.create({
   brainWalletSection: {
     marginBottom: 10,
   },
+  brainWalletInlineWarning: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 12,
+    paddingTop: 12,
+  },
   brainWalletWarningContent: {
     gap: 10,
   },
   brainWalletWarningLine: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  brainWalletWarningTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 21,
   },
   brainWalletWarningTrigger: {
     borderRadius: 6,
