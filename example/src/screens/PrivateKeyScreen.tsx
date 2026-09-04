@@ -430,10 +430,16 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
                       ]}
                       testID={`brain-wallet-output-${option}`}
                     >
-                      <Text style={[styles.brainWalletOptionTitle, { color: selected ? colors.text : colors.muted }]}>
+                      <Text
+                        style={[styles.brainWalletOptionTitle, { color: selected ? colors.text : colors.muted }]}
+                        testID={`brain-wallet-output-${option}-title`}
+                      >
                         {copy.title}
                       </Text>
-                      <Text style={[styles.brainWalletOptionDescription, { color: colors.muted }]}>
+                      <Text
+                        style={[styles.brainWalletOptionDescription, { color: colors.muted }]}
+                        testID={`brain-wallet-output-${option}-description`}
+                      >
                         {copy.description}
                       </Text>
                     </Pressable>
@@ -492,7 +498,14 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
                   <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
                 </Pressable>
               </View>
-              <Text style={[styles.inputHelp, { color: colors.muted }]}>{formatCopy.description}</Text>
+              {format !== 'brain' && (
+                <Text
+                  style={[styles.inputHelp, { color: colors.muted }]}
+                  testID="private-key-input-help"
+                >
+                  {formatCopy.description}
+                </Text>
+              )}
               <View style={[styles.inputSurface, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <TextInput
                   accessibilityLabel={entropyLabEnglish['key.inputLabel']}

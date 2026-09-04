@@ -57,12 +57,13 @@ const PRIVATE_KEY_COPY_KEYS = {
 
 const BRAIN_WALLET_OUTPUT_COPY = {
   hd: {
-    description: entropyLabEnglish['note.brainLabSha'],
-    title: entropyLabEnglish['result.seedPhraseN'].replace('{n}', '24'),
+    description:
+      'The digest is 256-bit BIP39 entropy for a 24-word seed. Not the same wallet as the single key pair.',
+    title: 'HD wallet with seed phrase',
   },
   scalar: {
-    description: entropyLabEnglish['key.brainDesc'],
-    title: entropyLabEnglish['result.singleKicker'],
+    description: 'The digest is the private key. One address, the original brain-wallet behaviour.',
+    title: 'Single key pair',
   },
 } as const;
 

@@ -14,7 +14,10 @@ import {
   ReactTestRenderer,
   selectEntropyTool,
 } from '../../test/testSupport';
-import { BRAIN_WALLET_WARNING_COPY } from '../../src/features/privateKey/privateKey';
+import {
+  BRAIN_WALLET_WARNING_COPY,
+  brainWalletOutputCopy,
+} from '../../src/features/privateKey/privateKey';
 
 const WIF = 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn';
 
@@ -236,6 +239,7 @@ describe('Private Key', () => {
     expect(app!.root.findByProps({ testID: 'brain-wallet-warning-trigger' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'private-key-input' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'private-key-keypad' })).toBeDefined();
+    expect(app!.root.findAllByProps({ testID: 'private-key-input-help' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(true);
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'private-key-input' }).props.onChangeText('brain wallet text');
@@ -372,6 +376,18 @@ describe('Private Key', () => {
     expect(app!.root.findByProps({ testID: 'brain-wallet-output-hd' }).props.accessibilityState).toEqual({
       selected: false,
     });
+    expect(app!.root.findByProps({ testID: 'brain-wallet-output-scalar-title' }).props.children).toBe(
+      brainWalletOutputCopy('scalar').title,
+    );
+    expect(app!.root.findByProps({ testID: 'brain-wallet-output-scalar-description' }).props.children).toBe(
+      brainWalletOutputCopy('scalar').description,
+    );
+    expect(app!.root.findByProps({ testID: 'brain-wallet-output-hd-title' }).props.children).toBe(
+      brainWalletOutputCopy('hd').title,
+    );
+    expect(app!.root.findByProps({ testID: 'brain-wallet-output-hd-description' }).props.children).toBe(
+      brainWalletOutputCopy('hd').description,
+    );
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'private-key-input' }).props.onChangeText('brain wallet text');
