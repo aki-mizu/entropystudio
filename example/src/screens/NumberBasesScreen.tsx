@@ -225,6 +225,7 @@ export function NumberBasesScreen({
     wordCount,
   );
   const formatRequirement = numberBaseSetupRequirement(wordCount, analysis.config);
+  const hasLongSetupGuidance = format === 'base32' || format === 'base64';
   let words = [...analysis.previewWords];
 
   if (entropy) {
@@ -351,11 +352,7 @@ export function NumberBasesScreen({
       testID="number-bases-screen-safe-area"
     >
       {activeView === 'setup' ? (
-        <ScrollView
-          contentContainerStyle={styles.setupContent}
-          style={styles.setupScroll}
-          testID="number-bases-setup-view"
-        >
+        <View style={styles.setupContent} testID="number-bases-setup-view">
           <View style={styles.header}>
             <View style={styles.headerCopy}>
               <Text style={[styles.title, { color: colors.text }]} testID="number-bases-screen-title">
@@ -414,7 +411,12 @@ export function NumberBasesScreen({
             </Text>
           </View>
 
-          <View style={styles.setupActionArea}>
+          <View
+            style={[
+              styles.setupActionArea,
+              hasLongSetupGuidance && styles.longSetupActionArea,
+            ]}
+          >
             <Pressable
               accessibilityLabel={STUDIO_UI_TEXT.actions.start}
               accessibilityRole="button"
@@ -430,7 +432,7 @@ export function NumberBasesScreen({
               </Text>
             </Pressable>
           </View>
-        </ScrollView>
+        </View>
       ) : (
         <View style={styles.entryContent} testID="number-bases-entry-view">
           <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
@@ -759,6 +761,10 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
+  longSetupActionArea: {
+    flex: 0,
+    marginTop: 16,
+  },
   seedPreviewArea: {
     flex: 1,
     minHeight: 0,
@@ -769,13 +775,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   setupContent: {
-    flexGrow: 1,
+    flex: 1,
     paddingBottom: 12,
     paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
     paddingTop: 12,
-  },
-  setupScroll: {
-    flex: 1,
   },
   setupSettings: {
     marginTop: 16,

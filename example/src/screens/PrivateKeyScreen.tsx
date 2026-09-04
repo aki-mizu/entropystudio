@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -371,11 +370,7 @@ export function PrivateKeyScreen({
       testID="private-key-screen-safe-area"
     >
       {activeView === 'setup' ? (
-        <ScrollView
-          contentContainerStyle={styles.setupContent}
-          style={styles.setupScroll}
-          testID="private-key-setup-view"
-        >
+        <View style={styles.setupContent} testID="private-key-setup-view">
           <View style={styles.header}>
             <View style={styles.headerCopy}>
               <Text style={[styles.title, { color: colors.text }]} testID="private-key-screen-title">
@@ -446,7 +441,7 @@ export function PrivateKeyScreen({
               </Text>
             </Pressable>
           </View>
-        </ScrollView>
+        </View>
       ) : (
         <View style={styles.entryContent} testID="private-key-entry-view">
           <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
@@ -898,13 +893,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   setupContent: {
-    flexGrow: 1,
+    flex: 1,
     paddingBottom: 12,
     paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
     paddingTop: 12,
-  },
-  setupScroll: {
-    flex: 1,
   },
   setupSettings: {
     marginTop: 16,

@@ -7,6 +7,7 @@ import {
   App,
   React,
   ReactTestRenderer,
+  ScrollView,
   selectDiceMethod,
   selectEntropyTool,
   selectSeedPhraseLength,
@@ -147,6 +148,39 @@ test('keeps native workflow trees mounted while changing methods', async () => {
   expect(app!.root.findByProps({ testID: 'cards-screen-safe-area' }).props.pointerEvents).toBe(
     'none',
   );
+});
+
+test('keeps every method setup view fixed', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  for (const [tool, setupView] of [
+    ['dice', 'dice-setup-view'],
+    ['cards', 'cards-setup-view'],
+    ['hex', 'number-bases-setup-view'],
+    ['seed', 'seed-phrase-setup-view'],
+    ['key', 'private-key-setup-view'],
+  ] as const) {
+    await selectEntropyTool(app!, tool);
+    expect(app!.root.findByProps({ testID: setupView }).findAllByType(ScrollView)).toHaveLength(0);
+  }
+
+  await selectEntropyTool(app!, 'hex');
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'number-base-format-base32' }).props.onPress();
+  });
+  expect(
+    app!.root.findByProps({ testID: 'number-bases-setup-view' }).findAllByType(ScrollView),
+  ).toHaveLength(0);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'number-base-format-base64' }).props.onPress();
+  });
+  expect(
+    app!.root.findByProps({ testID: 'number-bases-setup-view' }).findAllByType(ScrollView),
+  ).toHaveLength(0);
 });
 
 test('syncs entropy across methods through the native snapshot', async () => {
