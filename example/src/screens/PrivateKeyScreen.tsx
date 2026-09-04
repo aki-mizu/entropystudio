@@ -18,6 +18,7 @@ import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { diceColors } from '../features/dice/diceTheme';
 import { PrivateKeyKeypad } from '../features/privateKey/components/PrivateKeyKeypad';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
 import { entropyToMnemonic } from '../native/entropyStudio';
 import {
   BRAIN_WALLET_OUTPUTS,
@@ -377,7 +378,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
 
           <View style={styles.setupActionArea}>
             <Pressable
-              accessibilityLabel="Enter private key"
+              accessibilityLabel={formatCopy.title}
               accessibilityRole="button"
               onPress={openPrivateKeyEntry}
               style={({ pressed }) => [
@@ -386,7 +387,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
               ]}
               testID="open-private-key-entry"
             >
-              <Text style={[styles.buttonText, { color: colors.onAccent }]}>Enter private key</Text>
+              <Text style={[styles.buttonText, { color: colors.onAccent }]}>{formatCopy.title}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -394,13 +395,15 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
         <View style={styles.entryContent} testID="private-key-entry-view">
           <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
             <Pressable
-              accessibilityLabel="Back to private key settings"
+              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.common.back}
               accessibilityRole="button"
               onPress={() => setActiveView('setup')}
               style={styles.backButton}
               testID="close-private-key-entry"
             >
-              <Text style={[styles.backButtonText, { color: colors.accent }]}>Back</Text>
+              <Text style={[styles.backButtonText, { color: colors.accent }]}>
+                {UPSTREAM_UI_FALLBACK_COPY.common.back}
+              </Text>
             </Pressable>
             <View style={styles.entryHeaderCopy}>
               <Text style={[styles.entryTitle, { color: colors.text }]}>
@@ -483,11 +486,7 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
                   {entropyLabEnglish['key.inputLabel']}
                 </Text>
                 <Pressable
-                  accessibilityLabel={
-                    selectedInput.end > selectedInput.start
-                      ? 'Remove selected private-key characters'
-                      : 'Remove private-key character before cursor'
-                  }
+                  accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
                   accessibilityRole="button"
                   disabled={!canDeleteInput}
                   onPress={deleteInputCharacter}
@@ -497,7 +496,9 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
                   ]}
                   testID="private-key-undo"
                 >
-                  <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
+                  <Text style={[styles.undoLabel, { color: colors.accent }]}>
+                    {UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
+                  </Text>
                 </Pressable>
               </View>
               {format !== 'brain' && (
@@ -552,7 +553,6 @@ export function PrivateKeyScreen({ activeTool, isActive, isDarkMode, onSelectToo
                 colors={colors}
                 firstCharacter={input.charAt(0)}
                 format={format}
-                label={formatCopy.title}
                 onInsert={insertInputCharacter}
               />
             </>

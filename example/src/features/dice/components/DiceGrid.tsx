@@ -11,7 +11,6 @@ type Props = {
   readonly colors: DiceColors;
   readonly enabledFaces?: readonly DiceInputFace[];
   readonly faces?: readonly DiceInputFace[];
-  readonly inputLabel: string;
   readonly maxTileSize?: number;
   readonly onSelect: (face: DiceInputFace) => void;
 };
@@ -21,7 +20,6 @@ export function DiceGrid({
   colors,
   enabledFaces,
   faces = DICE_FACES,
-  inputLabel,
   maxTileSize = columns >= 6 ? 56 : 84,
   onSelect,
 }: Props) {
@@ -44,7 +42,7 @@ export function DiceGrid({
         return (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`${inputLabel}: ${face}`}
+            accessibilityLabel={String(face)}
             disabled={disabled}
             key={face}
             onPress={() => onSelect(face)}

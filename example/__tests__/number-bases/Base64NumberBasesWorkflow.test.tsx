@@ -9,6 +9,7 @@ import {
   ScrollView,
   selectEntropyTool,
 } from '../../test/testSupport';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
 
 describe('Number Bases / Base64', () => {
   test('uses the upstream-style soft keyboard', async () => {
@@ -28,7 +29,7 @@ describe('Number Bases / Base64', () => {
     expect(app!.root.findByProps({ testID: 'number-base-key-z' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'number-base-key-space' }).props.disabled).toBe(true);
     expect(app!.root.findByProps({ testID: 'number-base-keypad-mode' }).props.accessibilityLabel).toBe(
-      'Change Base64 keyboard character mode',
+      UPSTREAM_UI_FALLBACK_COPY.keyboard.base64EntropyChangeMode(),
     );
 
     await ReactTestRenderer.act(async () => {

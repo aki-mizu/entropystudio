@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { SoftKeyboardMode } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
 import type { PrivateKeyInputFormat } from '../privateKey';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
@@ -19,7 +20,6 @@ type Props = {
   readonly colors: DiceColors;
   readonly firstCharacter: string;
   readonly format: PrivateKeyInputFormat;
-  readonly label: string;
   readonly onInsert: (character: string) => void;
 };
 
@@ -29,7 +29,6 @@ export function PrivateKeyKeypad({
   colors,
   firstCharacter,
   format,
-  label,
   onInsert,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
@@ -44,8 +43,9 @@ export function PrivateKeyKeypad({
         Math.floor((availableWidth - KEY_GAP * (prefixes.length - 1)) / prefixes.length),
       ),
     );
-    const prefixLabel =
-      format === 'wif' ? 'Choose the first WIF character' : 'Choose the first Mini key character';
+    const prefixLabel = UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKeyInitial(
+      format === 'wif' ? 'wif' : 'mini',
+    );
 
     return (
       <View accessibilityLabel={prefixLabel} style={styles.keypad} testID="private-key-prefix-keypad">
@@ -54,7 +54,7 @@ export function PrivateKeyKeypad({
             const enabled = canInsert(character);
             return (
               <Pressable
-                accessibilityLabel={`Enter ${character}`}
+                accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.enterCharacter(character)}
                 accessibilityRole="button"
                 disabled={!enabled}
                 key={character}
@@ -88,12 +88,12 @@ export function PrivateKeyKeypad({
         canInsertSpace={canInsertSpace}
         colors={colors}
         initialMode={initialKeyboardMode(format, firstCharacter)}
-        keyboardLabel={mode => `On-screen ${mode} ${label} keyboard`}
+        keyboardLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKey}
         keyboardTestID="private-key-keypad"
         keyTestIDPrefix="private-key-key-"
         modeControl="enabled"
         modeTestID="private-key-keypad-mode"
-        modeToggleLabel="Change private key keyboard character mode"
+        modeToggleLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKeyChangeMode()}
         onInsert={onInsert}
         spaceTestID="private-key-key-space"
         style={styles.keypad}
@@ -109,7 +109,7 @@ export function PrivateKeyKeypad({
 
   return (
     <View
-      accessibilityLabel="On-screen hexadecimal private key keyboard"
+      accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKeyHex}
       style={styles.keypad}
       testID="private-key-keypad"
     >
@@ -118,7 +118,7 @@ export function PrivateKeyKeypad({
           const enabled = canInsert(character);
           return (
             <Pressable
-              accessibilityLabel={`Enter hexadecimal character ${character}`}
+              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.enterCharacter(character)}
               accessibilityRole="button"
               disabled={!enabled}
               key={character}

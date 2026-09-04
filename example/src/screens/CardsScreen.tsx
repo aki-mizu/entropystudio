@@ -36,6 +36,7 @@ import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { WordCountSelector } from '../features/dice/components/WordCountSelector';
 import { diceColors } from '../features/dice/diceTheme';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 type CardView = 'entry' | 'setup';
@@ -215,7 +216,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
                 {entropyLabEnglish['cards.coleman']}
               </Text>
               <Text style={[styles.colemanNote, { color: colors.muted }]}>
-                {entropyLabEnglish['cards.coleman.note']}
+                {UPSTREAM_UI_FALLBACK_COPY.cards.colemanNote}
               </Text>
             </View>
           </Pressable>
@@ -269,7 +270,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
 
           <View style={styles.setupActionArea}>
             <Pressable
-              accessibilityLabel="Enter card draws"
+              accessibilityLabel={copy.inputLabel}
               accessibilityRole="button"
               onPress={() => setActiveView('entry')}
               style={({ pressed }) => [
@@ -281,7 +282,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
               ]}
               testID="open-cards-entry"
             >
-              <Text style={[styles.buttonText, { color: colors.onAccent }]}>Enter cards</Text>
+              <Text style={[styles.buttonText, { color: colors.onAccent }]}>{copy.inputLabel}</Text>
             </Pressable>
           </View>
         </View>
@@ -289,16 +290,20 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
         <View style={styles.entryContent} testID="cards-entry-view">
           <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
             <Pressable
-              accessibilityLabel="Back to card setup"
+              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.common.back}
               accessibilityRole="button"
               onPress={() => setActiveView('setup')}
               style={styles.backButton}
               testID="close-cards-entry"
             >
-              <Text style={[styles.backButtonText, { color: colors.accent }]}>Back</Text>
+              <Text style={[styles.backButtonText, { color: colors.accent }]}>
+                {UPSTREAM_UI_FALLBACK_COPY.common.back}
+              </Text>
             </Pressable>
             <View style={styles.entryHeaderCopy}>
-              <Text style={[styles.entryTitle, { color: colors.text }]}>Seed</Text>
+              <Text style={[styles.entryTitle, { color: colors.text }]}>
+                {entropyLabEnglish['mode.seed']}
+              </Text>
               <Text style={[styles.entrySubtitle, { color: colors.muted }]}>
                 {copy.seedLengthValue}
               </Text>
@@ -322,7 +327,7 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
               {copy.inputLabel}
             </Text>
             <Pressable
-              accessibilityLabel={isDirect ? 'Undo last rank draw' : entropyLabEnglish['cards.undo']}
+              accessibilityLabel={entropyLabEnglish['cards.undo']}
               accessibilityRole="button"
               disabled={!transcript}
               onPress={undoLastEntry}
@@ -332,7 +337,9 @@ export function CardsScreen({ activeTool, isActive, isDarkMode, onSelectTool }: 
               ]}
               testID="undo-card-entry"
             >
-              <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
+              <Text style={[styles.undoLabel, { color: colors.accent }]}>
+                {entropyLabEnglish['cards.undo']}
+              </Text>
             </Pressable>
           </View>
 
@@ -471,7 +478,7 @@ function HashedCardPicker({
             (Boolean(selectedSuit) && !selected);
           return (
             <Pressable
-              accessibilityLabel={`Select ${suit.code} suit`}
+              accessibilityLabel={suit.label}
               accessibilityRole="button"
               accessibilityState={{ disabled, selected }}
               disabled={disabled}
@@ -501,7 +508,7 @@ function HashedCardPicker({
             (Boolean(selectedRank) && !selected);
           return (
             <Pressable
-              accessibilityLabel={`Select ${rank} rank`}
+              accessibilityLabel={rank === 'T' ? '10' : rank}
               accessibilityRole="button"
               accessibilityState={{ disabled, selected }}
               disabled={disabled}

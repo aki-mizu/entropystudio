@@ -20,6 +20,7 @@ import type { DiceResult, WordCount } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
 import { SeedPhraseKeypad } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import type { SeedPhraseEntryMethod } from '../features/seedPhrase/components/SeedPhraseKeypad';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
 import {
   analyzeSeedPhrase,
   seedPhraseAutocomplete,
@@ -322,7 +323,7 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
 
           <View style={styles.setupActionArea}>
             <Pressable
-              accessibilityLabel="Enter seed phrase"
+              accessibilityLabel={entropyLabEnglish[`seed.method.${seedMethod}`]}
               accessibilityRole="button"
               onPress={() => setActiveView('entry')}
               style={({ pressed }) => [
@@ -331,7 +332,9 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
               ]}
               testID="open-seed-phrase-entry"
             >
-              <Text style={[styles.buttonText, { color: colors.onAccent }]}>Enter seed phrase</Text>
+              <Text style={[styles.buttonText, { color: colors.onAccent }]}>
+                {entropyLabEnglish[`seed.method.${seedMethod}`]}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -339,16 +342,20 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
         <View style={styles.entryContent} testID="seed-phrase-entry-view">
           <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
             <Pressable
-              accessibilityLabel="Back to seed phrase settings"
+              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.common.back}
               accessibilityRole="button"
               onPress={() => setActiveView('setup')}
               style={styles.backButton}
               testID="close-seed-phrase-entry"
             >
-              <Text style={[styles.backButtonText, { color: colors.accent }]}>Back</Text>
+              <Text style={[styles.backButtonText, { color: colors.accent }]}>
+                {UPSTREAM_UI_FALLBACK_COPY.common.back}
+              </Text>
             </Pressable>
             <View style={styles.entryHeaderCopy}>
-              <Text style={[styles.entryTitle, { color: colors.text }]}>Seed</Text>
+              <Text style={[styles.entryTitle, { color: colors.text }]}>
+                {entropyLabEnglish['mode.seed']}
+              </Text>
               <Text style={[styles.entrySubtitle, { color: colors.muted }]}>
                 {entropyLabEnglish[`seed.method.${seedMethod}`]}
               </Text>
@@ -374,11 +381,7 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
                 : formatCopy(entropyLabEnglish['seed.numbersLabel'], { words: wordCount })}
             </Text>
             <Pressable
-              accessibilityLabel={
-                selectedInput.end > selectedInput.start
-                  ? 'Remove selected seed input'
-                  : 'Remove seed input character before cursor'
-              }
+              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
               accessibilityRole="button"
               disabled={!canDeleteInput}
               onPress={deleteInputCharacter}
@@ -388,7 +391,9 @@ export function SeedPhraseScreen({ activeTool, isActive, isDarkMode, onSelectToo
               ]}
               testID="seed-phrase-undo"
             >
-              <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
+              <Text style={[styles.undoLabel, { color: colors.accent }]}>
+                {UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
+              </Text>
             </Pressable>
           </View>
           <Text style={[styles.inputHelp, { color: colors.muted }]}>

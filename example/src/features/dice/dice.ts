@@ -19,6 +19,7 @@ import type {
   HashedDiceState,
 } from '../../native/entropyStudio';
 import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
 
 export const DICE_FACES = ['1', '2', '3', '4', '5', '6'] as const;
 export const D8_D16_FACES = [
@@ -43,12 +44,6 @@ export const HASHED_DICE_METHODS = ['coldcard', 'coleman'] as const;
 export const DIRECT_DICE_METHODS = ['bitbox', 'd8d16'] as const;
 export const DICE_METHODS = [...HASHED_DICE_METHODS, ...DIRECT_DICE_METHODS] as const;
 export const WORD_COUNTS = [12, 15, 18, 21, 24] as const;
-
-const UPSTREAM_DICE_PLACEHOLDERS = {
-  bitbox: '111111 222224…',
-  d8d16: '100 2AF…',
-  hashed: '415263415263…',
-} as const;
 
 const DICE_METHOD_COPY_KEYS = {
   bitbox: {
@@ -212,11 +207,11 @@ export function directDiceProgressCopy(
     return `${progress}${extra}${skipped}`;
   }
 
-  const groups = formatCopy(entropyLabEnglish['dice.dplus.groups'], {
-    completed: state.completedGroups,
-    partial: state.partialWords,
-    word: state.activeWord,
-  });
+  const groups = UPSTREAM_UI_FALLBACK_COPY.dice.d8d16.groups(
+    state.completedGroups,
+    state.partialWords,
+    state.activeWord,
+  );
   const completeGroups = formatCopy(entropyLabEnglish['dice.dplus.rollsComplete'], {
     partial: state.partialWords,
   });
@@ -268,10 +263,10 @@ export function diceScreenCopy(
           });
   const inputPlaceholder =
     method === 'bitbox'
-      ? UPSTREAM_DICE_PLACEHOLDERS.bitbox
+      ? UPSTREAM_UI_FALLBACK_COPY.dice.placeholders.bitbox
       : method === 'd8d16'
-        ? UPSTREAM_DICE_PLACEHOLDERS.d8d16
-        : UPSTREAM_DICE_PLACEHOLDERS.hashed;
+        ? UPSTREAM_UI_FALLBACK_COPY.dice.placeholders.d8d16
+        : UPSTREAM_UI_FALLBACK_COPY.dice.placeholders.hashed;
 
   return {
     deriveAction: entropyLabEnglish['action.derive'],

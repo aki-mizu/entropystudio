@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 import entropyLabEnglish from '../../../../../entropylab/src/locales/en.json';
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
 import type { NumberBaseFormat } from '../numberBases';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
@@ -36,12 +37,12 @@ export function NumberBaseKeypad({
         canInsert={canInsert}
         canInsertSpace={canInsertSpace}
         colors={colors}
-        keyboardLabel={mode => `On-screen ${mode} Base64 entropy keyboard`}
+        keyboardLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.base64Entropy}
         keyboardTestID="number-base-keypad"
         keyTestIDPrefix="number-base-key-"
         modeControl="enabled"
         modeTestID="number-base-keypad-mode"
-        modeToggleLabel="Change Base64 keyboard character mode"
+        modeToggleLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.base64EntropyChangeMode()}
         onInsert={onInsert}
         spaceTestID="number-base-key-space"
         style={styles.keypad}

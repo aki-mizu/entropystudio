@@ -12,6 +12,7 @@ import {
   ReactTestRenderer,
   selectEntropyTool,
 } from '../../test/testSupport';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
 
 describe('Hashed cards', () => {
   test('derives a hashed card transcript through the native binding', async () => {
@@ -107,7 +108,7 @@ describe('Hashed cards', () => {
 
     await openCardsEntry(app!);
     expect(app!.root.findByProps({ testID: 'card-transcript-input' }).props.placeholder).toBe(
-      'A\u2660 2\u2663 T\u2665 T\u2666...',
+      UPSTREAM_UI_FALLBACK_COPY.cards.placeholders.ianColeman,
     );
     expect(app!.root.findByProps({ testID: 'card-transcript-input' }).props.value).toBe(
       'A\u2660 2\u2663',

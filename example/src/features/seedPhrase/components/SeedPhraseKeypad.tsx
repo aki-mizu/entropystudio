@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import entropyLabEnglish from '../../../../../entropylab/src/locales/en.json';
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
 
 export type SeedPhraseEntryMethod = 'numbers' | 'words';
 
@@ -60,7 +61,7 @@ export function SeedPhraseKeypad({
           ))}
         </View>
         <Pressable
-          accessibilityLabel="Enter next BIP39 word number"
+          accessibilityLabel={entropyLabEnglish['seed.nextWord']}
           accessibilityRole="button"
           disabled={!canInsertSpace}
           onPress={() => onInsert(' ')}
@@ -87,12 +88,12 @@ export function SeedPhraseKeypad({
       canInsert={canInsert}
       canInsertSpace={canInsertSpace}
       colors={colors}
-      keyboardLabel={() => 'On-screen lowercase seed phrase keyboard'}
+      keyboardLabel={() => UPSTREAM_UI_FALLBACK_COPY.keyboard.seedPhrase}
       keyboardTestID="seed-phrase-keypad"
       keyTestIDPrefix="seed-phrase-key-"
       modeControl="disabled"
       modeTestID="seed-phrase-keypad-mode"
-      modeToggleLabel="Character mode switching is available for the passphrase"
+      modeToggleLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.characterModeUnavailable}
       onInsert={onInsert}
       rowTestIDPrefix="seed-phrase-key-row-"
       spaceTestID="seed-phrase-key-space"

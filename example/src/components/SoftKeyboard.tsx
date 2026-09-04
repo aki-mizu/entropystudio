@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import type { DiceColors } from '../features/dice/diceTheme';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 const KEYBOARD_COLUMNS = 10;
@@ -94,7 +95,7 @@ export function SoftKeyboard({
             const enabled = canInsert(character);
             return (
               <Pressable
-                accessibilityLabel={`Enter ${character}`}
+                accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.enterCharacter(character)}
                 accessibilityRole="button"
                 disabled={!enabled}
                 key={character}
@@ -141,11 +142,13 @@ export function SoftKeyboard({
             ]}
             testID={modeTestID}
           >
-            <Text style={[styles.modeLabel, { color: colors.text }]}>aA1</Text>
+            <Text style={[styles.modeLabel, { color: colors.text }]}>
+              {UPSTREAM_UI_FALLBACK_COPY.keyboard.modeButton}
+            </Text>
           </Pressable>
         )}
         <Pressable
-          accessibilityLabel="Enter space"
+          accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.enterSpace}
           accessibilityRole="button"
           disabled={!canInsertSpace}
           onPress={() => onInsert(' ')}
@@ -159,7 +162,9 @@ export function SoftKeyboard({
           ]}
           testID={spaceTestID}
         >
-          <Text style={[styles.modeLabel, { color: colors.text }]}>space</Text>
+          <Text style={[styles.modeLabel, { color: colors.text }]}>
+            {UPSTREAM_UI_FALLBACK_COPY.keyboard.spaceButton}
+          </Text>
         </Pressable>
       </View>
     </View>

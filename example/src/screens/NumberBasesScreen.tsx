@@ -27,6 +27,7 @@ import {
   numberBaseFormatConfig,
 } from '../features/numberBases/numberBases';
 import type { NumberBaseFormat } from '../features/numberBases/numberBases';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
@@ -192,6 +193,10 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
     !/\s$/u.test(input) &&
     analysis.digitCount < analysis.config.digits;
   const inputHelp = numberBaseInputHelp(format, analysis.config);
+  const inputLabel = formatCopy(entropyLabEnglish['hex.entropyLabel'], {
+    label: analysis.config.label,
+    words: wordCount,
+  });
   let words = [...analysis.previewWords];
 
   if (entropy) {
@@ -302,9 +307,6 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
               <Text style={[styles.title, { color: colors.text }]} testID="number-bases-screen-title">
                 {entropyLabEnglish['mode.hex']}
               </Text>
-              <Text style={[styles.subtitle, { color: colors.muted }]}>
-                Enter entropy you already created
-              </Text>
             </View>
           </View>
 
@@ -361,7 +363,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
 
           <View style={styles.setupActionArea}>
             <Pressable
-              accessibilityLabel="Enter number base entropy"
+              accessibilityLabel={analysis.config.label}
               accessibilityRole="button"
               onPress={() => setActiveView('entry')}
               style={({ pressed }) => [
@@ -370,7 +372,9 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
               ]}
               testID="open-number-bases-entry"
             >
-              <Text style={[styles.buttonText, { color: colors.onAccent }]}>Enter entropy</Text>
+              <Text style={[styles.buttonText, { color: colors.onAccent }]}>
+                {analysis.config.label}
+              </Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -378,16 +382,20 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
         <View style={styles.entryContent} testID="number-bases-entry-view">
           <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
             <Pressable
-              accessibilityLabel="Back to number base settings"
+              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.common.back}
               accessibilityRole="button"
               onPress={() => setActiveView('setup')}
               style={styles.backButton}
               testID="close-number-bases-entry"
             >
-              <Text style={[styles.backButtonText, { color: colors.accent }]}>Back</Text>
+              <Text style={[styles.backButtonText, { color: colors.accent }]}>
+                {UPSTREAM_UI_FALLBACK_COPY.common.back}
+              </Text>
             </Pressable>
             <View style={styles.entryHeaderCopy}>
-              <Text style={[styles.entryTitle, { color: colors.text }]}>Seed</Text>
+              <Text style={[styles.entryTitle, { color: colors.text }]}>
+                {entropyLabEnglish['mode.seed']}
+              </Text>
               <Text style={[styles.entrySubtitle, { color: colors.muted }]}>
                 {analysis.config.label}
               </Text>
@@ -410,14 +418,10 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
               style={[styles.inputLabel, { color: colors.muted }]}
               testID="number-base-input-label"
             >
-              {`${analysis.config.label} entropy for a ${wordCount}-word seed`}
+              {inputLabel}
             </Text>
             <Pressable
-              accessibilityLabel={
-                selectedInput.end > selectedInput.start
-                  ? 'Remove selected entropy characters'
-                  : 'Remove entropy character before cursor'
-              }
+              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
               accessibilityRole="button"
               disabled={!canDeleteInput}
               onPress={deleteInputCharacter}
@@ -427,7 +431,9 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
               ]}
               testID="number-base-undo"
             >
-              <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
+              <Text style={[styles.undoLabel, { color: colors.accent }]}>
+                {UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
+              </Text>
             </Pressable>
           </View>
           {format === 'base64' ? (
@@ -453,7 +459,7 @@ export function NumberBasesScreen({ activeTool, isActive, isDarkMode, onSelectTo
           )}
           <View style={[styles.inputSurface, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <TextInput
-              accessibilityLabel={`${analysis.config.label} entropy`}
+              accessibilityLabel={inputLabel}
               autoCapitalize={format === 'base64' ? 'none' : 'characters'}
               autoComplete="off"
               autoCorrect={false}

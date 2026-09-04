@@ -4,6 +4,7 @@ import type { TextInputInstance } from 'react-native';
 import { formatDiceTranscript } from '../dice';
 import type { DiceMethod, WordCount } from '../dice';
 import type { DiceColors } from '../diceTheme';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
 
 export type DiceTranscriptSelection = {
   readonly end: number;
@@ -47,7 +48,6 @@ export function DiceTranscriptInput({
   const displaySelection = selection
     ? displaySelectionFromRawSelection(displayRolls, selection)
     : undefined;
-  const hasSelectedRange = Boolean(selection && selection.end > selection.start);
   const isD8D16 = method === 'd8d16';
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export function DiceTranscriptInput({
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={hasSelectedRange ? 'Remove selected rolls' : 'Remove roll before cursor'}
+          accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
           disabled={rolls.length === 0}
           onPress={() => {
             const result = removeDiceRollAtSelection(rolls, selection);
@@ -82,7 +82,9 @@ export function DiceTranscriptInput({
           ]}
           testID="remove-dice-roll"
         >
-          <Text style={[styles.undoLabel, { color: colors.accent }]}>Undo</Text>
+          <Text style={[styles.undoLabel, { color: colors.accent }]}>
+            {UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
+          </Text>
         </Pressable>
       </View>
       <View
@@ -214,9 +216,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   label: {
+    flex: 1,
     fontSize: 12,
     fontWeight: '700',
     marginBottom: 10,
+    minWidth: 0,
+    paddingRight: 12,
   },
   progressFill: {
     borderRadius: 2,

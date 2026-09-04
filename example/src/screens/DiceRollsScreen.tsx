@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import entropyLabEnglish from '../../../entropylab/src/locales/en.json';
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
 import { DirectDiceFinalWordPicker } from '../features/dice/components/DirectDiceFinalWordPicker';
@@ -22,6 +23,7 @@ import { WordCountSelector } from '../features/dice/components/WordCountSelector
 import { D8_D16_FACES } from '../features/dice/dice';
 import type { DiceInputFace } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
 import { useDiceRolls } from '../features/dice/useDiceRolls';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
@@ -202,7 +204,7 @@ export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool
 
           <View style={styles.setupActionArea}>
             <Pressable
-              accessibilityLabel="Enter dice rolls"
+              accessibilityLabel={copy.inputLabel}
               accessibilityRole="button"
               onPress={() => setActiveView('entry')}
               style={({ pressed }) => [
@@ -214,7 +216,7 @@ export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool
               ]}
               testID="open-dice-entry"
             >
-              <Text style={[styles.buttonText, { color: colors.onAccent }]}>Enter rolls</Text>
+              <Text style={[styles.buttonText, { color: colors.onAccent }]}>{copy.inputLabel}</Text>
             </Pressable>
           </View>
         </View>
@@ -222,16 +224,20 @@ export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool
         <View style={styles.entryContent} testID="dice-rolls-view">
           <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
             <Pressable
-              accessibilityLabel="Back to dice settings"
+              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.common.back}
               accessibilityRole="button"
               onPress={() => setActiveView('setup')}
               style={styles.backButton}
               testID="close-dice-entry"
             >
-              <Text style={[styles.backButtonText, { color: colors.accent }]}>Back</Text>
+              <Text style={[styles.backButtonText, { color: colors.accent }]}>
+                {UPSTREAM_UI_FALLBACK_COPY.common.back}
+              </Text>
             </Pressable>
             <View style={styles.entryHeaderCopy}>
-              <Text style={[styles.entryTitle, { color: colors.text }]}>Seed</Text>
+              <Text style={[styles.entryTitle, { color: colors.text }]}>
+                {entropyLabEnglish['mode.seed']}
+              </Text>
               <Text style={[styles.entrySubtitle, { color: colors.muted }]}>
                 {copy.seedLengthValue}
               </Text>
@@ -300,7 +306,6 @@ export function DiceRollsScreen({ activeTool, isActive, isDarkMode, onSelectTool
               colors={colors}
               enabledFaces={enabledFaces}
               faces={method === 'd8d16' ? D8_D16_FACES : undefined}
-              inputLabel={copy.inputLabel}
               maxTileSize={maxTileSize}
               onSelect={insertDiceFace}
             />

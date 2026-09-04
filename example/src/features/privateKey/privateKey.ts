@@ -105,41 +105,43 @@ export function privateKeyProgressText(
   state: PrivateKeyInputState,
   format: PrivateKeyInputFormat,
 ): string {
+  const { progress } = UPSTREAM_UI_FALLBACK_COPY.privateKey;
+
   switch (format) {
     case 'wif':
       if (state.canDerive) {
-        return `${state.enteredCount} of ${state.requiredCount} WIF characters entered · Bitcoin mainnet checksum valid · ready to derive`;
+        return progress.wif.ready(state.enteredCount, state.requiredCount);
       }
       if (state.requiredCount === 0) {
-        return `${state.enteredCount} of ${state.minimumCount} or ${state.maximumCount} WIF characters entered · starts with 5, K, or L`;
+        return progress.wif.prefix(state.enteredCount, state.minimumCount, state.maximumCount);
       }
       if (state.excessCount > 0) {
-        return `${state.enteredCount} WIF characters entered · ${state.requiredCount} required`;
+        return progress.wif.excess(state.enteredCount, state.requiredCount);
       }
-      return `${state.enteredCount} of ${state.requiredCount} WIF characters entered · ${state.remainingCount} remaining`;
+      return progress.wif.remaining(state.enteredCount, state.requiredCount, state.remainingCount);
     case 'hex':
       if (state.canDerive) {
-        return `${state.enteredCount} of ${state.requiredCount} hexadecimal characters entered · valid secp256k1 private key · ready to derive`;
+        return progress.hex.ready(state.enteredCount, state.requiredCount);
       }
       if (state.excessCount > 0) {
-        return `${state.enteredCount} hexadecimal characters entered · ${state.requiredCount} required`;
+        return progress.hex.excess(state.enteredCount, state.requiredCount);
       }
-      return `${state.enteredCount} of ${state.requiredCount} hexadecimal characters entered · ${state.remainingCount} remaining`;
+      return progress.hex.remaining(state.enteredCount, state.requiredCount, state.remainingCount);
     case 'mini':
       if (state.canDerive) {
-        return `${state.enteredCount} of ${state.requiredCount} Mini-key characters entered · checksum valid · ready to derive`;
+        return progress.mini.ready(state.enteredCount, state.requiredCount);
       }
       if (state.status === PrivateKeyInputStatus.Prefix) {
-        return `0 of ${state.minimumCount} or ${state.maximumCount} Mini-key characters entered · must start with S`;
+        return progress.mini.prefix(state.minimumCount, state.maximumCount);
       }
       if (state.excessCount > 0) {
-        return `${state.enteredCount} Mini-key characters entered · ${state.maximumCount} maximum`;
+        return progress.mini.excess(state.enteredCount, state.maximumCount);
       }
-      return `${state.enteredCount} of ${state.requiredCount} Mini-key characters entered · ${state.remainingCount} remaining`;
+      return progress.mini.remaining(state.enteredCount, state.requiredCount, state.remainingCount);
     case 'brain':
       return state.status === PrivateKeyInputStatus.Empty
-        ? 'No text entered · brain wallets are unsafe'
-        : 'Text entered · exact text will be used · brain wallets are unsafe';
+        ? progress.brain.empty()
+        : progress.brain.entered();
   }
 }
 

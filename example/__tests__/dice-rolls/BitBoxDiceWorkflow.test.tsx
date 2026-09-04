@@ -14,6 +14,7 @@ import {
   ReactTestRenderer,
   selectDiceMethod,
 } from '../../test/testSupport';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
 
 test('uses EntropyLab BitBox help copy', () => {
   expect(diceScreenCopy('bitbox', 24).inputHelp).toBe(
@@ -129,7 +130,7 @@ test('removes a selected BitBox dice range through Undo', async () => {
 
   expect(
     app!.root.findByProps({ testID: 'remove-dice-roll' }).props.accessibilityLabel,
-  ).toBe('Remove selected rolls');
+  ).toBe(UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter);
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'remove-dice-roll' }).props.onPress();

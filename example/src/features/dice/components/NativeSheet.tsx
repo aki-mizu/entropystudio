@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { DiceColors } from '../diceTheme';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
 
 type Props = {
   readonly children: ReactNode;
@@ -37,7 +38,7 @@ export function NativeSheet({
     >
       <View style={styles.overlay}>
         <Pressable
-          accessibilityLabel={`Close ${title}`}
+          accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.common.cancel}
           accessibilityRole="button"
           onPress={onDismiss}
           style={styles.backdrop}
@@ -60,13 +61,15 @@ export function NativeSheet({
               {title}
             </Text>
             <Pressable
-              accessibilityLabel={`Close ${title}`}
+              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.common.cancel}
               accessibilityRole="button"
               onPress={onDismiss}
               style={styles.closeButton}
               testID={`${testID}-close`}
             >
-              <Text style={[styles.closeText, { color: colors.accent }]}>Close</Text>
+              <Text style={[styles.closeText, { color: colors.accent }]}>
+                {UPSTREAM_UI_FALLBACK_COPY.common.cancel}
+              </Text>
             </Pressable>
           </View>
           {children}

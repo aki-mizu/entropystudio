@@ -18,6 +18,7 @@ import {
   BRAIN_WALLET_WARNING_COPY,
   brainWalletOutputCopy,
 } from '../../src/features/privateKey/privateKey';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
 
 const WIF = 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn';
 
@@ -75,7 +76,7 @@ describe('Private Key', () => {
     );
     expect(app!.root.findAllByProps({ testID: 'private-key-status' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'private-key-keypad' }).props.accessibilityLabel).toBe(
-      'On-screen number WIF keyboard',
+      UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKey('number'),
     );
     expect(app!.root.findByProps({ testID: 'private-key-key-1' }).props.disabled).toBe(false);
     expect(app!.root.findByProps({ testID: 'private-key-key-0' }).props.disabled).toBe(true);
@@ -173,7 +174,7 @@ describe('Private Key', () => {
     });
 
     expect(app!.root.findByProps({ testID: 'private-key-prefix-keypad' }).props.accessibilityLabel).toBe(
-      'Choose the first Mini key character',
+      UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKeyInitial('mini'),
     );
     expect(app!.root.findByProps({ testID: 'private-key-progress' }).props.children).toBe(
       '0 of 22 or 30 Mini-key characters entered · must start with S',
@@ -188,7 +189,7 @@ describe('Private Key', () => {
       '1 of 22 Mini-key characters entered · 21 remaining',
     );
     expect(app!.root.findByProps({ testID: 'private-key-keypad' }).props.accessibilityLabel).toBe(
-      'On-screen upper Mini key keyboard',
+      UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKey('upper'),
     );
     expect(app!.root.findByProps({ testID: 'private-key-key-A' }).props.disabled).toBe(false);
   });

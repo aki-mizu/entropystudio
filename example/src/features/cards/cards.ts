@@ -16,6 +16,7 @@ import {
 import type { DirectCardState, HashedCardState } from '../../native/entropyStudio';
 import type { WordCount } from '../dice/dice';
 import entropyLabEnglish from '../../../../entropylab/src/locales/en.json';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
 
 export const CARD_METHODS = ['hashed', 'direct'] as const;
 export const CARD_RANKS = [
@@ -34,10 +35,10 @@ export const CARD_RANKS = [
   'K',
 ] as const;
 export const CARD_SUITS = [
-  { code: 'S', symbol: '\u2660', red: false },
-  { code: 'H', symbol: '\u2665', red: true },
-  { code: 'C', symbol: '\u2663', red: false },
-  { code: 'D', symbol: '\u2666', red: true },
+  { code: 'S', label: UPSTREAM_UI_FALLBACK_COPY.cards.suits.spades, symbol: '\u2660', red: false },
+  { code: 'H', label: UPSTREAM_UI_FALLBACK_COPY.cards.suits.hearts, symbol: '\u2665', red: true },
+  { code: 'C', label: UPSTREAM_UI_FALLBACK_COPY.cards.suits.clubs, symbol: '\u2663', red: false },
+  { code: 'D', label: UPSTREAM_UI_FALLBACK_COPY.cards.suits.diamonds, symbol: '\u2666', red: true },
 ] as const;
 export const DIRECT_CARD_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8'] as const;
 
@@ -100,15 +101,15 @@ export function cardScreenCopy(
     how: formatCopy(entropyLabEnglish['cards.how'], { words: wordCount }),
     inputHelp: isDirect
       ? formatCopy(entropyLabEnglish['cards.help.direct'], { partialWords: wordCount - 1 })
-      : formatCopy(entropyLabEnglish['cards.help.hashed'], { deal }),
+      : UPSTREAM_UI_FALLBACK_COPY.cards.hashedInputHelp(deal),
     inputLabel: isDirect
       ? entropyLabEnglish['cards.transcriptDirect']
       : entropyLabEnglish['cards.transcript'],
     inputPlaceholder: isDirect
-      ? 'A284 37A2...'
+      ? UPSTREAM_UI_FALLBACK_COPY.cards.placeholders.direct
       : matchesIanColeman
-        ? 'A\u2660 2\u2663 T\u2665 T\u2666...'
-        : 'As Th Td...',
+        ? UPSTREAM_UI_FALLBACK_COPY.cards.placeholders.ianColeman
+        : UPSTREAM_UI_FALLBACK_COPY.cards.placeholders.standard,
     mode: entropyLabEnglish['mode.cards'],
     resultEntropy: entropyLabEnglish['result.entropyHex'],
     seedLengthLabel: entropyLabEnglish['seedLength.label'],
