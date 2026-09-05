@@ -25,7 +25,11 @@ import {
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { SeedPhraseKeypad } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import type { SeedPhraseEntryMethod } from '../features/seedPhrase/components/SeedPhraseKeypad';
-import { Bip39PassphraseButton, Bip39PassphraseView } from '../features/seedPhrase/bip39Passphrase';
+import {
+  Bip39PassphraseButton,
+  Bip39PassphraseView,
+  useBip39PassphraseOptions,
+} from '../features/seedPhrase/bip39Passphrase';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '../features/upstreamUiCopy';
 import {
   analyzeSeedPhrase,
@@ -112,6 +116,7 @@ export function SeedPhraseScreen({
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
   const [numberInput, setNumberInput] = useState('');
   const [passphrase, setPassphrase] = useState('');
+  const passphraseOptions = useBip39PassphraseOptions(passphrase);
   const [result, setResult] = useState<DiceResult | null>(null);
   const [seedMethod, setSeedMethod] = useState<SeedPhraseEntryMethod>('words');
   const [wordInput, setWordInput] = useState('');
@@ -145,6 +150,7 @@ export function SeedPhraseScreen({
       entropy = null;
     }
   }
+  const canDeriveWithPassphrase = Boolean(entropy) && passphraseOptions.canDerive;
 
   useRegisterCurrentEntropySyncRequest(isActive, {
     selectedFinalWord: '',
@@ -302,7 +308,7 @@ export function SeedPhraseScreen({
   }
 
   function showResult() {
-    if (!entropy) {
+    if (!entropy || !passphraseOptions.canDerive) {
       return;
     }
 
@@ -570,13 +576,13 @@ export function SeedPhraseScreen({
 
           <Pressable
             accessibilityRole="button"
-            disabled={!entropy}
+            disabled={!canDeriveWithPassphrase}
             onPress={showResult}
             style={({ pressed }) => [
               styles.button,
               {
                 backgroundColor: colors.accent,
-                opacity: !entropy ? 0.45 : pressed ? 0.82 : 1,
+                opacity: !canDeriveWithPassphrase ? 0.45 : pressed ? 0.82 : 1,
               },
             ]}
             testID="derive-seed-phrase"
@@ -593,6 +599,7 @@ export function SeedPhraseScreen({
           inputTestID="seed-phrase-passphrase-input"
           onBack={() => setActiveView('entry')}
           onChangePassphrase={setPassphrase}
+          options={passphraseOptions}
           screenTestID="seed-phrase-passphrase-view"
           value={passphrase}
         />

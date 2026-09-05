@@ -1,4 +1,5 @@
 import {
+  Bip39PassphraseState,
   CardHashMethod,
   CardInputMethod,
   DirectCardStep as GeneratedDirectCardStep,
@@ -15,6 +16,10 @@ import {
   SeedPhraseStatus as GeneratedSeedPhraseStatus,
   analyzeNumberBaseInput,
   bip39EntropyBits,
+  bip39PassphraseAutocomplete,
+  bip39PassphraseKeyAllowed,
+  bip39PassphraseSpaceAllowed,
+  bip39PassphraseState,
   cardKeyAllowed,
   cardTranscriptToEntropy,
   diceMethodInfo,
@@ -144,6 +149,10 @@ export {
   GeneratedNumberBaseFormat as NumberBaseFormat,
   analyzeNumberBaseInput,
   bip39EntropyBits,
+  bip39PassphraseAutocomplete,
+  bip39PassphraseKeyAllowed,
+  bip39PassphraseSpaceAllowed,
+  bip39PassphraseState,
   cardKeyAllowed,
   cardTranscriptToEntropy,
   diceMethodInfo,
@@ -175,6 +184,7 @@ export {
 };
 
 export type {
+  Bip39PassphraseState,
   DiceMethodInfo,
   DirectCardState,
   DirectDiceState,

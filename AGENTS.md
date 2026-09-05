@@ -22,19 +22,25 @@ Guidelines for AI coding agents.
   native domain rules or introduce TypeScript fallbacks for them.
 - When the UI needs domain information, expose it through a typed Rust/UniFFI
   API or state record.
+- Do not duplicate code when an existing implementation or shared helper can
+  satisfy the behavior. Extend or reuse the owning abstraction instead; add a
+  new abstraction only when the behavior or ownership boundary is genuinely
+  different.
 
 ## Copy and Localization
 
-- All visible and accessibility copy in `example/src/` must first be verified
-  as text rendered by the pinned upstream UI, except the narrowly scoped
-  Studio navigation copy in `example/src/features/studioUiCopy.ts`.
-  EntropyLab uses content-keyed localization: English source text is the key,
-  and upstream has no `en.json`.
+- All visible and accessibility copy in `example/src/` must be sourced from
+  text visibly rendered by the pinned upstream UI, except the narrowly scoped
+  Studio navigation copy in `example/src/features/studioUiCopy.ts`. An
+  upstream accessibility label is not visibly rendered UI copy and must not
+  be copied into Studio. EntropyLab uses content-keyed localization: English
+  source text is the key, and upstream has no `en.json`.
 - `example/src/features/upstreamUiCopy.ts` is Studio's sole source of upstream
   UI copy. `UPSTREAM_TEXT` provides static semantic aliases,
   `UPSTREAM_UI_LABELS` owns direct `i18n-labels.js` imports, and
   `UPSTREAM_UI_FALLBACK_COPY` holds direct `app.js`-derived values and
-  formatters. Elsewhere, import those exports instead of using literal source
+  formatters only when they are visibly rendered upstream and unavailable in
+  `es.json`. Elsewhere, import those exports instead of using literal source
   text or importing upstream labels directly.
 - `example/src/features/studioUiCopy.ts` is the sole approved exception for
   Studio-authored navigation. It currently permits only the `Settings` tab

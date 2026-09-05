@@ -1,6 +1,10 @@
 import {
   SeedPhraseInputMethod,
   SeedPhraseStatus,
+  bip39PassphraseAutocomplete as nativeBip39PassphraseAutocomplete,
+  bip39PassphraseKeyAllowed as nativeBip39PassphraseKeyAllowed,
+  bip39PassphraseSpaceAllowed as nativeBip39PassphraseSpaceAllowed,
+  bip39PassphraseState as nativeBip39PassphraseState,
   seedPhraseAutocomplete as nativeSeedPhraseAutocomplete,
   seedPhraseKeyAllowed as nativeSeedPhraseKeyAllowed,
   seedPhraseNumbersToWords as nativeSeedPhraseNumbersToWords,
@@ -10,6 +14,7 @@ import {
   translateSeedNumberIndices as nativeTranslateSeedNumberIndices,
 } from '../../native/entropyStudio';
 import type {
+  Bip39PassphraseState,
   SeedPhraseAutocompleteResult,
   SeedPhraseState,
 } from '../../native/entropyStudio';
@@ -18,6 +23,36 @@ import type { SeedPhraseEntryMethod } from './components/SeedPhraseKeypad';
 import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
 
 type InputSelection = { readonly end: number; readonly start: number };
+
+export function analyzeBip39Passphrase(
+  value: string,
+  activeCaret?: number,
+): Bip39PassphraseState {
+  return nativeBip39PassphraseState(value, activeCaret);
+}
+
+export function bip39PassphraseKeyAllowed(
+  value: string,
+  selection: InputSelection,
+  character: string,
+): boolean {
+  return nativeBip39PassphraseKeyAllowed(value, selection.start, selection.end, character);
+}
+
+export function bip39PassphraseSpaceAllowed(
+  value: string,
+  selection: InputSelection,
+): boolean {
+  return nativeBip39PassphraseSpaceAllowed(value, selection.start, selection.end);
+}
+
+export function bip39PassphraseAutocomplete(
+  value: string,
+  cursor: number,
+  enabled: boolean,
+): SeedPhraseAutocompleteResult {
+  return nativeBip39PassphraseAutocomplete(value, cursor, enabled);
+}
 
 export function analyzeSeedPhrase(
   value: string,
@@ -160,6 +195,38 @@ export function seedPhraseStatusCopy(
   }
 }
 
+export function bip39PassphraseStatusCopy(state: Bip39PassphraseState): string {
+  if (state.invalidCount) {
+    return formatPassphraseWordCountCopy(
+      state.invalidCount,
+      UPSTREAM_TEXT.passphrase.inconsistentOne,
+      UPSTREAM_TEXT.passphrase.inconsistentMany,
+    );
+  }
+  if (state.incomplete) {
+    return formatPassphraseWordCountCopy(
+      state.completeWords,
+      UPSTREAM_TEXT.passphrase.incompleteOne,
+      UPSTREAM_TEXT.passphrase.incompleteMany,
+    );
+  }
+  if (state.trailingSeparator) {
+    return formatPassphraseWordCountCopy(
+      state.completeWords,
+      UPSTREAM_TEXT.passphrase.trailingSeparatorOne,
+      UPSTREAM_TEXT.passphrase.trailingSeparatorMany,
+    );
+  }
+  if (state.completeWords) {
+    return formatPassphraseWordCountCopy(
+      state.completeWords,
+      UPSTREAM_TEXT.passphrase.wordsEnteredOne,
+      UPSTREAM_TEXT.passphrase.wordsEnteredMany,
+    );
+  }
+  return UPSTREAM_TEXT.passphrase.wordsHelp;
+}
+
 function nativeInputMethod(method: SeedPhraseEntryMethod) {
   return method === 'words' ? SeedPhraseInputMethod.Words : SeedPhraseInputMethod.Numbers;
 }
@@ -169,4 +236,12 @@ function formatCopy(template: string, values: Record<string, number | string>): 
     (copy, [key, value]) => copy.replaceAll(`{${key}}`, String(value)),
     template,
   );
+}
+
+function formatPassphraseWordCountCopy(
+  count: number,
+  singular: string,
+  plural: string,
+): string {
+  return formatCopy(count === 1 ? singular : plural, { n: count });
 }

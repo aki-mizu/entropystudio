@@ -35,10 +35,11 @@ pub use private_key::{
 	PrivateKeyInputState, PrivateKeyInputStatus,
 };
 pub use seed_phrase::{
-	seed_phrase_autocomplete, seed_phrase_key_allowed, seed_phrase_numbers_to_words,
-	seed_phrase_space_allowed, seed_phrase_state, seed_phrase_words_to_numbers,
-	translate_seed_number_indices, SeedPhraseAutocompleteResult, SeedPhraseInputMethod,
-	SeedPhraseState, SeedPhraseStatus,
+	bip39_passphrase_autocomplete, bip39_passphrase_key_allowed, bip39_passphrase_space_allowed,
+	bip39_passphrase_state, seed_phrase_autocomplete, seed_phrase_key_allowed,
+	seed_phrase_numbers_to_words, seed_phrase_space_allowed, seed_phrase_state,
+	seed_phrase_words_to_numbers, translate_seed_number_indices, Bip39PassphraseState,
+	SeedPhraseAutocompleteResult, SeedPhraseInputMethod, SeedPhraseState, SeedPhraseStatus,
 };
 
 #[cfg(test)]

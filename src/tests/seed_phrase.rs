@@ -173,3 +173,58 @@ fn seed_phrase_state_owns_words_checksum_candidates_and_number_indexes() {
         Err(EntropyStudioError::UnsupportedDiceWordCount)
     ));
 }
+
+#[test]
+fn bip39_word_passphrase_state_owns_unbounded_word_admission() {
+    let empty = bip39_passphrase_state(String::new(), None);
+    assert!(empty.can_derive);
+    assert_eq!(empty.complete_words, 0);
+
+    let valid = bip39_passphrase_state("abandon zoo".to_owned(), None);
+    assert!(valid.can_derive);
+    assert_eq!(valid.complete_words, 2);
+
+    let incomplete = bip39_passphrase_state("aban".to_owned(), Some(4));
+    assert!(!incomplete.can_derive);
+    assert!(incomplete.incomplete);
+    assert_eq!(incomplete.invalid_count, 0);
+
+    let invalid = bip39_passphrase_state("aban".to_owned(), None);
+    assert!(!invalid.can_derive);
+    assert!(!invalid.incomplete);
+    assert_eq!(invalid.invalid_count, 1);
+
+    let trailing = bip39_passphrase_state("abandon ".to_owned(), None);
+    assert!(!trailing.can_derive);
+    assert!(trailing.trailing_separator);
+    assert_eq!(trailing.invalid_count, 0);
+
+    let spacing = bip39_passphrase_state("abandon  zoo".to_owned(), None);
+    assert!(!spacing.can_derive);
+    assert_eq!(spacing.invalid_count, 1);
+
+    let uppercase = bip39_passphrase_state("Abandon".to_owned(), None);
+    assert!(!uppercase.can_derive);
+    assert_eq!(uppercase.invalid_count, 1);
+
+    assert!(bip39_passphrase_key_allowed(
+        "aba".to_owned(),
+        3,
+        3,
+        "n".to_owned(),
+    ));
+    assert!(!bip39_passphrase_key_allowed(
+        "aba".to_owned(),
+        3,
+        3,
+        "z".to_owned(),
+    ));
+    assert!(bip39_passphrase_space_allowed("abandon".to_owned(), 7, 7,));
+    assert!(!bip39_passphrase_space_allowed("abando".to_owned(), 6, 6,));
+
+    let completed = bip39_passphrase_autocomplete("aban".to_owned(), 4, true);
+    assert_eq!(completed.value, "abandon ");
+    assert_eq!(completed.cursor, 8);
+    let uppercase_completed = bip39_passphrase_autocomplete("ABAN".to_owned(), 4, true);
+    assert_eq!(uppercase_completed.value, "abandon ");
+}

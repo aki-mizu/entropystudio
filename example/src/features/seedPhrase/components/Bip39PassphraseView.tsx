@@ -1,7 +1,14 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
+import {
+  analyzeBip39Passphrase,
+  bip39PassphraseAutocomplete,
+  bip39PassphraseKeyAllowed,
+  bip39PassphraseSpaceAllowed,
+  bip39PassphraseStatusCopy,
+} from '../seedPhrase';
 import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
@@ -19,8 +26,17 @@ type ViewProps = {
   readonly inputTestID: string;
   readonly onBack: () => void;
   readonly onChangePassphrase: (value: string) => void;
+  readonly options: Bip39PassphraseOptions;
   readonly screenTestID: string;
   readonly value: string;
+};
+
+export type Bip39PassphraseOptions = {
+  readonly autocompleteEnabled: boolean;
+  readonly buildFromBip39Words: boolean;
+  readonly canDerive: boolean;
+  readonly setAutocompleteEnabled: (enabled: boolean) => void;
+  readonly setBuildFromBip39Words: (enabled: boolean) => void;
 };
 
 type InputSelection = {
@@ -43,6 +59,20 @@ function replaceInputSelection(
   inserted: string,
 ): string {
   return `${value.slice(0, selection.start)}${inserted}${value.slice(selection.end)}`;
+}
+
+export function useBip39PassphraseOptions(value: string): Bip39PassphraseOptions {
+  const [autocompleteEnabled, setAutocompleteEnabled] = useState(true);
+  const [buildFromBip39Words, setBuildFromBip39Words] = useState(false);
+  const state = buildFromBip39Words ? analyzeBip39Passphrase(value) : null;
+
+  return {
+    autocompleteEnabled,
+    buildFromBip39Words,
+    canDerive: !buildFromBip39Words || Boolean(state?.canDerive),
+    setAutocompleteEnabled,
+    setBuildFromBip39Words,
+  };
 }
 
 export function Bip39PassphraseButton({
@@ -83,18 +113,66 @@ export function Bip39PassphraseView({
   inputTestID,
   onBack,
   onChangePassphrase,
+  options,
   screenTestID,
   value,
 }: ViewProps) {
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
   const selectedInput = normalizedInputSelection(value, inputSelection);
+  const bip39State = options.buildFromBip39Words
+    ? analyzeBip39Passphrase(value, selectedInput.start)
+    : null;
   const canDeleteInput = selectedInput.end > selectedInput.start || selectedInput.start > 0;
+  const hasInvalidBip39Input = Boolean(bip39State?.invalidCount);
+
+  function canInsertInputCharacter(character: string) {
+    return (
+      !options.buildFromBip39Words ||
+      bip39PassphraseKeyAllowed(value, selectedInput, character)
+    );
+  }
+
+  function canInsertInputSpace() {
+    return (
+      !options.buildFromBip39Words || bip39PassphraseSpaceAllowed(value, selectedInput)
+    );
+  }
+
+  function changeAutocompleteEnabled(enabled: boolean) {
+    options.setAutocompleteEnabled(enabled);
+    if (!enabled || selectedInput.start !== selectedInput.end) {
+      return;
+    }
+
+    const autocompleted = bip39PassphraseAutocomplete(value, selectedInput.end, true);
+    if (autocompleted.value === value) {
+      return;
+    }
+
+    const cursor = Math.min(autocompleted.cursor, autocompleted.value.length);
+    setInputSelection({ end: cursor, start: cursor });
+    onChangePassphrase(autocompleted.value);
+  }
 
   function insertInputCharacter(character: string) {
-    const nextValue = replaceInputSelection(value, selectedInput, character);
-    const cursor = selectedInput.start + character.length;
+    const canInsert =
+      character === ' ' ? canInsertInputSpace() : canInsertInputCharacter(character);
+    if (!canInsert) {
+      return;
+    }
+
+    const insertedValue = replaceInputSelection(value, selectedInput, character);
+    const insertedCursor = selectedInput.start + character.length;
+    const autocompleted = options.buildFromBip39Words
+      ? bip39PassphraseAutocomplete(
+          insertedValue,
+          insertedCursor,
+          options.autocompleteEnabled,
+        )
+      : { cursor: insertedCursor, value: insertedValue };
+    const cursor = Math.min(autocompleted.cursor, autocompleted.value.length);
     setInputSelection({ end: cursor, start: cursor });
-    onChangePassphrase(nextValue);
+    onChangePassphrase(autocompleted.value);
   }
 
   function deleteInputCharacter() {
@@ -131,6 +209,47 @@ export function Bip39PassphraseView({
       </View>
 
       <View style={styles.form}>
+        <View style={styles.bip39Options}>
+          <View style={styles.bip39Toggle}>
+            <View style={styles.bip39Copy}>
+              <Text
+                style={[styles.bip39Label, { color: colors.text }]}
+                testID="bip39-passphrase-bip39-label"
+              >
+                {UPSTREAM_TEXT.passphrase.buildFromWords}
+              </Text>
+              <Text
+                style={[styles.bip39Note, { color: colors.muted }]}
+                testID="bip39-passphrase-bip39-note"
+              >
+                {UPSTREAM_TEXT.passphrase.wordsNote}
+              </Text>
+            </View>
+            <Switch
+              accessibilityLabel={UPSTREAM_TEXT.passphrase.buildFromWords}
+              onValueChange={options.setBuildFromBip39Words}
+              testID="bip39-passphrase-bip39-toggle"
+              thumbColor={options.buildFromBip39Words ? colors.surface : colors.muted}
+              trackColor={{ false: colors.segment, true: colors.accent }}
+              value={options.buildFromBip39Words}
+            />
+          </View>
+          {options.buildFromBip39Words ? (
+            <View style={styles.autocompleteToggle}>
+              <Text style={[styles.bip39Label, { color: colors.text }]}>
+                {UPSTREAM_TEXT.passphrase.autocomplete}
+              </Text>
+              <Switch
+                accessibilityLabel={UPSTREAM_TEXT.passphrase.autocomplete}
+                onValueChange={changeAutocompleteEnabled}
+                testID="bip39-passphrase-autocomplete"
+                thumbColor={options.autocompleteEnabled ? colors.surface : colors.muted}
+                trackColor={{ false: colors.segment, true: colors.accent }}
+                value={options.autocompleteEnabled}
+              />
+            </View>
+          ) : null}
+        </View>
         <View style={styles.inputHeader}>
           <Text style={[styles.label, { color: colors.muted }]}>
             {UPSTREAM_TEXT.passphrase.label}
@@ -155,6 +274,7 @@ export function Bip39PassphraseView({
           style={[
             styles.inputSurface,
             { backgroundColor: colors.surface, borderColor: colors.border },
+            hasInvalidBip39Input && { borderColor: colors.error },
           ]}
         >
           <TextInput
@@ -178,15 +298,28 @@ export function Bip39PassphraseView({
             textContentType="none"
             value={value}
           />
+          {bip39State ? (
+            <Text
+              style={[
+                styles.bip39Status,
+                { color: hasInvalidBip39Input ? colors.error : colors.muted },
+                bip39State.canDerive && value.length > 0 && { color: colors.accent },
+              ]}
+              testID="bip39-passphrase-bip39-status"
+            >
+              {bip39PassphraseStatusCopy(bip39State)}
+            </Text>
+          ) : null}
         </View>
         <SoftKeyboard
-          canInsert={() => true}
-          canInsertSpace
+          canInsert={canInsertInputCharacter}
+          canInsertSpace={canInsertInputSpace()}
           colors={colors}
+          key={options.buildFromBip39Words ? 'bip39-words' : 'passphrase'}
           keyboardLabel={() => UPSTREAM_TEXT.passphrase.label}
           keyboardTestID="bip39-passphrase-keypad"
           keyTestIDPrefix="bip39-passphrase-key-"
-          modeControl="enabled"
+          modeControl={options.buildFromBip39Words ? 'disabled' : 'enabled'}
           modeTestID="bip39-passphrase-keypad-mode"
           modeToggleLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.modeButton}
           onInsert={insertInputCharacter}
@@ -207,6 +340,38 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  autocompleteToggle: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  bip39Copy: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 12,
+  },
+  bip39Label: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  bip39Note: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  bip39Options: {
+    gap: 8,
+    marginBottom: 14,
+  },
+  bip39Status: {
+    fontSize: 12,
+    lineHeight: 17,
+    paddingBottom: 8,
+    paddingHorizontal: 10,
+  },
+  bip39Toggle: {
+    alignItems: 'center',
+    flexDirection: 'row',
   },
   button: {
     alignItems: 'center',

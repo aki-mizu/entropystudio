@@ -4,6 +4,10 @@
 
 import {
   App,
+  mockBip39PassphraseAutocomplete,
+  mockBip39PassphraseKeyAllowed,
+  mockBip39PassphraseSpaceAllowed,
+  mockBip39PassphraseState,
   mockDiceRollsToEntropy,
   mockEntropyToMnemonic,
   mockMnemonicToSeed,
@@ -51,6 +55,79 @@ describe('Dice Rolls / BIP39 passphrase', () => {
       app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.scrollEnabled,
     ).toBe(true);
     expect(app!.root.findByProps({ testID: 'bip39-passphrase-keypad' })).toBeDefined();
+
+    mockBip39PassphraseState.mockReturnValue({
+      canDerive: false,
+      completeWords: 0,
+      incomplete: false,
+      invalidCount: 1,
+      trailingSeparator: false,
+    });
+    mockBip39PassphraseKeyAllowed.mockReturnValue(false);
+    mockBip39PassphraseSpaceAllowed.mockReturnValue(false);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'bip39-passphrase-bip39-toggle' }).props.onValueChange(true);
+    });
+
+    expect(
+      app!.root.findByProps({ testID: 'bip39-passphrase-bip39-label' }).props.children,
+    ).toBe(UPSTREAM_TEXT.passphrase.buildFromWords);
+    expect(
+      app!.root.findByProps({ testID: 'bip39-passphrase-bip39-note' }).props.children,
+    ).toBe(UPSTREAM_TEXT.passphrase.wordsNote);
+    expect(
+      app!.root.findByProps({ testID: 'bip39-passphrase-bip39-status' }).props.children,
+    ).toBe(UPSTREAM_TEXT.passphrase.inconsistentOne.replace('{n}', '1'));
+    expect(
+      app!.root.findByProps({ testID: 'bip39-passphrase-keypad-mode' }).props.disabled,
+    ).toBe(true);
+    expect(app!.root.findByProps({ testID: 'bip39-passphrase-key-a' }).props.disabled).toBe(true);
+    expect(
+      app!.root.findByProps({ testID: 'bip39-passphrase-autocomplete' }).props.value,
+    ).toBe(true);
+
+    mockBip39PassphraseKeyAllowed.mockReturnValue(true);
+    mockBip39PassphraseAutocomplete.mockReturnValue({ cursor: 1, value: 'a' });
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'bip39-passphrase-autocomplete' })
+        .props.onValueChange(false);
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'bip39-passphrase-key-a' }).props.onPress();
+    });
+    mockBip39PassphraseAutocomplete.mockReturnValue({ cursor: 8, value: 'abandon ' });
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'bip39-passphrase-autocomplete' })
+        .props.onValueChange(true);
+    });
+    expect(mockBip39PassphraseAutocomplete).toHaveBeenLastCalledWith('a', 1, true);
+    expect(app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.value).toBe(
+      'abandon ',
+    );
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-dice-passphrase' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1');
+    });
+    expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(true);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'dice-result-sheet' }).props.visible).toBe(false);
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-dice-passphrase' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'bip39-passphrase-bip39-toggle' }).props.onValueChange(false);
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.onChangeText('');
+    });
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'bip39-passphrase-key-a' }).props.onPress();

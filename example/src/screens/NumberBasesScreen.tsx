@@ -27,6 +27,7 @@ import { NumberBaseKeypad } from '../features/numberBases/components/NumberBaseK
 import {
   Bip39PassphraseButton,
   Bip39PassphraseView,
+  useBip39PassphraseOptions,
 } from '../features/seedPhrase/bip39Passphrase';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import {
@@ -211,6 +212,7 @@ export function NumberBasesScreen({
   const [inputValues, setInputValues] = useState<InputValues>(EMPTY_INPUT_VALUES);
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
   const [passphrase, setPassphrase] = useState('');
+  const passphraseOptions = useBip39PassphraseOptions(passphrase);
   const [result, setResult] = useState<DiceResult | null>(null);
   const [wordCount, setWordCount] = useState<WordCount>(24);
   const entropySync = useEntropySync();
@@ -231,6 +233,7 @@ export function NumberBasesScreen({
   );
   const formatRequirement = numberBaseSetupRequirement(wordCount, analysis.config);
   const hasLongSetupGuidance = format === 'base32' || format === 'base64';
+  const canDeriveWithPassphrase = Boolean(entropy) && passphraseOptions.canDerive;
   let words = [...analysis.previewWords];
 
   if (entropy) {
@@ -333,7 +336,7 @@ export function NumberBasesScreen({
   }
 
   function showResult() {
-    if (!entropy) {
+    if (!entropy || !passphraseOptions.canDerive) {
       return;
     }
 
@@ -599,13 +602,13 @@ export function NumberBasesScreen({
 
           <Pressable
             accessibilityRole="button"
-            disabled={!entropy}
+            disabled={!canDeriveWithPassphrase}
             onPress={showResult}
             style={({ pressed }) => [
               styles.button,
               {
                 backgroundColor: colors.accent,
-                opacity: !entropy ? 0.45 : pressed ? 0.82 : 1,
+                opacity: !canDeriveWithPassphrase ? 0.45 : pressed ? 0.82 : 1,
               },
             ]}
             testID="derive-number-base-phrase"
@@ -622,6 +625,7 @@ export function NumberBasesScreen({
           inputTestID="number-bases-passphrase-input"
           onBack={() => setActiveView('entry')}
           onChangePassphrase={setPassphrase}
+          options={passphraseOptions}
           screenTestID="number-bases-passphrase-view"
           value={passphrase}
         />

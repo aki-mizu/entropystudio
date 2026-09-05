@@ -9,6 +9,15 @@ const BIP39_WORD_COUNT: usize = 2048;
 
 static BIP39_WORDS: OnceLock<Vec<String>> = OnceLock::new();
 
+#[derive(Debug, uniffi::Record)]
+pub struct Bip39PassphraseState {
+    pub can_derive: bool,
+    pub complete_words: u32,
+    pub incomplete: bool,
+    pub invalid_count: u32,
+    pub trailing_separator: bool,
+}
+
 #[derive(Debug, Clone, Copy, uniffi::Enum)]
 pub enum SeedPhraseInputMethod {
     Words,
@@ -50,6 +59,67 @@ pub struct SeedPhraseState {
 pub struct SeedPhraseAutocompleteResult {
     pub cursor: u32,
     pub value: String,
+}
+
+#[uniffi::export]
+pub fn bip39_passphrase_state(
+    mut value: String,
+    active_caret: Option<u32>,
+) -> Bip39PassphraseState {
+    let result = analyze_bip39_passphrase(&value, active_caret);
+    wipe_string(&mut value);
+    result
+}
+
+#[uniffi::export]
+pub fn bip39_passphrase_key_allowed(
+    mut value: String,
+    selection_start: u32,
+    selection_end: u32,
+    mut character: String,
+) -> bool {
+    let result = if character.len() != 1 || !character.as_bytes()[0].is_ascii_lowercase() {
+        false
+    } else {
+        let (start, end) = selection_bounds(&value, selection_start, selection_end);
+        let mut candidate = replace_selection(&value, start, end, &character);
+        let allowed = analyze_bip39_passphrase(&candidate, Some((start + character.len()) as u32))
+            .invalid_count
+            == 0;
+        wipe_string(&mut candidate);
+        allowed
+    };
+    wipe_string(&mut value);
+    wipe_string(&mut character);
+    result
+}
+
+#[uniffi::export]
+pub fn bip39_passphrase_space_allowed(
+    mut value: String,
+    selection_start: u32,
+    selection_end: u32,
+) -> bool {
+    let (start, end) = selection_bounds(&value, selection_start, selection_end);
+    let mut candidate = replace_selection(&value, start, end, " ");
+    let state = analyze_bip39_passphrase(&candidate, None);
+    let allowed = state.invalid_count == 0
+        && state.complete_words > 0
+        && state.complete_words == passphrase_tokens(&candidate).len() as u32;
+    wipe_string(&mut candidate);
+    wipe_string(&mut value);
+    allowed
+}
+
+#[uniffi::export]
+pub fn bip39_passphrase_autocomplete(
+    mut value: String,
+    cursor: u32,
+    enabled: bool,
+) -> SeedPhraseAutocompleteResult {
+    let result = autocomplete_bip39_passphrase(&value, cursor, enabled);
+    wipe_string(&mut value);
+    result
 }
 
 struct ParsedNumber {
@@ -477,84 +547,166 @@ fn autocomplete_word_input(
     let normalized = normalize_word_input(value);
     let (cursor, _) = selection_bounds(&normalized, cursor, cursor);
     if !enabled {
-        return Ok(SeedPhraseAutocompleteResult {
-            cursor: cursor as u32,
-            value: normalized,
-        });
-    }
-    let suffix = &normalized[cursor..];
-    if !suffix.is_empty() && !suffix.starts_with(' ') {
-        return Ok(SeedPhraseAutocompleteResult {
-            cursor: cursor as u32,
-            value: normalized,
-        });
-    }
-    let before_cursor = &normalized[..cursor];
-    let prefix_start = before_cursor
-        .char_indices()
-        .rev()
-        .find(|(_, character)| !character.is_ascii_lowercase())
-        .map(|(index, character)| index + character.len_utf8())
-        .unwrap_or(0);
-    if prefix_start == cursor {
-        return Ok(SeedPhraseAutocompleteResult {
-            cursor: cursor as u32,
-            value: normalized,
-        });
+        return Ok(autocomplete_bip39_words(
+            &normalized,
+            cursor,
+            false,
+            2,
+            bip39_words(),
+        ));
     }
     let tokens = word_tokens(&normalized);
     let Some(token_index) = tokens
         .iter()
         .position(|token| token.start < cursor && cursor <= token.end)
     else {
-        return Ok(SeedPhraseAutocompleteResult {
-            cursor: cursor as u32,
-            value: normalized,
-        });
+        return Ok(unchanged_autocomplete(&normalized, cursor));
     };
     let target = usize::from(target_words);
     if token_index >= target || tokens[..token_index].iter().any(|token| word_index(token.word).is_none()) {
-        return Ok(SeedPhraseAutocompleteResult {
-            cursor: cursor as u32,
-            value: normalized,
-        });
+        return Ok(unchanged_autocomplete(&normalized, cursor));
     }
-    let prefix = &before_cursor[prefix_start..];
-    let minimum_prefix_length = if token_index == target.saturating_sub(1) { 1 } else { 2 };
-    if prefix.len() < minimum_prefix_length {
-        return Ok(SeedPhraseAutocompleteResult {
-            cursor: cursor as u32,
-            value: normalized,
-        });
-    }
-    let matches = if token_index == target.saturating_sub(1) {
+    let (minimum_prefix_length, final_candidates) = if token_index == target.saturating_sub(1) {
         let prefix_indices = tokens[..token_index]
             .iter()
             .map(|token| word_index(token.word))
             .collect::<Option<Vec<_>>>();
-        prefix_indices
+        let candidates = prefix_indices
             .map(|indices| final_word_candidates(&indices, target_words))
             .transpose()?
-            .unwrap_or_default()
+            .unwrap_or_default();
+        (1, Some(candidates))
     } else {
-        bip39_words().to_vec()
+        (2, None)
     };
-    let matching_words = matches
-        .iter()
-        .filter(|word| word.starts_with(prefix))
-        .collect::<Vec<_>>();
-    if matching_words.len() != 1 {
-        return Ok(SeedPhraseAutocompleteResult {
-            cursor: cursor as u32,
-            value: normalized,
-        });
+    let result = if let Some(candidates) = final_candidates.as_deref() {
+        autocomplete_bip39_words(
+            &normalized,
+            cursor,
+            true,
+            minimum_prefix_length,
+            candidates,
+        )
+    } else {
+        autocomplete_bip39_words(
+            &normalized,
+            cursor,
+            true,
+            minimum_prefix_length,
+            bip39_words(),
+        )
+    };
+    Ok(result)
+}
+
+fn analyze_bip39_passphrase(value: &str, active_caret: Option<u32>) -> Bip39PassphraseState {
+    let tokens = passphrase_tokens(value);
+    let active_caret = active_caret.map(|caret| selection_bounds(value, caret, caret).0);
+    let mut complete_words = 0u32;
+    let mut incomplete = false;
+    let mut invalid_count = 0u32;
+
+    for (index, token) in tokens.iter().enumerate() {
+        let listed = word_index(token.word).is_some();
+        let active = active_caret
+            .map(|caret| token.start < caret && caret <= token.end)
+            .unwrap_or(false);
+        let prefix = active
+            && token
+                .word
+                .bytes()
+                .all(|character| character.is_ascii_lowercase())
+            && word_has_prefix(token.word);
+        if listed {
+            complete_words += 1;
+        } else if prefix {
+            incomplete = true;
+        } else {
+            invalid_count += 1;
+        }
+
+        let gap_start = if index == 0 { 0 } else { tokens[index - 1].end };
+        let gap = &value[gap_start..token.start];
+        if !gap.is_empty() && (index == 0 || gap != " ") {
+            invalid_count += 1;
+        }
     }
-    let replacement = format!("{}{}", matching_words[0], if suffix.is_empty() { " " } else { "" });
-    let value = format!("{}{}{}", &normalized[..prefix_start], replacement, suffix);
-    Ok(SeedPhraseAutocompleteResult {
+
+    let suffix_start = tokens.last().map(|token| token.end).unwrap_or(0);
+    let suffix = &value[suffix_start..];
+    let trailing_separator = suffix == " ";
+    if !suffix.is_empty()
+        && !(tokens.len() > 0 && suffix == " " && complete_words == tokens.len() as u32)
+    {
+        invalid_count += 1;
+    }
+
+    Bip39PassphraseState {
+        can_derive: invalid_count == 0 && !incomplete && !trailing_separator,
+        complete_words,
+        incomplete,
+        invalid_count,
+        trailing_separator,
+    }
+}
+
+fn autocomplete_bip39_passphrase(
+    value: &str,
+    cursor: u32,
+    enabled: bool,
+) -> SeedPhraseAutocompleteResult {
+    let (cursor, _) = selection_bounds(value, cursor, cursor);
+    autocomplete_bip39_words(value, cursor, enabled, 2, bip39_words())
+}
+
+fn autocomplete_bip39_words(
+    value: &str,
+    cursor: usize,
+    enabled: bool,
+    minimum_prefix_length: usize,
+    candidates: &[String],
+) -> SeedPhraseAutocompleteResult {
+    if !enabled {
+        return unchanged_autocomplete(value, cursor);
+    }
+    let suffix = &value[cursor..];
+    if !suffix.is_empty() && !suffix.chars().next().is_some_and(char::is_whitespace) {
+        return unchanged_autocomplete(value, cursor);
+    }
+    let before_cursor = &value[..cursor];
+    let prefix_start = before_cursor
+        .char_indices()
+        .rev()
+        .find(|(_, character)| !character.is_ascii_alphabetic())
+        .map(|(index, character)| index + character.len_utf8())
+        .unwrap_or(0);
+    if prefix_start == cursor {
+        return unchanged_autocomplete(value, cursor);
+    }
+    let prefix = before_cursor[prefix_start..].to_ascii_lowercase();
+    if prefix.len() < minimum_prefix_length {
+        return unchanged_autocomplete(value, cursor);
+    }
+    let mut matching_words = candidates.iter().filter(|word| word.starts_with(&prefix));
+    let Some(word) = matching_words.next() else {
+        return unchanged_autocomplete(value, cursor);
+    };
+    if matching_words.next().is_some() {
+        return unchanged_autocomplete(value, cursor);
+    }
+    let replacement = format!("{}{}", word, if suffix.is_empty() { " " } else { "" });
+    let value = format!("{}{}{}", &value[..prefix_start], replacement, suffix);
+    SeedPhraseAutocompleteResult {
         cursor: (prefix_start + replacement.len()) as u32,
         value,
-    })
+    }
+}
+
+fn unchanged_autocomplete(value: &str, cursor: usize) -> SeedPhraseAutocompleteResult {
+    SeedPhraseAutocompleteResult {
+        cursor: cursor as u32,
+        value: value.to_owned(),
+    }
 }
 
 fn final_word_candidates(
@@ -651,6 +803,30 @@ struct SeedWordToken<'a> {
     end: usize,
     start: usize,
     word: &'a str,
+}
+
+fn passphrase_tokens(value: &str) -> Vec<SeedWordToken<'_>> {
+    let mut tokens = Vec::new();
+    let mut start = None;
+    for (index, character) in value.char_indices() {
+        if !character.is_whitespace() {
+            start.get_or_insert(index);
+        } else if let Some(token_start) = start.take() {
+            tokens.push(SeedWordToken {
+                end: index,
+                start: token_start,
+                word: &value[token_start..index],
+            });
+        }
+    }
+    if let Some(token_start) = start {
+        tokens.push(SeedWordToken {
+            end: value.len(),
+            start: token_start,
+            word: &value[token_start..],
+        });
+    }
+    tokens
 }
 
 fn word_tokens(value: &str) -> Vec<SeedWordToken<'_>> {

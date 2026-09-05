@@ -19,7 +19,11 @@ import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceTranscriptInput } from '../features/dice/components/DiceTranscriptInput';
 import type { DiceTranscriptSelection } from '../features/dice/components/DiceTranscriptInput';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
-import { Bip39PassphraseButton, Bip39PassphraseView } from '../features/seedPhrase/bip39Passphrase';
+import {
+  Bip39PassphraseButton,
+  Bip39PassphraseView,
+  useBip39PassphraseOptions,
+} from '../features/seedPhrase/bip39Passphrase';
 import { D8_D16_FACES } from '../features/dice/dice';
 import type { DiceInputFace } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
@@ -53,6 +57,7 @@ export function DiceRollsScreen({
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<DiceView>('setup');
   const [passphrase, setPassphrase] = useState('');
+  const passphraseOptions = useBip39PassphraseOptions(passphrase);
   const [transcriptSelection, setTranscriptSelection] =
     useState<DiceTranscriptSelection | null>(null);
   const [selectionRequestId, setSelectionRequestId] = useState(0);
@@ -103,6 +108,7 @@ export function DiceRollsScreen({
       : [];
   const canChooseFinalWord =
     method === 'bitbox' && Boolean(directState && directCopy && directState.candidates.length > 0);
+  const canDeriveWithPassphrase = canDerive && passphraseOptions.canDerive;
 
   useRegisterCurrentEntropySyncRequest(isActive, {
     selectedFinalWord,
@@ -125,6 +131,9 @@ export function DiceRollsScreen({
   }, [activeView, isActive]);
 
   function showResult() {
+    if (!canDeriveWithPassphrase) {
+      return;
+    }
     derivePhrase();
     setActiveSheet('result');
   }
@@ -161,13 +170,13 @@ export function DiceRollsScreen({
     return (
       <Pressable
         accessibilityRole="button"
-        disabled={!canDerive}
+        disabled={!canDeriveWithPassphrase}
         onPress={showResult}
         style={({ pressed }) => [
           styles.button,
           {
             backgroundColor: colors.accent,
-            opacity: !canDerive ? 0.45 : pressed ? 0.82 : 1,
+            opacity: !canDeriveWithPassphrase ? 0.45 : pressed ? 0.82 : 1,
           },
         ]}
         testID="derive-dice-phrase"
@@ -361,6 +370,7 @@ export function DiceRollsScreen({
           inputTestID="dice-passphrase-input"
           onBack={() => setActiveView('entry')}
           onChangePassphrase={setPassphrase}
+          options={passphraseOptions}
           screenTestID="dice-passphrase-view"
           value={passphrase}
         />

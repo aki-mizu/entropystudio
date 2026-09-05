@@ -39,7 +39,11 @@ import {
   useEntropySync,
   useRegisterCurrentEntropySyncRequest,
 } from '../features/entropySync';
-import { Bip39PassphraseButton, Bip39PassphraseView } from '../features/seedPhrase/bip39Passphrase';
+import {
+  Bip39PassphraseButton,
+  Bip39PassphraseView,
+  useBip39PassphraseOptions,
+} from '../features/seedPhrase/bip39Passphrase';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
 
@@ -70,6 +74,7 @@ export function CardsScreen({
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<CardView>('setup');
   const [passphrase, setPassphrase] = useState('');
+  const passphraseOptions = useBip39PassphraseOptions(passphrase);
   const [selectedRank, setSelectedRank] = useState<CardRank | null>(null);
   const [selectedSuit, setSelectedSuit] = useState<CardSuit | null>(null);
   const entropySync = useEntropySync();
@@ -122,6 +127,7 @@ export function CardsScreen({
     : result?.mnemonic
       ? result.mnemonic.split(' ')
       : [];
+  const canDeriveWithPassphrase = canDerive && passphraseOptions.canDerive;
 
   useRegisterCurrentEntropySyncRequest(isActive, {
     selectedFinalWord: '',
@@ -144,6 +150,9 @@ export function CardsScreen({
   }, [activeView, isActive]);
 
   function showResult() {
+    if (!canDeriveWithPassphrase) {
+      return;
+    }
     derivePhrase();
     setActiveSheet('result');
   }
@@ -453,13 +462,13 @@ export function CardsScreen({
 
           <Pressable
             accessibilityRole="button"
-            disabled={!canDerive}
+            disabled={!canDeriveWithPassphrase}
             onPress={showResult}
             style={({ pressed }) => [
               styles.button,
               {
                 backgroundColor: colors.accent,
-                opacity: !canDerive ? 0.45 : pressed ? 0.82 : 1,
+                opacity: !canDeriveWithPassphrase ? 0.45 : pressed ? 0.82 : 1,
               },
             ]}
             testID="derive-card-phrase"
@@ -476,6 +485,7 @@ export function CardsScreen({
           inputTestID="cards-passphrase-input"
           onBack={() => setActiveView('entry')}
           onChangePassphrase={setPassphrase}
+          options={passphraseOptions}
           screenTestID="cards-passphrase-view"
           value={passphrase}
         />

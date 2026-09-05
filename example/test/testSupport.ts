@@ -21,6 +21,10 @@ export const mockDiceMethodInfo = jest.fn();
 export const mockDirectDiceInputState = jest.fn();
 export const mockFormatDiceTranscript = jest.fn();
 export const mockHashedDiceState = jest.fn();
+export const mockBip39PassphraseAutocomplete = jest.fn();
+export const mockBip39PassphraseKeyAllowed = jest.fn();
+export const mockBip39PassphraseSpaceAllowed = jest.fn();
+export const mockBip39PassphraseState = jest.fn();
 export const mockSeedPhraseAutocomplete = jest.fn();
 export const mockSeedPhraseKeyAllowed = jest.fn();
 export const mockSeedPhraseNumbersToWords = jest.fn();
@@ -186,6 +190,10 @@ jest.mock('entropystudio', () => ({
   cardKeyAllowed: mockCardKeyAllowed,
   analyzeNumberBaseInput: mockAnalyzeNumberBaseInput,
   bip39EntropyBits: mockBip39EntropyBits,
+  bip39PassphraseAutocomplete: mockBip39PassphraseAutocomplete,
+  bip39PassphraseKeyAllowed: mockBip39PassphraseKeyAllowed,
+  bip39PassphraseSpaceAllowed: mockBip39PassphraseSpaceAllowed,
+  bip39PassphraseState: mockBip39PassphraseState,
   diceMethodInfo: mockDiceMethodInfo,
   directCardState: mockDirectCardState,
   directDiceInputState: mockDirectDiceInputState,
