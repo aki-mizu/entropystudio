@@ -6,7 +6,6 @@ const SEED_WORD_COLUMNS = 3;
 type Props = {
   readonly compact?: boolean;
   readonly colors: DiceColors;
-  readonly dense?: boolean;
   readonly finalWord?: string;
   readonly slotCount?: number;
   readonly testID: string;
@@ -16,7 +15,6 @@ type Props = {
 export function SeedWordGrid({
   compact = false,
   colors,
-  dense = false,
   finalWord,
   slotCount,
   testID,
@@ -36,13 +34,13 @@ export function SeedWordGrid({
     <View
       accessibilityLabel={words.length > 0 ? words.join(' ') : undefined}
       accessible={words.length > 0}
-      style={[styles.grid, compact && styles.compactGrid, dense && styles.denseGrid]}
+      style={[styles.grid, compact && styles.compactGrid]}
       testID={testID}
     >
       {seedWordColumns(slots).map((column, columnIndex) => (
         <View
           key={columnIndex}
-          style={[styles.column, compact && styles.compactColumn, dense && styles.denseColumn]}
+          style={[styles.column, compact && styles.compactColumn]}
           testID={`${testID}-column-${columnIndex + 1}`}
         >
           {column.map(({ index, word }) => (
@@ -51,7 +49,6 @@ export function SeedWordGrid({
               style={[
                 styles.slot,
                 compact && styles.compactSlot,
-                dense && styles.denseSlot,
                 { backgroundColor: colors.surface, borderColor: colors.border },
               ]}
               testID={`${testID}-slot-${index + 1}`}
@@ -60,7 +57,6 @@ export function SeedWordGrid({
                 style={[
                   styles.number,
                   compact && styles.compactNumber,
-                  dense && styles.denseNumber,
                   { color: colors.muted },
                 ]}
               >
@@ -74,7 +70,6 @@ export function SeedWordGrid({
                 style={[
                   styles.word,
                   compact && styles.compactWord,
-                  dense && styles.denseWord,
                   {
                     color:
                       index === words.length - 1 && finalWord
@@ -132,24 +127,6 @@ const styles = StyleSheet.create({
   compactWord: {
     fontSize: 11,
     lineHeight: 16,
-  },
-  denseColumn: {
-    gap: 2,
-  },
-  denseGrid: {
-    gap: 5,
-  },
-  denseNumber: {
-    fontSize: 10,
-    lineHeight: 13,
-  },
-  denseSlot: {
-    minHeight: 22,
-    paddingVertical: 0,
-  },
-  denseWord: {
-    fontSize: 10,
-    lineHeight: 13,
   },
   grid: {
     flexDirection: 'row',

@@ -443,7 +443,6 @@ export function SeedPhraseScreen({
             <DiceWordList
               compact
               colors={colors}
-              dense={wordCount === 24}
               slotCount={wordCount}
               testID="seed-phrase-words"
               words={previewWords}

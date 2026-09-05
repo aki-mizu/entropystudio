@@ -6,7 +6,6 @@ import { SeedWordGrid } from './SeedWordGrid';
 type DiceWordListProps = {
   readonly compact?: boolean;
   readonly colors: DiceColors;
-  readonly dense?: boolean;
   readonly finalWord?: string;
   readonly slotCount?: number;
   readonly testID: string;
@@ -23,7 +22,6 @@ type Props = {
 export function DiceWordList({
   compact = false,
   colors,
-  dense = false,
   finalWord,
   slotCount,
   testID,
@@ -44,7 +42,6 @@ export function DiceWordList({
       <SeedWordGrid
         compact={compact}
         colors={colors}
-        dense={dense}
         finalWord={finalWord}
         slotCount={slotCount}
         testID={testID}

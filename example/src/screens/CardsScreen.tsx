@@ -362,7 +362,6 @@ export function CardsScreen({
             <DiceWordList
               compact
               colors={colors}
-              dense={wordCount === 24}
               finalWord={directState?.finalWord}
               slotCount={wordCount}
               testID="live-card-words"
