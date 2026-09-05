@@ -34,6 +34,26 @@ fn mnemonic_to_entropy_returns_typed_error() {
 }
 
 #[test]
+fn mnemonic_to_seed_returns_bip39_master_seed() {
+    let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let seed = mnemonic_to_seed(phrase.to_owned(), "TREZOR".to_owned());
+
+    assert_eq!(
+        hex(&seed),
+        "c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04"
+    );
+}
+
+#[test]
+fn mnemonic_to_seed_nfkd_normalizes_the_passphrase() {
+    let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let composed = mnemonic_to_seed(phrase.to_owned(), "\u{00e9}".to_owned());
+    let decomposed = mnemonic_to_seed(phrase.to_owned(), "e\u{0301}".to_owned());
+
+    assert_eq!(composed, decomposed);
+}
+
+#[test]
 fn entropy_to_mnemonic_returns_bip39_phrase() {
     assert_eq!(
         entropy_to_mnemonic(vec![0; 16]).unwrap(),
@@ -47,4 +67,8 @@ fn entropy_to_mnemonic_returns_typed_error() {
         entropy_to_mnemonic(vec![0; 17]),
         Err(EntropyStudioError::InvalidEntropy)
     ));
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }

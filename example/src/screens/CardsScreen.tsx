@@ -94,6 +94,7 @@ export function CardsScreen({
     updateTranscript,
     wordCount,
   } = useCards({
+    passphrase,
     onInputChange: change => {
       entropySync.publish({
         selectedFinalWord: '',
@@ -486,7 +487,12 @@ export function CardsScreen({
         title={copy.deriveAction}
         visible={activeSheet === 'result' && Boolean(result)}
       >
-        <CardResultPanel colors={colors} entropyLabel={copy.resultEntropy} result={result} />
+        <CardResultPanel
+          colors={colors}
+          entropyLabel={copy.resultEntropy}
+          masterSeedLabel={copy.resultMasterSeed}
+          result={result}
+        />
       </NativeSheet>
     </SafeAreaView>
   );
@@ -618,10 +624,16 @@ function DirectCardPicker({ activeMax, colors, disabled, onSelect }: DirectCardP
 type CardResultPanelProps = {
   readonly colors: ReturnType<typeof diceColors>;
   readonly entropyLabel: string;
+  readonly masterSeedLabel: string;
   readonly result: CardResult | null;
 };
 
-function CardResultPanel({ colors, entropyLabel, result }: CardResultPanelProps) {
+function CardResultPanel({
+  colors,
+  entropyLabel,
+  masterSeedLabel,
+  result,
+}: CardResultPanelProps) {
   if (!result) {
     return null;
   }
@@ -639,6 +651,19 @@ function CardResultPanel({ colors, entropyLabel, result }: CardResultPanelProps)
           </Text>
           <Text selectable style={[styles.entropy, { color: colors.text }]} testID="card-entropy-output">
             {result.entropy}
+          </Text>
+          <Text
+            style={[styles.label, styles.masterSeedLabel, { color: colors.muted }]}
+            testID="card-master-seed-label"
+          >
+            {masterSeedLabel}
+          </Text>
+          <Text
+            selectable
+            style={[styles.entropy, { color: colors.text }]}
+            testID="card-master-seed-output"
+          >
+            {result.masterSeed}
           </Text>
         </>
       )}
@@ -779,6 +804,9 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  masterSeedLabel: {
+    marginTop: 16,
   },
   methodDescription: {
     fontSize: 13,

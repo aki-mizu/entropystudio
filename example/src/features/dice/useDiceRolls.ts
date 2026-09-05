@@ -27,12 +27,18 @@ type DiceInputChange = {
 
 type UseDiceRollsOptions = {
   readonly onInputChange?: (change: DiceInputChange) => void;
+  readonly passphrase?: string;
   readonly snapshot?: EntropySyncSnapshot | null;
   readonly targetWords?: WordCount;
 };
 
 export function useDiceRolls(options: UseDiceRollsOptions = {}) {
-  const { onInputChange, snapshot: syncSnapshot, targetWords: syncTargetWords } = options;
+  const {
+    onInputChange,
+    passphrase = '',
+    snapshot: syncSnapshot,
+    targetWords: syncTargetWords,
+  } = options;
   const [hashedRolls, setHashedRolls] = useState('');
   const [bitboxRolls, setBitboxRolls] = useState('');
   const [d8D16Rolls, setD8D16Rolls] = useState('');
@@ -62,8 +68,8 @@ export function useDiceRolls(options: UseDiceRollsOptions = {}) {
     if (!isHashedDiceMethod(method) || !hashedState?.canDerive) {
       return null;
     }
-    return deriveDiceResult(rolls, method, wordCount, hashedState);
-  }, [hashedState, method, rolls, wordCount]);
+    return deriveDiceResult(rolls, method, wordCount, hashedState, passphrase);
+  }, [hashedState, method, passphrase, rolls, wordCount]);
   const directCopy = directState ? directDiceSelectionCopy(directState) : null;
   let progress = 0;
   let progressText = '';
@@ -153,9 +159,9 @@ export function useDiceRolls(options: UseDiceRollsOptions = {}) {
     }
 
     if (isHashedDiceMethod(method) && hashedState) {
-      setResult(deriveDiceResult(rolls, method, wordCount, hashedState));
+      setResult(deriveDiceResult(rolls, method, wordCount, hashedState, passphrase));
     } else if (directState) {
-      setResult(deriveDirectDiceResult(directState));
+      setResult(deriveDirectDiceResult(directState, passphrase));
     }
   }
 

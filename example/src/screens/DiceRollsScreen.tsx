@@ -80,6 +80,7 @@ export function DiceRollsScreen({
     updateRolls,
     wordCount,
   } = useDiceRolls({
+    passphrase,
     onInputChange: change => {
       entropySync.publish({
         selectedFinalWord: change.selectedFinalWord,
@@ -396,6 +397,7 @@ export function DiceRollsScreen({
         <DiceResultPanel
           colors={colors}
           entropyLabel={copy.resultEntropy}
+          masterSeedLabel={copy.resultMasterSeed}
           result={result}
         />
       </NativeSheet>

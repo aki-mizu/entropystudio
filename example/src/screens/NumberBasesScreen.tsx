@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
-import { entropyToMnemonic } from '../native/entropyStudio';
+import { entropyToMnemonic, mnemonicToSeed } from '../native/entropyStudio';
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
@@ -338,9 +338,11 @@ export function NumberBasesScreen({
     }
 
     try {
+      const mnemonic = entropyToMnemonic(entropy);
       setResult({
         entropy: entropyHex(entropy),
-        mnemonic: entropyToMnemonic(entropy),
+        masterSeed: entropyHex(mnemonicToSeed(mnemonic, passphrase)),
+        mnemonic,
       });
     } catch {
       setResult({ error: UPSTREAM_TEXT.error.generic });
@@ -635,6 +637,7 @@ export function NumberBasesScreen({
         <DiceResultPanel
           colors={colors}
           entropyLabel={UPSTREAM_TEXT.result.entropyHex}
+          masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
           result={result}
         />
       </NativeSheet>

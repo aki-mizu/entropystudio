@@ -28,12 +28,18 @@ type CardsInputChange = {
 
 type UseCardsOptions = {
   readonly onInputChange?: (change: CardsInputChange) => void;
+  readonly passphrase?: string;
   readonly snapshot?: EntropySyncSnapshot | null;
   readonly targetWords?: WordCount;
 };
 
 export function useCards(options: UseCardsOptions = {}) {
-  const { onInputChange, snapshot: syncSnapshot, targetWords: syncTargetWords } = options;
+  const {
+    onInputChange,
+    passphrase = '',
+    snapshot: syncSnapshot,
+    targetWords: syncTargetWords,
+  } = options;
   const [hashedTranscript, setHashedTranscript] = useState('');
   const [directTranscript, setDirectTranscript] = useState('');
   const [method, setMethod] = useState<CardMethod>('hashed');
@@ -55,9 +61,15 @@ export function useCards(options: UseCardsOptions = {}) {
   const hashedResult = useMemo(
     () =>
       isHashedCardMethod(method) && hashedState && hasHashedCardInput(hashedState)
-        ? deriveHashedCardResult(hashedTranscript, matchesIanColeman, wordCount, hashedState)
+        ? deriveHashedCardResult(
+            hashedTranscript,
+            matchesIanColeman,
+            wordCount,
+            hashedState,
+            passphrase,
+          )
         : null,
-    [hashedState, hashedTranscript, matchesIanColeman, method, wordCount],
+    [hashedState, hashedTranscript, matchesIanColeman, method, passphrase, wordCount],
   );
   const progress = isHashedCardMethod(method)
     ? hashedState
@@ -167,9 +179,17 @@ export function useCards(options: UseCardsOptions = {}) {
       return;
     }
     if (isHashedCardMethod(method) && hashedState) {
-      setResult(deriveHashedCardResult(hashedTranscript, matchesIanColeman, wordCount, hashedState));
+      setResult(
+        deriveHashedCardResult(
+          hashedTranscript,
+          matchesIanColeman,
+          wordCount,
+          hashedState,
+          passphrase,
+        ),
+      );
     } else if (directState) {
-      setResult(deriveDirectCardResult(directState));
+      setResult(deriveDirectCardResult(directState, passphrase));
     }
   }
 

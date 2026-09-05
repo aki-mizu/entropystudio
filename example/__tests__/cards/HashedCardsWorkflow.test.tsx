@@ -6,6 +6,7 @@ import {
   App,
   mockCardTranscriptToEntropy,
   mockEntropyToMnemonic,
+  mockMnemonicToSeed,
   openCardsEntry,
   React,
   ReactTestRenderer,
@@ -46,6 +47,7 @@ describe('Hashed cards', () => {
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
     mockCardTranscriptToEntropy.mockReset();
     mockEntropyToMnemonic.mockReset();
+    mockMnemonicToSeed.mockClear();
     mockCardTranscriptToEntropy.mockReturnValue(entropy);
     mockEntropyToMnemonic.mockReturnValue(mnemonic);
 
@@ -87,6 +89,13 @@ describe('Hashed cards', () => {
     expect(app!.root.findByProps({ testID: 'card-result-sheet' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'card-entropy-output' }).props.children).toBe(
       '00000000000000000000000000000000',
+    );
+    expect(mockMnemonicToSeed).toHaveBeenLastCalledWith(mnemonic, '');
+    expect(app!.root.findByProps({ testID: 'card-master-seed-label' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
+    );
+    expect(app!.root.findByProps({ testID: 'card-master-seed-output' }).props.children).toBe(
+      '0'.repeat(128),
     );
   });
 

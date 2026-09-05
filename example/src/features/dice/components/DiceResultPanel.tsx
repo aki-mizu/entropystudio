@@ -2,18 +2,20 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { DiceColors } from '../diceTheme';
 
 export type EntropyResult =
-  | { readonly entropy: string; readonly error?: never }
-  | { readonly entropy?: never; readonly error: string };
+  | { readonly entropy: string; readonly masterSeed?: string; readonly error?: never }
+  | { readonly entropy?: never; readonly masterSeed?: never; readonly error: string };
 
 type Props = {
   readonly colors: DiceColors;
   readonly entropyLabel: string;
+  readonly masterSeedLabel?: string;
   readonly result: EntropyResult | null;
 };
 
 export function DiceResultPanel({
   colors,
   entropyLabel,
+  masterSeedLabel,
   result,
 }: Props) {
   if (!result) {
@@ -44,6 +46,23 @@ export function DiceResultPanel({
           >
             {result.entropy}
           </Text>
+          {masterSeedLabel && result.masterSeed ? (
+            <>
+              <Text
+                style={[styles.label, styles.masterSeedLabel, { color: colors.muted }]}
+                testID="master-seed-label"
+              >
+                {masterSeedLabel}
+              </Text>
+              <Text
+                selectable
+                style={[styles.entropy, { color: colors.text }]}
+                testID="master-seed-output"
+              >
+                {result.masterSeed}
+              </Text>
+            </>
+          ) : null}
         </>
       )}
     </View>
@@ -65,5 +84,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 10,
   },
+  masterSeedLabel: { marginTop: 16 },
   result: { paddingBottom: 4 },
 });

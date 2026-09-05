@@ -4,14 +4,22 @@
 
 import {
   App,
+  mockDiceRollsToEntropy,
+  mockEntropyToMnemonic,
+  mockMnemonicToSeed,
   openDiceEntry,
   React,
   ReactTestRenderer,
 } from '../../test/testSupport';
-import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
+import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
 
 describe('Dice Rolls / BIP39 passphrase', () => {
   test('opens a visible optional BIP39 passphrase screen separately from deriving', async () => {
+    const mnemonic =
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    mockDiceRollsToEntropy.mockReturnValue(new Uint8Array(16).buffer);
+    mockEntropyToMnemonic.mockReturnValue(mnemonic);
+    mockMnemonicToSeed.mockClear();
     let app: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(async () => {
       app = ReactTestRenderer.create(<App />);
@@ -73,5 +81,23 @@ describe('Dice Rolls / BIP39 passphrase', () => {
     });
 
     expect(app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.value).toBe('TREZOR');
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-dice-passphrase' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1');
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+    });
+
+    expect(mockMnemonicToSeed).toHaveBeenLastCalledWith(mnemonic, 'TREZOR');
+    expect(app!.root.findByProps({ testID: 'master-seed-label' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
+    );
+    expect(app!.root.findByProps({ testID: 'master-seed-output' }).props.children).toBe(
+      '0'.repeat(128),
+    );
   });
 });

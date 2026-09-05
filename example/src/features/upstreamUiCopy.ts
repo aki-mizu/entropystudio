@@ -398,6 +398,9 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
       },
     },
   },
+  result: {
+    masterSeedHex: 'Master seed hex',
+  },
   sync: {
     shortfall: (entropyBits: number, minimumEntropyBits: number) =>
       `${entropyBits} bits of entropy · under ${minimumEntropyBits}`,

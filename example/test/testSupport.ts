@@ -34,6 +34,10 @@ export const mockDirectCardState = jest.fn();
 export const mockEntropyToMnemonic = jest.fn<string, [ArrayBuffer]>();
 export const mockHashedCardState = jest.fn<HashedCardState, [string, number]>();
 export const mockMnemonicToEntropy = jest.fn<ArrayBuffer, [string]>();
+const MASTER_SEED_FIXTURE = new Uint8Array(64).buffer;
+export const mockMnemonicToSeed = jest.fn<ArrayBuffer, [string, string]>(
+  () => MASTER_SEED_FIXTURE.slice(0),
+);
 export const mockNormalizeCardToken = jest.fn<string, [string]>();
 export const mockNormalizeDirectCardTranscript = jest.fn<string, [string]>();
 export const mockAnalyzeNumberBaseInput = jest.fn<NumberBaseAnalysis, [string, number, number]>();
@@ -190,6 +194,7 @@ jest.mock('entropystudio', () => ({
   hashedCardState: mockHashedCardState,
   hashedDiceState: mockHashedDiceState,
   mnemonicToEntropy: mockMnemonicToEntropy,
+  mnemonicToSeed: mockMnemonicToSeed,
   normalizeCardToken: mockNormalizeCardToken,
   normalizeDirectCardTranscript: mockNormalizeDirectCardTranscript,
   numberBaseEntropy: mockNumberBaseEntropy,

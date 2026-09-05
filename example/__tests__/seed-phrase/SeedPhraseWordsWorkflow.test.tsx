@@ -7,6 +7,7 @@ import {
   App,
   mockEntropyToMnemonic,
   mockMnemonicToEntropy,
+  mockMnemonicToSeed,
   React,
   ReactTestRenderer,
   selectEntropyTool,
@@ -19,6 +20,7 @@ describe('Seed Phrase / Words', () => {
     const mnemonic =
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
     const entropy = new Uint8Array(16).buffer;
+    mockMnemonicToSeed.mockClear();
     mockMnemonicToEntropy.mockImplementation(phrase => {
       if (phrase !== mnemonic) {
         throw new Error('Invalid mnemonic');
@@ -86,6 +88,13 @@ describe('Seed Phrase / Words', () => {
 
     expect(app!.root.findByProps({ testID: 'seed-phrase-result-sheet' }).props.visible).toBe(true);
     expect(app!.root.findAllByProps({ testID: 'seed-phrase-passphrase-view' })).toHaveLength(0);
+    expect(mockMnemonicToSeed).toHaveBeenLastCalledWith(mnemonic, '');
+    expect(app!.root.findByProps({ testID: 'master-seed-label' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
+    );
+    expect(app!.root.findByProps({ testID: 'master-seed-output' }).props.children).toBe(
+      '0'.repeat(128),
+    );
   });
 
   test('validates and autocompletes Seed Phrase keyboard prefixes', async () => {

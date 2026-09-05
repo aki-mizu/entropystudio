@@ -1,5 +1,6 @@
 use crate::error::EntropyStudioError;
 use crate::wipe::{wipe_bytes, wipe_string};
+use unicode_normalization::UnicodeNormalization;
 
 #[uniffi::export]
 pub fn bip39_entropy_bits(target_words: u8) -> Result<u16, EntropyStudioError> {
@@ -27,6 +28,35 @@ pub fn mnemonic_to_entropy(mut normalized_phrase: String) -> Result<Vec<u8>, Ent
     let result = entropy[..length as usize].to_vec();
     wipe_bytes(&mut entropy);
     Ok(result)
+}
+
+#[uniffi::export]
+pub fn mnemonic_to_seed(mut phrase: String, mut passphrase: String) -> Vec<u8> {
+    let mut normalized_phrase: String = phrase.nfkd().collect();
+    let mut salt = String::from("mnemonic");
+    salt.push_str(&passphrase);
+    let mut normalized_salt: String = salt.nfkd().collect();
+    wipe_string(&mut phrase);
+    wipe_string(&mut passphrase);
+    wipe_string(&mut salt);
+
+    let mut seed = [0u8; 64];
+    unsafe {
+        entropylab_wasm::el_pbkdf2_hmac_sha512(
+            normalized_phrase.as_ptr(),
+            normalized_phrase.len(),
+            normalized_salt.as_ptr(),
+            normalized_salt.len(),
+            2048,
+            seed.as_mut_ptr(),
+            seed.len(),
+        );
+    }
+    wipe_string(&mut normalized_phrase);
+    wipe_string(&mut normalized_salt);
+    let result = seed.to_vec();
+    wipe_bytes(&mut seed);
+    result
 }
 
 #[uniffi::export]

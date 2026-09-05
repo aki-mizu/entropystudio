@@ -37,7 +37,7 @@ import {
   seedPhraseWordsToNumbers,
   translateSeedNumberIndices,
 } from '../features/seedPhrase/seedPhrase';
-import { mnemonicToEntropy } from '../native/entropyStudio';
+import { mnemonicToEntropy, mnemonicToSeed } from '../native/entropyStudio';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
@@ -308,6 +308,7 @@ export function SeedPhraseScreen({
 
     setResult({
       entropy: entropyHex(entropy),
+      masterSeed: entropyHex(mnemonicToSeed(activePhrase, passphrase)),
       mnemonic: activePhrase,
     });
     setActiveSheet('result');
@@ -607,6 +608,7 @@ export function SeedPhraseScreen({
         <DiceResultPanel
           colors={colors}
           entropyLabel={UPSTREAM_TEXT.result.entropyHex}
+          masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
           result={result}
         />
       </NativeSheet>

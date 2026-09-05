@@ -6,19 +6,21 @@ import {
   activeMethodList,
   App,
   mockEntropyToMnemonic,
+  mockMnemonicToSeed,
   React,
   ReactTestRenderer,
   ScrollView,
   selectEntropyTool,
   selectSeedPhraseLength,
 } from '../../test/testSupport';
-import { UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
+import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
 
 describe('Number Bases / Hexadecimal', () => {
   test('derives entropy through the native BIP39 binding', async () => {
     const mnemonic =
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
     mockEntropyToMnemonic.mockReturnValue(mnemonic);
+    mockMnemonicToSeed.mockClear();
 
     let app: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(async () => {
@@ -90,6 +92,18 @@ describe('Number Bases / Hexadecimal', () => {
       'about',
     );
     expect(mockEntropyToMnemonic).toHaveBeenLastCalledWith(expect.any(ArrayBuffer));
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'derive-number-base-phrase' }).props.onPress();
+    });
+
+    expect(mockMnemonicToSeed).toHaveBeenLastCalledWith(mnemonic, '');
+    expect(app!.root.findByProps({ testID: 'master-seed-label' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
+    );
+    expect(app!.root.findByProps({ testID: 'master-seed-output' }).props.children).toBe(
+      '0'.repeat(128),
+    );
   });
 
   test('opens an optional BIP39 passphrase screen from number-base seed input', async () => {

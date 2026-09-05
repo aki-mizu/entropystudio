@@ -11,6 +11,7 @@ import {
   EntropyStudioError_Tags,
   hashedCardState as nativeHashedCardState,
   mnemonicToEntropy,
+  mnemonicToSeed,
   normalizeCardToken as nativeNormalizeCardToken,
   normalizeDirectCardTranscript as nativeNormalizeDirectCardTranscript,
 } from '../../native/entropyStudio';
@@ -54,8 +55,18 @@ export type CardSelectionState = {
   readonly compatibleSuits: readonly CardSuit[];
 };
 export type CardResult =
-  | { readonly entropy: string; readonly mnemonic: string; readonly error?: never }
-  | { readonly entropy?: never; readonly mnemonic?: never; readonly error: string };
+  | {
+      readonly entropy: string;
+      readonly masterSeed: string;
+      readonly mnemonic: string;
+      readonly error?: never;
+    }
+  | {
+      readonly entropy?: never;
+      readonly masterSeed?: never;
+      readonly mnemonic?: never;
+      readonly error: string;
+    };
 
 export function isHashedCardMethod(method: CardMethod): method is 'hashed' {
   return method === 'hashed';
@@ -113,7 +124,8 @@ export function cardScreenCopy(
         : UPSTREAM_UI_FALLBACK_COPY.cards.placeholders.standard,
     methodRequirement: cardMethodRequirement(method, wordCount, directState),
     mode: UPSTREAM_TEXT.mode.cards,
-      resultEntropy: UPSTREAM_TEXT.result.entropyHex,
+    resultEntropy: UPSTREAM_TEXT.result.entropyHex,
+    resultMasterSeed: UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
     seedLengthLabel: UPSTREAM_TEXT.seedLength.label,
     seedLengthValue: UPSTREAM_UI_FALLBACK_COPY.common.seedLengthWords(wordCount),
     wordSlotsAria: formatCopy(UPSTREAM_TEXT.seed.wordSlotsAria, { n: wordCount }),
@@ -368,6 +380,7 @@ export function deriveHashedCardResult(
   matchesIanColeman: boolean,
   wordCount: WordCount,
   state: HashedCardState,
+  passphrase: string,
 ): CardResult {
   try {
     const entropy = cardTranscriptToEntropy(
@@ -375,16 +388,18 @@ export function deriveHashedCardResult(
       matchesIanColeman ? CardHashMethod.Coleman : CardHashMethod.Ascii,
       wordCount,
     );
+    const mnemonic = entropyToMnemonic(entropy);
     return {
       entropy: arrayBufferToHex(entropy),
-      mnemonic: entropyToMnemonic(entropy),
+      masterSeed: arrayBufferToHex(mnemonicToSeed(mnemonic, passphrase)),
+      mnemonic,
     };
   } catch (error) {
     return { error: upstreamCardError(error, state) };
   }
 }
 
-export function deriveDirectCardResult(state: DirectCardState): CardResult {
+export function deriveDirectCardResult(state: DirectCardState, passphrase: string): CardResult {
   if (!state.complete || !state.finalWord) {
     return { error: UPSTREAM_TEXT.error.generic };
   }
@@ -393,6 +408,7 @@ export function deriveDirectCardResult(state: DirectCardState): CardResult {
   try {
     return {
       entropy: arrayBufferToHex(mnemonicToEntropy(mnemonic)),
+      masterSeed: arrayBufferToHex(mnemonicToSeed(mnemonic, passphrase)),
       mnemonic,
     };
   } catch {

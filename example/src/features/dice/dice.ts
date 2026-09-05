@@ -12,6 +12,7 @@ import {
   formatDiceTranscript as nativeFormatDiceTranscript,
   hashedDiceState as nativeHashedDiceState,
   mnemonicToEntropy,
+  mnemonicToSeed,
 } from '../../native/entropyStudio';
 import type {
   DiceMethodInfo,
@@ -81,8 +82,18 @@ export type DiceMethod = (typeof DICE_METHODS)[number];
 export type HashedDiceMethod = (typeof HASHED_DICE_METHODS)[number];
 export type DirectDiceMethodId = (typeof DIRECT_DICE_METHODS)[number];
 export type DiceResult =
-  | { readonly entropy: string; readonly mnemonic: string; readonly error?: never }
-  | { readonly entropy?: never; readonly mnemonic?: never; readonly error: string };
+  | {
+      readonly entropy: string;
+      readonly masterSeed: string;
+      readonly mnemonic: string;
+      readonly error?: never;
+    }
+  | {
+      readonly entropy?: never;
+      readonly masterSeed?: never;
+      readonly mnemonic?: never;
+      readonly error: string;
+    };
 
 export function isHashedDiceMethod(method: DiceMethod): method is HashedDiceMethod {
   return method === 'coldcard' || method === 'coleman';
@@ -292,6 +303,7 @@ export function diceScreenCopy(
     ),
     mode: UPSTREAM_TEXT.mode.dice,
     resultEntropy: UPSTREAM_TEXT.result.entropyHex,
+    resultMasterSeed: UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
     seedLengthLabel: UPSTREAM_TEXT.seedLength.label,
     seedLengthValue: formatCopy(UPSTREAM_TEXT.seedLength.words, {
       n: wordCount,
@@ -323,6 +335,7 @@ export function deriveDiceResult(
   method: HashedDiceMethod,
   wordCount: WordCount,
   state: HashedDiceState,
+  passphrase: string,
 ): DiceResult {
   try {
     const entropy = diceRollsToEntropy(
@@ -330,9 +343,11 @@ export function deriveDiceResult(
       method === 'coldcard' ? DiceRollMethod.Coldcard : DiceRollMethod.Coleman,
       wordCount,
     );
+    const mnemonic = entropyToMnemonic(entropy);
     return {
       entropy: arrayBufferToHex(entropy),
-      mnemonic: entropyToMnemonic(entropy),
+      masterSeed: arrayBufferToHex(mnemonicToSeed(mnemonic, passphrase)),
+      mnemonic,
     };
   } catch (error) {
     return { error: upstreamDiceError(error, state) };
@@ -341,6 +356,7 @@ export function deriveDiceResult(
 
 export function deriveDirectDiceResult(
   state: DirectDiceState,
+  passphrase: string,
 ): DiceResult {
   if (!state.canDerive || !state.mnemonic) {
     return { error: UPSTREAM_TEXT.error.generic };
@@ -350,6 +366,7 @@ export function deriveDirectDiceResult(
     const entropy = mnemonicToEntropy(state.mnemonic);
     return {
       entropy: arrayBufferToHex(entropy),
+      masterSeed: arrayBufferToHex(mnemonicToSeed(state.mnemonic, passphrase)),
       mnemonic: state.mnemonic,
     };
   } catch {
