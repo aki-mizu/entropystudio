@@ -79,6 +79,13 @@ describe('Seed Phrase / Words', () => {
     );
     expect(app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.disabled).toBe(false);
     expect(mockMnemonicToEntropy).toHaveBeenLastCalledWith(mnemonic);
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.onPress();
+    });
+
+    expect(app!.root.findByProps({ testID: 'seed-phrase-result-sheet' }).props.visible).toBe(true);
+    expect(app!.root.findAllByProps({ testID: 'seed-phrase-passphrase-view' })).toHaveLength(0);
   });
 
   test('validates and autocompletes Seed Phrase keyboard prefixes', async () => {
@@ -145,6 +152,68 @@ describe('Seed Phrase / Words', () => {
 
     expect(app!.root.findByProps({ testID: 'seed-phrase-input' }).props.value).toBe(`${mnemonic} `);
     expect(app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.disabled).toBe(false);
+  });
+
+  test('opens an optional BIP39 passphrase screen separately from deriving a seed result', async () => {
+    const mnemonic =
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    const entropy = new Uint8Array(16).buffer;
+    mockMnemonicToEntropy.mockImplementation(phrase => {
+      if (phrase !== mnemonic) {
+        throw new Error('Invalid mnemonic');
+      }
+      return entropy;
+    });
+
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+
+    await selectEntropyTool(app!, 'seed');
+    await selectSeedPhraseLength(app!, 12);
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'seed-phrase-input' }).props.onChangeText(mnemonic);
+    });
+    const passphraseButton = app!.root.findByProps({ testID: 'open-seed-phrase-passphrase' });
+    expect(
+      app!.root.findByProps({ accessibilityLabel: UPSTREAM_TEXT.passphrase.label }),
+    ).toBeDefined();
+    await ReactTestRenderer.act(async () => {
+      passphraseButton.props.onPress();
+    });
+
+    expect(app!.root.findByProps({ testID: 'seed-phrase-passphrase-view' })).toBeDefined();
+    expect(
+      app!.root.findAllByProps({ testID: 'derive-seed-phrase-with-passphrase' }),
+    ).toHaveLength(0);
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-passphrase-input' }).props.accessibilityLabel,
+    ).toBe(UPSTREAM_TEXT.passphrase.label);
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-passphrase-input' }).props.placeholder,
+    ).toBe(UPSTREAM_TEXT.passphrase.placeholder);
+
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'seed-phrase-passphrase-input' })
+        .props.onChangeText('TREZOR');
+    });
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'close-seed-phrase-passphrase' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-seed-phrase-passphrase' }).props.onPress();
+    });
+
+    expect(app!.root.findByProps({ testID: 'seed-phrase-passphrase-input' }).props.value).toBe(
+      'TREZOR',
+    );
   });
 
   test('uses EntropyLab alphabetical Seed Phrase keyboard rows', async () => {

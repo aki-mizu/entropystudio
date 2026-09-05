@@ -19,6 +19,7 @@ import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceTranscriptInput } from '../features/dice/components/DiceTranscriptInput';
 import type { DiceTranscriptSelection } from '../features/dice/components/DiceTranscriptInput';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
+import { Bip39PassphraseButton, Bip39PassphraseView } from '../features/seedPhrase/bip39Passphrase';
 import { D8_D16_FACES } from '../features/dice/dice';
 import type { DiceInputFace } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
@@ -32,7 +33,7 @@ import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_UI_LABELS } from '../features/upstr
 import { useDiceRolls } from '../features/dice/useDiceRolls';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
-type DiceView = 'entry' | 'setup';
+type DiceView = 'entry' | 'passphrase' | 'setup';
 type SheetName = 'final-word' | 'result' | null;
 
 type Props = {
@@ -51,6 +52,7 @@ export function DiceRollsScreen({
   const { height: windowHeight } = useWindowDimensions();
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<DiceView>('setup');
+  const [passphrase, setPassphrase] = useState('');
   const [transcriptSelection, setTranscriptSelection] =
     useState<DiceTranscriptSelection | null>(null);
   const [selectionRequestId, setSelectionRequestId] = useState(0);
@@ -115,7 +117,7 @@ export function DiceRollsScreen({
     }
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      setActiveView('setup');
+      setActiveView(view => (view === 'passphrase' ? 'entry' : 'setup'));
       return true;
     });
     return () => subscription.remove();
@@ -124,6 +126,10 @@ export function DiceRollsScreen({
   function showResult() {
     derivePhrase();
     setActiveSheet('result');
+  }
+
+  function openPassphrase() {
+    setActiveView('passphrase');
   }
 
   function chooseFinalWord(word: string) {
@@ -248,7 +254,7 @@ export function DiceRollsScreen({
             </Pressable>
           </View>
         </View>
-      ) : (
+      ) : activeView === 'entry' ? (
         <View style={styles.entryContent} testID="dice-rolls-view">
           <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
             <Pressable
@@ -270,6 +276,12 @@ export function DiceRollsScreen({
                 {copy.seedLengthValue}
               </Text>
             </View>
+            <Bip39PassphraseButton
+              compact
+              colors={colors}
+              onPress={openPassphrase}
+              testID="open-dice-passphrase"
+            />
           </View>
 
           <View style={styles.seedPreviewArea}>
@@ -341,6 +353,16 @@ export function DiceRollsScreen({
 
           <View style={styles.actionBar}>{renderDeriveButton()}</View>
         </View>
+      ) : (
+        <Bip39PassphraseView
+          backTestID="close-dice-passphrase"
+          colors={colors}
+          inputTestID="dice-passphrase-input"
+          onBack={() => setActiveView('entry')}
+          onChangePassphrase={setPassphrase}
+          screenTestID="dice-passphrase-view"
+          value={passphrase}
+        />
       )}
 
       <NativeSheet

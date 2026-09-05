@@ -90,6 +90,43 @@ describe('Hashed cards', () => {
     );
   });
 
+  test('opens an optional BIP39 passphrase screen from card seed input', async () => {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+
+    await selectEntropyTool(app!, 'cards');
+    await openCardsEntry(app!);
+
+    const passphraseButton = app!.root.findByProps({ testID: 'open-cards-passphrase' });
+    expect(
+      app!.root.findByProps({ accessibilityLabel: UPSTREAM_TEXT.passphrase.label }),
+    ).toBeDefined();
+
+    await ReactTestRenderer.act(async () => {
+      passphraseButton.props.onPress();
+    });
+
+    expect(app!.root.findByProps({ testID: 'cards-passphrase-view' })).toBeDefined();
+    expect(app!.root.findAllByProps({ testID: 'derive-card-phrase' })).toHaveLength(0);
+    expect(app!.root.findByProps({ testID: 'cards-passphrase-input' }).props.placeholder).toBe(
+      UPSTREAM_TEXT.passphrase.placeholder,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'cards-passphrase-input' }).props.onChangeText('TREZOR');
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-cards-passphrase' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-cards-passphrase' }).props.onPress();
+    });
+
+    expect(app!.root.findByProps({ testID: 'cards-passphrase-input' }).props.value).toBe('TREZOR');
+  });
+
   test('uses a checkbox to match Ian Coleman card formatting and hashing', async () => {
     const entropy = new Uint8Array(16).buffer;
     const mnemonic =

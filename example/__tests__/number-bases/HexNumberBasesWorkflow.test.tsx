@@ -91,4 +91,47 @@ describe('Number Bases / Hexadecimal', () => {
     );
     expect(mockEntropyToMnemonic).toHaveBeenLastCalledWith(expect.any(ArrayBuffer));
   });
+
+  test('opens an optional BIP39 passphrase screen from number-base seed input', async () => {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+
+    await selectEntropyTool(app!, 'hex');
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-number-bases-entry' }).props.onPress();
+    });
+
+    const passphraseButton = app!.root.findByProps({ testID: 'open-number-bases-passphrase' });
+    expect(
+      app!.root.findByProps({ accessibilityLabel: UPSTREAM_TEXT.passphrase.label }),
+    ).toBeDefined();
+
+    await ReactTestRenderer.act(async () => {
+      passphraseButton.props.onPress();
+    });
+
+    expect(app!.root.findByProps({ testID: 'number-bases-passphrase-view' })).toBeDefined();
+    expect(app!.root.findAllByProps({ testID: 'derive-number-base-phrase' })).toHaveLength(0);
+    expect(
+      app!.root.findByProps({ testID: 'number-bases-passphrase-input' }).props.placeholder,
+    ).toBe(UPSTREAM_TEXT.passphrase.placeholder);
+
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'number-bases-passphrase-input' })
+        .props.onChangeText('TREZOR');
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-number-bases-passphrase' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-number-bases-passphrase' }).props.onPress();
+    });
+
+    expect(
+      app!.root.findByProps({ testID: 'number-bases-passphrase-input' }).props.value,
+    ).toBe('TREZOR');
+  });
 });

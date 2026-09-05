@@ -39,11 +39,12 @@ import {
   useEntropySync,
   useRegisterCurrentEntropySyncRequest,
 } from '../features/entropySync';
+import { Bip39PassphraseButton, Bip39PassphraseView } from '../features/seedPhrase/bip39Passphrase';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
-type CardView = 'entry' | 'setup';
+type CardView = 'entry' | 'passphrase' | 'setup';
 type SheetName = 'result' | null;
 
 const EMPTY_CARD_SELECTION: CardSelectionState = {
@@ -68,6 +69,7 @@ export function CardsScreen({
 }: Props) {
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<CardView>('setup');
+  const [passphrase, setPassphrase] = useState('');
   const [selectedRank, setSelectedRank] = useState<CardRank | null>(null);
   const [selectedSuit, setSelectedSuit] = useState<CardSuit | null>(null);
   const entropySync = useEntropySync();
@@ -134,7 +136,7 @@ export function CardsScreen({
     }
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      setActiveView('setup');
+      setActiveView(view => (view === 'passphrase' ? 'entry' : 'setup'));
       return true;
     });
     return () => subscription.remove();
@@ -143,6 +145,10 @@ export function CardsScreen({
   function showResult() {
     derivePhrase();
     setActiveSheet('result');
+  }
+
+  function openPassphrase() {
+    setActiveView('passphrase');
   }
 
   function changeMethod(value: CardMethod) {
@@ -312,7 +318,7 @@ export function CardsScreen({
             </Pressable>
           </View>
         </View>
-      ) : (
+      ) : activeView === 'entry' ? (
         <View style={styles.entryContent} testID="cards-entry-view">
           <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
             <Pressable
@@ -334,6 +340,12 @@ export function CardsScreen({
                 {copy.seedLengthValue}
               </Text>
             </View>
+            <Bip39PassphraseButton
+              compact
+              colors={colors}
+              onPress={openPassphrase}
+              testID="open-cards-passphrase"
+            />
           </View>
 
           <View style={styles.seedPreviewArea}>
@@ -455,6 +467,16 @@ export function CardsScreen({
             </Text>
           </Pressable>
         </View>
+      ) : (
+        <Bip39PassphraseView
+          backTestID="close-cards-passphrase"
+          colors={colors}
+          inputTestID="cards-passphrase-input"
+          onBack={() => setActiveView('entry')}
+          onChangePassphrase={setPassphrase}
+          screenTestID="cards-passphrase-view"
+          value={passphrase}
+        />
       )}
 
       <NativeSheet

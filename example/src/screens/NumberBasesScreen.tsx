@@ -24,6 +24,10 @@ import {
   useRegisterCurrentEntropySyncRequest,
 } from '../features/entropySync';
 import { NumberBaseKeypad } from '../features/numberBases/components/NumberBaseKeypad';
+import {
+  Bip39PassphraseButton,
+  Bip39PassphraseView,
+} from '../features/seedPhrase/bip39Passphrase';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import {
   NUMBER_BASE_FORMATS,
@@ -36,7 +40,7 @@ import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '..
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
-type NumberBasesView = 'entry' | 'setup';
+type NumberBasesView = 'entry' | 'passphrase' | 'setup';
 type SheetName = 'result' | null;
 type InputValues = Record<NumberBaseFormat, string>;
 type InputSelection = { readonly end: number; readonly start: number };
@@ -206,6 +210,7 @@ export function NumberBasesScreen({
   const [format, setFormat] = useState<NumberBaseFormat>('bin');
   const [inputValues, setInputValues] = useState<InputValues>(EMPTY_INPUT_VALUES);
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
+  const [passphrase, setPassphrase] = useState('');
   const [result, setResult] = useState<DiceResult | null>(null);
   const [wordCount, setWordCount] = useState<WordCount>(24);
   const entropySync = useEntropySync();
@@ -266,7 +271,7 @@ export function NumberBasesScreen({
     }
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      setActiveView('setup');
+      setActiveView(view => (view === 'passphrase' ? 'entry' : 'setup'));
       return true;
     });
     return () => subscription.remove();
@@ -321,6 +326,10 @@ export function NumberBasesScreen({
     setFormat(value);
     setInputSelection(null);
     setResult(null);
+  }
+
+  function openPassphrase() {
+    setActiveView('passphrase');
   }
 
   function showResult() {
@@ -433,7 +442,7 @@ export function NumberBasesScreen({
             </Pressable>
           </View>
         </View>
-      ) : (
+      ) : activeView === 'entry' ? (
         <View style={styles.entryContent} testID="number-bases-entry-view">
           <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
             <Pressable
@@ -455,6 +464,12 @@ export function NumberBasesScreen({
                 {analysis.config.label}
               </Text>
             </View>
+            <Bip39PassphraseButton
+              compact
+              colors={colors}
+              onPress={openPassphrase}
+              testID="open-number-bases-passphrase"
+            />
           </View>
 
           <View style={styles.seedPreviewArea}>
@@ -598,6 +613,16 @@ export function NumberBasesScreen({
             </Text>
           </Pressable>
         </View>
+      ) : (
+        <Bip39PassphraseView
+          backTestID="close-number-bases-passphrase"
+          colors={colors}
+          inputTestID="number-bases-passphrase-input"
+          onBack={() => setActiveView('entry')}
+          onChangePassphrase={setPassphrase}
+          screenTestID="number-bases-passphrase-view"
+          value={passphrase}
+        />
       )}
 
       <NativeSheet

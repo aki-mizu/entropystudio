@@ -172,6 +172,10 @@ export const UPSTREAM_TEXT = {
     bitboxSkippedMany: 'Skipped {n} faces of 5 or 6 on the first five dice of a word (reroll).',
     bitboxSkippedOne: 'Skipped {n} face of 5 or 6 on the first five dice of a word (reroll).',
   },
+  passphrase: {
+    label: 'Optional BIP39 passphrase',
+    placeholder: 'Enter a BIP39 passphrase, or leave blank for none',
+  },
   result: {
     entropyHex: 'BIP39 entropy hex',
     privateKey: 'Private key material',

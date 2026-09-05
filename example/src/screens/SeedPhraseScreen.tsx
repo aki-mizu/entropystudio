@@ -25,6 +25,7 @@ import {
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { SeedPhraseKeypad } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import type { SeedPhraseEntryMethod } from '../features/seedPhrase/components/SeedPhraseKeypad';
+import { Bip39PassphraseButton, Bip39PassphraseView } from '../features/seedPhrase/bip39Passphrase';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '../features/upstreamUiCopy';
 import {
   analyzeSeedPhrase,
@@ -40,7 +41,7 @@ import { mnemonicToEntropy } from '../native/entropyStudio';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
-type SeedPhraseView = 'entry' | 'setup';
+type SeedPhraseView = 'entry' | 'passphrase' | 'setup';
 type SheetName = 'result' | null;
 type InputSelection = { readonly end: number; readonly start: number };
 
@@ -110,6 +111,7 @@ export function SeedPhraseScreen({
   const [autocompleteEnabled, setAutocompleteEnabled] = useState(true);
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
   const [numberInput, setNumberInput] = useState('');
+  const [passphrase, setPassphrase] = useState('');
   const [result, setResult] = useState<DiceResult | null>(null);
   const [seedMethod, setSeedMethod] = useState<SeedPhraseEntryMethod>('words');
   const [wordInput, setWordInput] = useState('');
@@ -172,7 +174,7 @@ export function SeedPhraseScreen({
     }
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      setActiveView('setup');
+      setActiveView(view => (view === 'passphrase' ? 'entry' : 'setup'));
       return true;
     });
     return () => subscription.remove();
@@ -295,6 +297,10 @@ export function SeedPhraseScreen({
     setZeroIndexed(nextZeroIndexed);
   }
 
+  function openPassphrase() {
+    setActiveView('passphrase');
+  }
+
   function showResult() {
     if (!entropy) {
       return;
@@ -396,7 +402,7 @@ export function SeedPhraseScreen({
             </Pressable>
           </View>
         </View>
-      ) : (
+      ) : activeView === 'entry' ? (
         <View style={styles.entryContent} testID="seed-phrase-entry-view">
           <View style={[styles.entryHeader, { borderBottomColor: colors.border }]}>
             <Pressable
@@ -418,6 +424,12 @@ export function SeedPhraseScreen({
                 {SEED_METHOD_COPY[seedMethod].title}
               </Text>
             </View>
+            <Bip39PassphraseButton
+              compact
+              colors={colors}
+              onPress={openPassphrase}
+              testID="open-seed-phrase-passphrase"
+            />
           </View>
 
           <View style={styles.seedPreviewArea}>
@@ -573,6 +585,16 @@ export function SeedPhraseScreen({
             </Text>
           </Pressable>
         </View>
+      ) : (
+        <Bip39PassphraseView
+          backTestID="close-seed-phrase-passphrase"
+          colors={colors}
+          inputTestID="seed-phrase-passphrase-input"
+          onBack={() => setActiveView('entry')}
+          onChangePassphrase={setPassphrase}
+          screenTestID="seed-phrase-passphrase-view"
+          value={passphrase}
+        />
       )}
 
       <NativeSheet
