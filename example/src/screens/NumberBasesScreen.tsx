@@ -490,7 +490,11 @@ export function NumberBasesScreen({
 
           <View style={styles.inputHeader}>
             <Text
-              style={[styles.inputLabel, { color: colors.muted }]}
+              style={[
+                styles.inputLabel,
+                format === 'base32' && styles.base32InputLabel,
+                { color: colors.muted },
+              ]}
               testID="number-base-input-label"
             >
               {inputLabel}
@@ -500,11 +504,12 @@ export function NumberBasesScreen({
                 colors={colors}
                 disabled={!canDeleteInput}
                 onPress={deleteInputCharacter}
+                style={format === 'base32' ? styles.base32InputAction : undefined}
                 testID="number-base-undo"
               />
             ) : null}
           </View>
-          {format === 'base64' ? (
+          {format === 'base32' || format === 'base64' ? (
             <ScrollView
               contentContainerStyle={styles.inputHelpContent}
               nestedScrollEnabled
@@ -653,6 +658,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+  base32InputLabel: {
+    transform: [{ translateY: 14 }],
+  },
+  base32InputAction: {
+    transform: [{ translateY: 14 }],
+  },
   button: {
     alignItems: 'center',
     borderRadius: 6,
@@ -673,7 +684,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    minHeight: 58,
+    minHeight: 63,
   },
   entryHeaderCopy: {
     flex: 1,
