@@ -4,7 +4,6 @@ import type { DiceColors } from '../diceTheme';
 
 type Props = {
   readonly colors: DiceColors;
-  readonly finalWordAria: string;
   readonly finalWordLabel: string;
   readonly finalWordPlaceholder: string;
   readonly onChangeFinalWord: (word: string) => void;
@@ -15,7 +14,6 @@ type Props = {
 
 export function DirectDiceFinalWordPicker({
   colors,
-  finalWordAria,
   finalWordLabel,
   finalWordPlaceholder,
   onChangeFinalWord,
@@ -34,7 +32,6 @@ export function DirectDiceFinalWordPicker({
         {finalWordLabel}
       </Text>
       <TextInput
-        accessibilityLabel={finalWordAria}
         autoCapitalize="none"
         autoComplete="off"
         autoCorrect={false}

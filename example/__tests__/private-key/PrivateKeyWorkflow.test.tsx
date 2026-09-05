@@ -74,9 +74,6 @@ describe('Private Key', () => {
       '1 of 51 WIF characters entered · 50 remaining',
     );
     expect(app!.root.findAllByProps({ testID: 'private-key-status' })).toHaveLength(0);
-    expect(app!.root.findByProps({ testID: 'private-key-keypad' }).props.accessibilityLabel).toBe(
-      UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKey('number'),
-    );
     expect(app!.root.findByProps({ testID: 'private-key-key-1' }).props.disabled).toBe(false);
     expect(app!.root.findByProps({ testID: 'private-key-key-0' }).props.disabled).toBe(true);
     expect(app!.root.findByProps({ testID: 'private-key-undo' }).props.disabled).toBe(false);
@@ -231,9 +228,6 @@ describe('Private Key', () => {
       app!.root.findByProps({ testID: 'open-private-key-entry' }).props.onPress();
     });
 
-    expect(app!.root.findByProps({ testID: 'private-key-prefix-keypad' }).props.accessibilityLabel).toBe(
-      UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKeyInitial('mini'),
-    );
     expect(app!.root.findByProps({ testID: 'private-key-progress' }).props.children).toBe(
       '0 of 22 or 30 Mini-key characters entered · must start with S',
     );
@@ -245,9 +239,6 @@ describe('Private Key', () => {
     expect(app!.root.findByProps({ testID: 'private-key-input' }).props.value).toBe('S');
     expect(app!.root.findByProps({ testID: 'private-key-progress' }).props.children).toBe(
       '1 of 22 Mini-key characters entered · 21 remaining',
-    );
-    expect(app!.root.findByProps({ testID: 'private-key-keypad' }).props.accessibilityLabel).toBe(
-      UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKey('upper'),
     );
     expect(app!.root.findByProps({ testID: 'private-key-key-A' }).props.disabled).toBe(false);
   });

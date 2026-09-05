@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import type { TextInputInstance } from 'react-native';
+import { BackspaceIconButton } from '../../../components/BackspaceKey';
 import { formatDiceTranscript } from '../dice';
 import type { DiceMethod, WordCount } from '../dice';
 import type { DiceColors } from '../diceTheme';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
 
 export type DiceTranscriptSelection = {
   readonly end: number;
@@ -67,25 +67,16 @@ export function DiceTranscriptInput({
         <Text style={[styles.label, { color: colors.muted }]} testID="dice-input-label">
           {inputLabel}
         </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
+        <BackspaceIconButton
+          colors={colors}
           disabled={rolls.length === 0}
           onPress={() => {
             const result = removeDiceRollAtSelection(rolls, selection);
             onProgrammaticSelectionChange(result.selection);
             onChange(result.rolls);
           }}
-          style={({ pressed }) => [
-            styles.undoButton,
-            { opacity: rolls.length === 0 ? 0.38 : pressed ? 0.72 : 1 },
-          ]}
           testID="remove-dice-roll"
-        >
-          <Text style={[styles.undoLabel, { color: colors.accent }]}>
-            {UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
-          </Text>
-        </Pressable>
+        />
       </View>
       <View
         style={[
@@ -207,14 +198,6 @@ function removeDiceRollAtSelection(
 }
 
 const styles = StyleSheet.create({
-  undoButton: {
-    paddingHorizontal: 4,
-    paddingVertical: 3,
-  },
-  undoLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
   label: {
     flex: 1,
     fontSize: 12,

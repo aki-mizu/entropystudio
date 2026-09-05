@@ -447,7 +447,6 @@ export function SeedPhraseScreen({
               slotCount={wordCount}
               testID="seed-phrase-words"
               words={previewWords}
-              wordSlotsAria={UPSTREAM_TEXT.seed.wordSlotsAria.replace('{n}', String(wordCount))}
             />
           </View>
 
@@ -457,21 +456,6 @@ export function SeedPhraseScreen({
                 ? UPSTREAM_UI_FALLBACK_COPY.seedPhrase.wordsLabel(wordCount)
                 : formatCopy(UPSTREAM_TEXT.seed.numbersLabel, { words: wordCount })}
             </Text>
-            <Pressable
-              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
-              accessibilityRole="button"
-              disabled={!canDeleteInput}
-              onPress={deleteInputCharacter}
-              style={({ pressed }) => [
-                styles.undoButton,
-                { opacity: canDeleteInput ? (pressed ? 0.72 : 1) : 0.38 },
-              ]}
-              testID="seed-phrase-undo"
-            >
-              <Text style={[styles.undoLabel, { color: colors.accent }]}>
-                {UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
-              </Text>
-            </Pressable>
           </View>
           <Text style={[styles.inputHelp, { color: colors.muted }]}>
             {seedMethod === 'words'
@@ -567,10 +551,13 @@ export function SeedPhraseScreen({
           </View>
 
           <SeedPhraseKeypad
+            canDelete={canDeleteInput}
             canInsert={canInsertInputCharacter}
             canInsertSpace={canInsertInputSpace}
             colors={colors}
+            deleteTestID="seed-phrase-undo"
             method={seedMethod}
+            onDelete={deleteInputCharacter}
             onInsert={insertInputCharacter}
           />
 
@@ -795,14 +782,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     lineHeight: 34,
-  },
-  undoButton: {
-    paddingHorizontal: 4,
-    paddingVertical: 3,
-  },
-  undoLabel: {
-    fontSize: 13,
-    fontWeight: '700',
   },
   zeroIndexCopy: {
     flex: 1,

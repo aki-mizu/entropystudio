@@ -11,7 +11,6 @@ type DiceWordListProps = {
   readonly slotCount?: number;
   readonly testID: string;
   readonly words: readonly string[];
-  readonly wordSlotsAria: string;
 };
 
 type Props = {
@@ -19,7 +18,6 @@ type Props = {
   readonly colors: DiceColors;
   readonly slotCount?: number;
   readonly state: DirectDiceState;
-  readonly wordSlotsAria: string;
 };
 
 export function DiceWordList({
@@ -30,7 +28,6 @@ export function DiceWordList({
   slotCount,
   testID,
   words,
-  wordSlotsAria,
 }: DiceWordListProps) {
   if (words.length === 0 && !slotCount) {
     return null;
@@ -38,8 +35,6 @@ export function DiceWordList({
 
   return (
     <View
-      accessibilityLabel={wordSlotsAria}
-      accessible={words.length === 0}
       style={[
         styles.container,
         compact && styles.compactContainer,
@@ -64,7 +59,6 @@ export function DirectDicePreview({
   colors,
   slotCount,
   state,
-  wordSlotsAria,
 }: Props) {
   const finalWord = state.finalWord;
   const words = finalWord ? [...state.words, finalWord] : state.words;
@@ -77,7 +71,6 @@ export function DirectDicePreview({
       slotCount={slotCount}
       testID="direct-dice-words"
       words={words}
-      wordSlotsAria={wordSlotsAria}
     />
   );
 }

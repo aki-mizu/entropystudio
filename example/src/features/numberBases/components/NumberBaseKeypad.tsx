@@ -1,47 +1,49 @@
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
-import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../../upstreamUiCopy';
 import type { NumberBaseFormat } from '../numberBases';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 const KEY_GAP = 6;
 
 type Props = {
+  readonly canDelete: boolean;
   readonly canInsert: (character: string) => boolean;
   readonly canInsertSpace: boolean;
   readonly characters: string;
   readonly colors: DiceColors;
+  readonly deleteTestID: string;
   readonly format: NumberBaseFormat;
-  readonly label: string;
+  readonly onDelete: () => void;
   readonly onInsert: (character: string) => void;
-  readonly shortLabel: string;
 };
 
 export function NumberBaseKeypad({
+  canDelete,
   canInsert,
   canInsertSpace,
   characters,
   colors,
+  deleteTestID,
   format,
-  label,
+  onDelete,
   onInsert,
-  shortLabel,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
 
   if (format === 'base64') {
     return (
       <SoftKeyboard
+        canDelete={canDelete}
         canInsert={canInsert}
         canInsertSpace={canInsertSpace}
         colors={colors}
-        keyboardLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.base64Entropy}
+        deleteTestID={deleteTestID}
         keyboardTestID="number-base-keypad"
         keyTestIDPrefix="number-base-key-"
         modeControl="enabled"
         modeTestID="number-base-keypad-mode"
-        modeToggleLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.base64EntropyChangeMode()}
+        onDelete={onDelete}
         onInsert={onInsert}
         spaceTestID="number-base-key-space"
         style={styles.keypad}
@@ -60,18 +62,11 @@ export function NumberBaseKeypad({
 
   return (
     <View style={styles.keypad} testID="number-base-keypad">
-      <View
-        accessibilityLabel={formatCopy(UPSTREAM_TEXT.hex.keypadAria, { label })}
-        style={[styles.keyGrid, { width: gridWidth }]}
-      >
+      <View style={[styles.keyGrid, { width: gridWidth }]}>
         {[...characters].map(character => {
           const enabled = canInsert(character);
           return (
             <Pressable
-              accessibilityLabel={formatCopy(UPSTREAM_TEXT.hex.enterDigit, {
-                character,
-                shortLabel,
-              })}
               accessibilityRole="button"
               disabled={!enabled}
               key={character}
@@ -101,13 +96,6 @@ export function NumberBaseKeypad({
         })}
       </View>
     </View>
-  );
-}
-
-function formatCopy(template: string, values: Record<string, string>): string {
-  return Object.entries(values).reduce(
-    (copy, [key, value]) => copy.replaceAll(`{${key}}`, value),
-    template,
   );
 }
 

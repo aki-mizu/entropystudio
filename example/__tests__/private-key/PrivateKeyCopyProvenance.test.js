@@ -49,6 +49,19 @@ describe('Upstream UI copy provenance', () => {
     });
   });
 
+  test('excludes upstream accessibility-only copy', () => {
+    expect(Object.keys(UPSTREAM_UI_FALLBACK_COPY.keyboard).sort()).toEqual([
+      'modeButton',
+      'spaceButton',
+    ]);
+    expect(UPSTREAM_TEXT.hex).not.toHaveProperty('enterDigit');
+    expect(UPSTREAM_TEXT.hex).not.toHaveProperty('keypadAria');
+    expect(UPSTREAM_TEXT.seed).not.toHaveProperty('enterDigit');
+    expect(UPSTREAM_TEXT.seed).not.toHaveProperty('lastWordAria');
+    expect(UPSTREAM_TEXT.seed).not.toHaveProperty('numberKeypadAria');
+    expect(UPSTREAM_TEXT.seed).not.toHaveProperty('wordSlotsAria');
+  });
+
   test('copies every dynamic formatter only from current upstream templates', () => {
     const dynamicFallbackTemplates = {
       'common.seedLengthWords': {
@@ -136,32 +149,6 @@ describe('Upstream UI copy provenance', () => {
       'dice.errors.invalidFaces': {
         source: upstreamAppJs,
         template: /Dice must be faces 1(?:\\u2013|–)6\. Ignored characters: \{chars\}/,
-      },
-      'keyboard.base64Entropy': {
-        source: upstreamAppJs,
-        template: /On-screen \$\{keyboard\.dataset\.seedKeyboardLayout\} Base64 entropy keyboard/,
-      },
-      'keyboard.base64EntropyChangeMode': {
-        source: upstreamAppJs,
-        template: /Change \$\{inputName\} character mode/,
-      },
-      'keyboard.enterCharacter': {
-        source: upstreamAppJs,
-        template: /aria-label="Enter \$\{(?:letter|character)\}"/,
-      },
-      'keyboard.privateKey': {
-        source: upstreamAppJs,
-        template:
-          /On-screen \$\{keyboard\.dataset\.seedKeyboardLayout \|\| "lower"\} private key keyboard/,
-      },
-      'keyboard.privateKeyChangeMode': {
-        source: upstreamAppJs,
-        template: /Change \$\{inputName\} character mode/,
-      },
-      'keyboard.privateKeyInitial': {
-        source: upstreamAppJs,
-        template:
-          /Choose the first \$\{kind === "wif" \? "WIF" : "Mini key"\} character/,
       },
       'numberBases.coinNext': {
         source: upstreamAppJs,

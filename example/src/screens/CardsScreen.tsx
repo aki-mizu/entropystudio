@@ -367,7 +367,6 @@ export function CardsScreen({
               slotCount={wordCount}
               testID="live-card-words"
               words={words}
-              wordSlotsAria={copy.wordSlotsAria}
             />
           </View>
 

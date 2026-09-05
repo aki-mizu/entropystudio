@@ -128,7 +128,6 @@ export function cardScreenCopy(
     resultMasterSeed: UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
     seedLengthLabel: UPSTREAM_TEXT.seedLength.label,
     seedLengthValue: UPSTREAM_UI_FALLBACK_COPY.common.seedLengthWords(wordCount),
-    wordSlotsAria: formatCopy(UPSTREAM_TEXT.seed.wordSlotsAria, { n: wordCount }),
   };
 }
 

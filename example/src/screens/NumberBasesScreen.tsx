@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BackspaceIconButton } from '../components/BackspaceKey';
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
 import { entropyToMnemonic, mnemonicToSeed } from '../native/entropyStudio';
@@ -484,7 +485,6 @@ export function NumberBasesScreen({
               slotCount={wordCount}
               testID="number-base-words"
               words={words}
-              wordSlotsAria={UPSTREAM_TEXT.seed.wordSlotsAria.replace('{n}', String(wordCount))}
             />
           </View>
 
@@ -495,21 +495,14 @@ export function NumberBasesScreen({
             >
               {inputLabel}
             </Text>
-            <Pressable
-              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
-              accessibilityRole="button"
-              disabled={!canDeleteInput}
-              onPress={deleteInputCharacter}
-              style={({ pressed }) => [
-                styles.undoButton,
-                { opacity: canDeleteInput ? (pressed ? 0.72 : 1) : 0.38 },
-              ]}
-              testID="number-base-undo"
-            >
-              <Text style={[styles.undoLabel, { color: colors.accent }]}>
-                {UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
-              </Text>
-            </Pressable>
+            {format !== 'base64' ? (
+              <BackspaceIconButton
+                colors={colors}
+                disabled={!canDeleteInput}
+                onPress={deleteInputCharacter}
+                testID="number-base-undo"
+              />
+            ) : null}
           </View>
           {format === 'base64' ? (
             <ScrollView
@@ -590,14 +583,15 @@ export function NumberBasesScreen({
 
           <NumberBaseKeypad
             key={format}
+            canDelete={canDeleteInput}
             canInsert={canInsertInputCharacter}
             canInsertSpace={canInsertInputSpace}
             characters={analysis.config.alphabet}
             colors={colors}
+            deleteTestID="number-base-undo"
             format={format}
-            label={analysis.config.label}
+            onDelete={deleteInputCharacter}
             onInsert={insertInputCharacter}
-            shortLabel={analysis.config.shortLabel}
           />
 
           <Pressable
@@ -833,13 +827,5 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     lineHeight: 34,
-  },
-  undoButton: {
-    paddingHorizontal: 4,
-    paddingVertical: 3,
-  },
-  undoLabel: {
-    fontSize: 13,
-    fontWeight: '700',
   },
 });

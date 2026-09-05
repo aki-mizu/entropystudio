@@ -240,9 +240,11 @@ describe('Seed Phrase / Words', () => {
     });
 
     const rowKeys = (row: number) =>
-      app!
-        .root.findByProps({ testID: `seed-phrase-key-row-${row}` })
-        .props.children.map((key: { props: { testID: string } }) => key.props.testID);
+      React.Children.toArray(
+        app!.root.findByProps({ testID: `seed-phrase-key-row-${row}` }).props.children,
+      ).flatMap(key =>
+        React.isValidElement<{ testID: string }>(key) ? [key.props.testID] : [],
+      );
 
     expect(rowKeys(1)).toEqual(
       'abcdefghij'.split('').map(character => `seed-phrase-key-${character}`),
@@ -251,7 +253,7 @@ describe('Seed Phrase / Words', () => {
       'klmnopqrs'.split('').map(character => `seed-phrase-key-${character}`),
     );
     expect(rowKeys(3)).toEqual(
-      'tuvwxyz'.split('').map(character => `seed-phrase-key-${character}`),
+      [...'tuvwxyz'.split('').map(character => `seed-phrase-key-${character}`), 'seed-phrase-undo'],
     );
     expect(app!.root.findByProps({ testID: 'seed-phrase-keypad-mode' }).props.disabled).toBe(true);
   });

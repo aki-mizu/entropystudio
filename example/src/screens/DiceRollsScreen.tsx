@@ -301,7 +301,6 @@ export function DiceRollsScreen({
                 colors={colors}
                 slotCount={wordCount}
                 state={directState}
-                wordSlotsAria={copy.wordSlotsAria}
               />
             ) : (
               <DiceWordList
@@ -310,7 +309,6 @@ export function DiceRollsScreen({
                 slotCount={wordCount}
                 testID="live-dice-words"
                 words={liveHashedWords}
-                wordSlotsAria={copy.wordSlotsAria}
               />
             )}
             {canChooseFinalWord && directCopy ? (
@@ -386,7 +384,6 @@ export function DiceRollsScreen({
         {directState && directCopy ? (
           <DirectDiceFinalWordPicker
             colors={colors}
-            finalWordAria={copy.lastWordAria}
             finalWordLabel={directCopy.finalWordLabel}
             finalWordPlaceholder={copy.lastWordPlaceholder}
             onChangeFinalWord={selectFinalWord}

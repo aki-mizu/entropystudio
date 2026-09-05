@@ -128,7 +128,6 @@ export const UPSTREAM_TEXT = {
     },
   },
   hex: {
-    enterDigit: 'Enter {shortLabel} {character}',
     format: {
       base32: 'Crockford Base32',
       base4: 'Base 4',
@@ -136,7 +135,6 @@ export const UPSTREAM_TEXT = {
       bin: 'Binary (Base 2)',
     },
     heading: 'Number base',
-    keypadAria: '{label} keypad',
     placeholder: 'Exactly {digits} {unit}',
     unit: {
       hex: 'hexadecimal characters',
@@ -196,9 +194,7 @@ export const UPSTREAM_TEXT = {
   },
   seed: {
     count: '{entered} of {words} BIP39 words entered',
-    enterDigit: 'Enter {n}',
     how: 'How to enter a seed phrase',
-    lastWordAria: 'Valid final word for {n}-word seed',
     lastWordLabel: 'Valid final word ({n} choices)',
     lastWordPlaceholder: 'Choose a confirmed final word',
     meta: {
@@ -220,14 +216,12 @@ export const UPSTREAM_TEXT = {
       wordsDesc: 'Type or paste the English BIP39 words themselves.',
     },
     nextWord: 'Next word',
-    numberKeypadAria: 'BIP39 word number keypad',
     numbersHelp: 'Enter one {range} number for each word, separated by spaces. The corresponding BIP39 words appear below.',
     numbersLabel: 'Your {words} BIP39 word numbers',
     numbersPlaceholder0: '0 1 2 …',
     numbersPlaceholder1: '1 2 3 …',
     range0: '0 through 2047',
     range1: '1 through 2048',
-    wordSlotsAria: '{n} seed-word slots',
     zeroIndex: 'Use zero-indexed word numbers',
     zeroIndexNote: '(0–2047 instead of the default 1–2048)',
   },
@@ -317,19 +311,7 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
     },
   },
   keyboard: {
-    base64Entropy: (mode: string) => `On-screen ${mode} Base64 entropy keyboard`,
-    base64EntropyChangeMode: () => 'Change Base64 entropy character mode',
-    characterModeUnavailable: 'Character mode switching is available for the passphrase',
-    deletePreviousCharacter: 'Delete previous character',
-    enterCharacter: (character: string) => `Enter ${character}`,
-    enterSpace: 'Enter space',
     modeButton: 'aA1',
-    privateKey: (mode: string) => `On-screen ${mode} private key keyboard`,
-    privateKeyChangeMode: () => 'Change private key character mode',
-    privateKeyHex: 'On-screen hexadecimal private key keyboard',
-    privateKeyInitial: (format: 'mini' | 'wif') =>
-      `Choose the first ${format === 'wif' ? 'WIF' : 'Mini key'} character`,
-    seedPhrase: 'On-screen lowercase seed phrase keyboard',
     spaceButton: 'space',
   },
   numberBases: {

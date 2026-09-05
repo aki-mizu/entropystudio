@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
+import { BackspaceKey } from './BackspaceKey';
 import type { DiceColors } from '../features/dice/diceTheme';
 import { UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
 
@@ -23,16 +24,17 @@ type KeyboardMode = SoftKeyboardMode;
 type ModeControl = 'disabled' | 'enabled' | 'hidden';
 
 type Props = {
+  readonly canDelete: boolean;
   readonly canInsert: (character: string) => boolean;
   readonly canInsertSpace: boolean;
   readonly colors: DiceColors;
+  readonly deleteTestID: string;
   readonly initialMode?: SoftKeyboardMode;
-  readonly keyboardLabel: (mode: KeyboardMode) => string;
   readonly keyboardTestID: string;
   readonly keyTestIDPrefix: string;
   readonly modeControl: ModeControl;
   readonly modeTestID?: string;
-  readonly modeToggleLabel?: string;
+  readonly onDelete: () => void;
   readonly onInsert: (character: string) => void;
   readonly rowTestIDPrefix?: string;
   readonly spaceTestID: string;
@@ -40,16 +42,17 @@ type Props = {
 };
 
 export function SoftKeyboard({
+  canDelete,
   canInsert,
   canInsertSpace,
   colors,
+  deleteTestID,
   initialMode = 'lower',
-  keyboardLabel,
   keyboardTestID,
   keyTestIDPrefix,
   modeControl,
   modeTestID,
-  modeToggleLabel,
+  onDelete,
   onInsert,
   rowTestIDPrefix,
   spaceTestID,
@@ -80,11 +83,7 @@ export function SoftKeyboard({
   }
 
   return (
-    <View
-      accessibilityLabel={keyboardLabel(activeMode)}
-      style={[styles.keyboard, style]}
-      testID={keyboardTestID}
-    >
+    <View style={[styles.keyboard, style]} testID={keyboardTestID}>
       {rows.map((row, rowIndex) => (
         <View
           key={`${activeMode}-${rowIndex}`}
@@ -95,7 +94,6 @@ export function SoftKeyboard({
             const enabled = canInsert(character);
             return (
               <Pressable
-                accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.enterCharacter(character)}
                 accessibilityRole="button"
                 disabled={!enabled}
                 key={character}
@@ -123,12 +121,20 @@ export function SoftKeyboard({
               </Pressable>
             );
           })}
+          {rowIndex === rows.length - 1 ? (
+            <BackspaceKey
+              colors={colors}
+              disabled={!canDelete}
+              onPress={onDelete}
+              style={{ height: Math.max(MIN_KEY_HEIGHT, keySize), width: keySize }}
+              testID={deleteTestID}
+            />
+          ) : null}
         </View>
       ))}
       <View style={styles.actionRow}>
         {modeControl !== 'hidden' && (
           <Pressable
-            accessibilityLabel={modeToggleLabel}
             accessibilityRole="button"
             disabled={modeControl === 'disabled'}
             onPress={modeControl === 'enabled' ? cycleMode : undefined}
@@ -148,7 +154,6 @@ export function SoftKeyboard({
           </Pressable>
         )}
         <Pressable
-          accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.enterSpace}
           accessibilityRole="button"
           disabled={!canInsertSpace}
           onPress={() => onInsert(' ')}

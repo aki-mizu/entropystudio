@@ -8,10 +8,10 @@ import {
   ReactTestRenderer,
   selectEntropyTool,
 } from '../../test/testSupport';
-import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
+import { UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
 
 describe('Number Bases / Binary', () => {
-  test('enters binary entropy through the on-screen keypad', async () => {
+  test('keeps deletion outside the binary controls', async () => {
     let app: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(async () => {
       app = ReactTestRenderer.create(<App />);
@@ -27,16 +27,15 @@ describe('Number Bases / Binary', () => {
       numberBasesSetup.findByProps({ testID: 'open-number-bases-entry' }).props.onPress();
     });
 
-    expect(
-      app!.root.findByProps({
-        accessibilityLabel: UPSTREAM_TEXT.hex.keypadAria.replace(
-          '{label}',
-          UPSTREAM_TEXT.hex.format.bin,
-        ),
-      }),
-    ).toBeDefined();
     expect(app!.root.findByProps({ testID: 'number-base-key-0' }).props.disabled).toBe(false);
     expect(app!.root.findByProps({ testID: 'number-base-key-1' }).props.disabled).toBe(false);
+    expect(app!.root.findByProps({ testID: 'number-base-undo' }).props.disabled).toBe(true);
+    expect(
+      app!
+        .root
+        .findByProps({ testID: 'number-base-keypad' })
+        .findAllByProps({ testID: 'number-base-undo' }),
+    ).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'number-base-key-1' }).props.onPress();
@@ -46,5 +45,12 @@ describe('Number Bases / Binary', () => {
     });
 
     expect(app!.root.findByProps({ testID: 'number-base-input' }).props.value).toBe('10');
+    expect(app!.root.findByProps({ testID: 'number-base-undo' }).props.disabled).toBe(false);
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'number-base-undo' }).props.onPress();
+    });
+
+    expect(app!.root.findByProps({ testID: 'number-base-input' }).props.value).toBe('1');
   });
 });

@@ -295,7 +295,6 @@ export function diceScreenCopy(
     inputLabel,
     inputHelp,
     inputPlaceholder,
-    lastWordAria: formatCopy(UPSTREAM_TEXT.seed.lastWordAria, { n: wordCount }),
     lastWordPlaceholder: UPSTREAM_TEXT.seed.lastWordPlaceholder,
     methodRequirement: UPSTREAM_UI_FALLBACK_COPY.common.seedLengthEntropy(
       wordCount,
@@ -308,7 +307,6 @@ export function diceScreenCopy(
     seedLengthValue: formatCopy(UPSTREAM_TEXT.seedLength.words, {
       n: wordCount,
     }),
-    wordSlotsAria: formatCopy(UPSTREAM_TEXT.seed.wordSlotsAria, { n: wordCount }),
   };
 }
 

@@ -1,13 +1,13 @@
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { BackspaceKey } from '../../../components/BackspaceKey';
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { SoftKeyboardMode } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
 import type { PrivateKeyInputFormat } from '../privateKey';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
-const HEX_CHARACTERS = '0123456789ABCDEF';
-const HEX_COLUMNS = 8;
+const HEX_ROWS = ['0123456789', 'ABCDEF'] as const;
+const HEX_COLUMNS = 10;
 const KEY_GAP = 6;
 const MAX_HEX_KEY_SIZE = 40;
 const MAX_PREFIX_KEY_SIZE = 72;
@@ -15,20 +15,26 @@ const MINI_KEY_PREFIXES = ['S'];
 const WIF_PREFIXES = ['5', 'K', 'L'];
 
 type Props = {
+  readonly canDelete: boolean;
   readonly canInsert: (character: string) => boolean;
   readonly canInsertSpace: boolean;
   readonly colors: DiceColors;
+  readonly deleteTestID: string;
   readonly firstCharacter: string;
   readonly format: PrivateKeyInputFormat;
+  readonly onDelete: () => void;
   readonly onInsert: (character: string) => void;
 };
 
 export function PrivateKeyKeypad({
+  canDelete,
   canInsert,
   canInsertSpace,
   colors,
+  deleteTestID,
   firstCharacter,
   format,
+  onDelete,
   onInsert,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
@@ -43,18 +49,14 @@ export function PrivateKeyKeypad({
         Math.floor((availableWidth - KEY_GAP * (prefixes.length - 1)) / prefixes.length),
       ),
     );
-    const prefixLabel = UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKeyInitial(
-      format === 'wif' ? 'wif' : 'mini',
-    );
 
     return (
-      <View accessibilityLabel={prefixLabel} style={styles.keypad} testID="private-key-prefix-keypad">
+      <View style={styles.keypad} testID="private-key-prefix-keypad">
         <View style={styles.prefixRow}>
           {prefixes.map(character => {
             const enabled = canInsert(character);
             return (
               <Pressable
-                accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.enterCharacter(character)}
                 accessibilityRole="button"
                 disabled={!enabled}
                 key={character}
@@ -84,16 +86,17 @@ export function PrivateKeyKeypad({
     return (
       <SoftKeyboard
         key={`${format}-${firstCharacter}`}
+        canDelete={canDelete}
         canInsert={canInsert}
         canInsertSpace={canInsertSpace}
         colors={colors}
+        deleteTestID={deleteTestID}
         initialMode={initialKeyboardMode(format, firstCharacter)}
-        keyboardLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKey}
         keyboardTestID="private-key-keypad"
         keyTestIDPrefix="private-key-key-"
         modeControl="enabled"
         modeTestID="private-key-keypad-mode"
-        modeToggleLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKeyChangeMode()}
+        onDelete={onDelete}
         onInsert={onInsert}
         spaceTestID="private-key-key-space"
         style={styles.keypad}
@@ -108,44 +111,52 @@ export function PrivateKeyKeypad({
   const gridWidth = keySize * HEX_COLUMNS + KEY_GAP * (HEX_COLUMNS - 1);
 
   return (
-    <View
-      accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.privateKeyHex}
-      style={styles.keypad}
-      testID="private-key-keypad"
-    >
+    <View style={styles.keypad} testID="private-key-keypad">
       <View style={[styles.hexGrid, { width: gridWidth }]}>
-        {[...HEX_CHARACTERS].map(character => {
-          const enabled = canInsert(character);
-          return (
-            <Pressable
-              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.enterCharacter(character)}
-              accessibilityRole="button"
-              disabled={!enabled}
-              key={character}
-              onPress={() => onInsert(character)}
-              style={({ pressed }) => [
-                styles.hexKey,
-                {
-                  backgroundColor: colors.diceSurface,
-                  borderColor: colors.diceBorder,
-                  height: keySize,
-                  opacity: enabled ? (pressed ? 0.78 : 1) : 0.38,
-                  width: keySize,
-                },
-              ]}
-              testID={`private-key-key-${character}`}
-            >
-              <Text
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
-                numberOfLines={1}
-                style={[styles.hexKeyLabel, { color: colors.diceText }]}
-              >
-                {character}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {HEX_ROWS.map((row, rowIndex) => (
+          <View key={row} style={styles.hexRow}>
+            {[...row].map(character => {
+              const enabled = canInsert(character);
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={!enabled}
+                  key={character}
+                  onPress={() => onInsert(character)}
+                  style={({ pressed }) => [
+                    styles.hexKey,
+                    {
+                      backgroundColor: colors.diceSurface,
+                      borderColor: colors.diceBorder,
+                      height: keySize,
+                      opacity: enabled ? (pressed ? 0.78 : 1) : 0.38,
+                      width: keySize,
+                    },
+                  ]}
+                  testID={`private-key-key-${character}`}
+                >
+                  <Text
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                    numberOfLines={1}
+                    style={[styles.hexKeyLabel, { color: colors.diceText }]}
+                  >
+                    {character}
+                  </Text>
+                </Pressable>
+              );
+            })}
+            {rowIndex === HEX_ROWS.length - 1 ? (
+              <BackspaceKey
+                colors={colors}
+                disabled={!canDelete}
+                onPress={onDelete}
+                style={{ height: keySize, width: keySize }}
+                testID={deleteTestID}
+              />
+            ) : null}
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -188,10 +199,11 @@ function initialKeyboardMode(
 const styles = StyleSheet.create({
   hexGrid: {
     alignSelf: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: KEY_GAP,
-    justifyContent: 'flex-start',
+  },
+  hexRow: {
+    flexDirection: 'row',
+    gap: KEY_GAP,
   },
   hexKey: {
     alignItems: 'center',

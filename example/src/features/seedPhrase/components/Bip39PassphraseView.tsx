@@ -254,21 +254,6 @@ export function Bip39PassphraseView({
           <Text style={[styles.label, { color: colors.muted }]}>
             {UPSTREAM_TEXT.passphrase.label}
           </Text>
-          <Pressable
-            accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
-            accessibilityRole="button"
-            disabled={!canDeleteInput}
-            onPress={deleteInputCharacter}
-            style={({ pressed }) => [
-              styles.undoButton,
-              { opacity: canDeleteInput ? (pressed ? 0.72 : 1) : 0.38 },
-            ]}
-            testID="bip39-passphrase-undo"
-          >
-            <Text style={[styles.undoLabel, { color: colors.accent }]}>
-              {UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
-            </Text>
-          </Pressable>
         </View>
         <View
           style={[
@@ -312,16 +297,17 @@ export function Bip39PassphraseView({
           ) : null}
         </View>
         <SoftKeyboard
+          canDelete={canDeleteInput}
           canInsert={canInsertInputCharacter}
           canInsertSpace={canInsertInputSpace()}
           colors={colors}
+          deleteTestID="bip39-passphrase-undo"
           key={options.buildFromBip39Words ? 'bip39-words' : 'passphrase'}
-          keyboardLabel={() => UPSTREAM_TEXT.passphrase.label}
           keyboardTestID="bip39-passphrase-keypad"
           keyTestIDPrefix="bip39-passphrase-key-"
           modeControl={options.buildFromBip39Words ? 'disabled' : 'enabled'}
           modeTestID="bip39-passphrase-keypad-mode"
-          modeToggleLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.modeButton}
+          onDelete={deleteInputCharacter}
           onInsert={insertInputCharacter}
           spaceTestID="bip39-passphrase-key-space"
           style={styles.keypad}
@@ -453,13 +439,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     lineHeight: 26,
-  },
-  undoButton: {
-    paddingHorizontal: 4,
-    paddingVertical: 3,
-  },
-  undoLabel: {
-    fontSize: 13,
-    fontWeight: '700',
   },
 });

@@ -10,7 +10,6 @@ import {
   selectEntropyTool,
   selectSeedPhraseLength,
 } from '../../test/testSupport';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
 
 describe('Number Bases / Base64', () => {
   test('uses the upstream-style soft keyboard', async () => {
@@ -29,9 +28,12 @@ describe('Number Bases / Base64', () => {
     expect(app!.root.findByProps({ testID: 'number-base-key-a' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'number-base-key-z' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'number-base-key-space' }).props.disabled).toBe(true);
-    expect(app!.root.findByProps({ testID: 'number-base-keypad-mode' }).props.accessibilityLabel).toBe(
-      UPSTREAM_UI_FALLBACK_COPY.keyboard.base64EntropyChangeMode(),
-    );
+    expect(
+      app!
+        .root
+        .findByProps({ testID: 'number-base-keypad' })
+        .findAllByProps({ testID: 'number-base-undo' }),
+    ).not.toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'number-base-keypad-mode' }).props.onPress();

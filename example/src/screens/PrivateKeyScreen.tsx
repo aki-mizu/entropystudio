@@ -580,21 +580,6 @@ export function PrivateKeyScreen({
                 <Text style={[styles.inputLabel, { color: colors.muted }]}>
                   {UPSTREAM_TEXT.key.inputLabel}
                 </Text>
-                <Pressable
-                  accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
-                  accessibilityRole="button"
-                  disabled={!canDeleteInput}
-                  onPress={deleteInputCharacter}
-                  style={({ pressed }) => [
-                    styles.undoButton,
-                    { opacity: canDeleteInput ? (pressed ? 0.72 : 1) : 0.38 },
-                  ]}
-                  testID="private-key-undo"
-                >
-                  <Text style={[styles.undoLabel, { color: colors.accent }]}>
-                    {UPSTREAM_UI_FALLBACK_COPY.keyboard.deletePreviousCharacter}
-                  </Text>
-                </Pressable>
               </View>
               {format !== 'brain' && (
                 <Text
@@ -643,11 +628,14 @@ export function PrivateKeyScreen({
               )}
 
               <PrivateKeyKeypad
+                canDelete={canDeleteInput}
                 canInsert={canInsertInputCharacter}
                 canInsertSpace={canInsertInputSpace}
                 colors={colors}
+                deleteTestID="private-key-undo"
                 firstCharacter={input.charAt(0)}
                 format={format}
+                onDelete={deleteInputCharacter}
                 onInsert={insertInputCharacter}
               />
             </>
@@ -688,7 +676,6 @@ export function PrivateKeyScreen({
               slotCount={24}
               testID="private-key-brain-seed-words"
               words={result.mnemonic.split(' ')}
-              wordSlotsAria={UPSTREAM_TEXT.seed.wordSlotsAria.replace('{n}', '24')}
             />
             <DiceResultPanel
               colors={colors}
@@ -991,13 +978,5 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     lineHeight: 34,
-  },
-  undoButton: {
-    paddingHorizontal: 4,
-    paddingVertical: 3,
-  },
-  undoLabel: {
-    fontSize: 13,
-    fontWeight: '700',
   },
 });

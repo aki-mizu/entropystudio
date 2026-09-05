@@ -1,32 +1,35 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BackspaceKey } from '../../../components/BackspaceKey';
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
-import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../../upstreamUiCopy';
+import { UPSTREAM_TEXT } from '../../upstreamUiCopy';
 
 export type SeedPhraseEntryMethod = 'numbers' | 'words';
 
 type Props = {
+  readonly canDelete: boolean;
   readonly canInsert: (character: string) => boolean;
   readonly canInsertSpace: boolean;
   readonly colors: DiceColors;
+  readonly deleteTestID: string;
   readonly method: SeedPhraseEntryMethod;
+  readonly onDelete: () => void;
   readonly onInsert: (character: string) => void;
 };
 
 export function SeedPhraseKeypad({
+  canDelete,
   canInsert,
   canInsertSpace,
   colors,
+  deleteTestID,
   method,
+  onDelete,
   onInsert,
 }: Props) {
   if (method === 'numbers') {
     return (
-      <View
-        accessibilityLabel={UPSTREAM_TEXT.seed.numberKeypadAria}
-        style={styles.numberKeypad}
-        testID="seed-number-keypad"
-      >
+      <View style={styles.numberKeypad} testID="seed-number-keypad">
         <View style={styles.numberGrid} testID="seed-number-key-grid">
           {['01234', '56789'].map((row, rowIndex) => (
             <View key={row} style={styles.numberRow} testID={`seed-number-key-row-${rowIndex}`}>
@@ -34,10 +37,6 @@ export function SeedPhraseKeypad({
                 const enabled = canInsert(character);
                 return (
                   <Pressable
-                    accessibilityLabel={UPSTREAM_TEXT.seed.enterDigit.replace(
-                      '{n}',
-                      character,
-                    )}
                     accessibilityRole="button"
                     disabled={!enabled}
                     key={character}
@@ -58,41 +57,51 @@ export function SeedPhraseKeypad({
               })}
             </View>
           ))}
+          <View style={styles.numberActions}>
+            <BackspaceKey
+              colors={colors}
+              disabled={!canDelete}
+              onPress={onDelete}
+              style={styles.numberDeleteKey}
+              testID={deleteTestID}
+            />
+            <Pressable
+              accessibilityLabel={UPSTREAM_TEXT.seed.nextWord}
+              accessibilityRole="button"
+              disabled={!canInsertSpace}
+              onPress={() => onInsert(' ')}
+              style={({ pressed }) => [
+                styles.nextWordButton,
+                {
+                  backgroundColor: colors.segment,
+                  borderColor: colors.border,
+                  opacity: canInsertSpace ? (pressed ? 0.78 : 1) : 0.38,
+                },
+              ]}
+              testID="seed-number-next-word"
+            >
+              <Text style={[styles.nextWordLabel, { color: colors.text }]}>
+                {UPSTREAM_TEXT.seed.nextWord}
+              </Text>
+            </Pressable>
+          </View>
         </View>
-        <Pressable
-          accessibilityLabel={UPSTREAM_TEXT.seed.nextWord}
-          accessibilityRole="button"
-          disabled={!canInsertSpace}
-          onPress={() => onInsert(' ')}
-          style={({ pressed }) => [
-            styles.nextWordButton,
-            {
-              backgroundColor: colors.segment,
-              borderColor: colors.border,
-              opacity: canInsertSpace ? (pressed ? 0.78 : 1) : 0.38,
-            },
-          ]}
-          testID="seed-number-next-word"
-        >
-          <Text style={[styles.nextWordLabel, { color: colors.text }]}>
-            {UPSTREAM_TEXT.seed.nextWord}
-          </Text>
-        </Pressable>
       </View>
     );
   }
 
   return (
     <SoftKeyboard
+      canDelete={canDelete}
       canInsert={canInsert}
       canInsertSpace={canInsertSpace}
       colors={colors}
-      keyboardLabel={() => UPSTREAM_UI_FALLBACK_COPY.keyboard.seedPhrase}
+      deleteTestID={deleteTestID}
       keyboardTestID="seed-phrase-keypad"
       keyTestIDPrefix="seed-phrase-key-"
       modeControl="disabled"
       modeTestID="seed-phrase-keypad-mode"
-      modeToggleLabel={UPSTREAM_UI_FALLBACK_COPY.keyboard.characterModeUnavailable}
+      onDelete={onDelete}
       onInsert={onInsert}
       rowTestIDPrefix="seed-phrase-key-row-"
       spaceTestID="seed-phrase-key-space"
@@ -111,8 +120,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 6,
     borderWidth: 1,
+    flex: 4,
     justifyContent: 'center',
-    marginTop: 6,
     minHeight: 40,
   },
   nextWordLabel: {
@@ -121,6 +130,15 @@ const styles = StyleSheet.create({
   },
   numberGrid: {
     gap: 6,
+  },
+  numberActions: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 6,
+  },
+  numberDeleteKey: {
+    flex: 1,
+    minHeight: 40,
   },
   numberKey: {
     alignItems: 'center',
