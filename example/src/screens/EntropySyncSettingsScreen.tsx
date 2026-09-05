@@ -1,23 +1,27 @@
 import { useEffect } from 'react';
-import { BackHandler, StyleSheet, View } from 'react-native';
+import { BackHandler, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { WordCountSelector } from '../features/dice/components/WordCountSelector';
 import { diceColors } from '../features/dice/diceTheme';
 import { EntropySyncControl, useEntropySync } from '../features/entropySync';
-import { UPSTREAM_TEXT } from '../features/upstreamUiCopy';
+import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
 type Props = {
+  readonly autocompleteEnabled: boolean;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
+  readonly onSetAutocompleteEnabled: (enabled: boolean) => void;
   readonly onReturnToMethod: () => void;
 };
 
 export function EntropySyncSettingsScreen({
+  autocompleteEnabled,
   isActive,
   isDarkMode,
+  onSetAutocompleteEnabled,
   onReturnToMethod,
 }: Props) {
   const colors = diceColors(isDarkMode);
@@ -58,6 +62,21 @@ export function EntropySyncSettingsScreen({
           )}
           wordCount={entropySync.targetWords}
         />
+        <View style={[styles.autocompleteControl, { borderTopColor: colors.border }]}>
+          <View style={styles.autocompleteCopy}>
+            <Text style={[styles.autocompleteLabel, { color: colors.text }]}>
+              {UPSTREAM_UI_FALLBACK_COPY.seedPhrase.autocomplete}
+            </Text>
+          </View>
+          <Switch
+            accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.seedPhrase.autocomplete}
+            onValueChange={onSetAutocompleteEnabled}
+            testID="seed-phrase-autocomplete-setting"
+            thumbColor={autocompleteEnabled ? colors.surface : colors.muted}
+            trackColor={{ false: colors.segment, true: colors.accent }}
+            value={autocompleteEnabled}
+          />
+        </View>
         <EntropySyncControl
           colors={colors}
           enabled={entropySync.enabled}
@@ -72,6 +91,22 @@ export function EntropySyncSettingsScreen({
 }
 
 const styles = StyleSheet.create({
+  autocompleteControl: {
+    alignItems: 'center',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    paddingTop: 14,
+  },
+  autocompleteCopy: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  autocompleteLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
   content: {
     flex: 1,
     paddingHorizontal: CONTENT_HORIZONTAL_PADDING,

@@ -35,7 +35,6 @@ export type Bip39PassphraseOptions = {
   readonly autocompleteEnabled: boolean;
   readonly buildFromBip39Words: boolean;
   readonly canDerive: boolean;
-  readonly setAutocompleteEnabled: (enabled: boolean) => void;
   readonly setBuildFromBip39Words: (enabled: boolean) => void;
 };
 
@@ -61,8 +60,10 @@ function replaceInputSelection(
   return `${value.slice(0, selection.start)}${inserted}${value.slice(selection.end)}`;
 }
 
-export function useBip39PassphraseOptions(value: string): Bip39PassphraseOptions {
-  const [autocompleteEnabled, setAutocompleteEnabled] = useState(true);
+export function useBip39PassphraseOptions(
+  value: string,
+  autocompleteEnabled: boolean,
+): Bip39PassphraseOptions {
   const [buildFromBip39Words, setBuildFromBip39Words] = useState(false);
   const state = buildFromBip39Words ? analyzeBip39Passphrase(value) : null;
 
@@ -70,7 +71,6 @@ export function useBip39PassphraseOptions(value: string): Bip39PassphraseOptions
     autocompleteEnabled,
     buildFromBip39Words,
     canDerive: !buildFromBip39Words || Boolean(state?.canDerive),
-    setAutocompleteEnabled,
     setBuildFromBip39Words,
   };
 }
@@ -136,22 +136,6 @@ export function Bip39PassphraseView({
     return (
       !options.buildFromBip39Words || bip39PassphraseSpaceAllowed(value, selectedInput)
     );
-  }
-
-  function changeAutocompleteEnabled(enabled: boolean) {
-    options.setAutocompleteEnabled(enabled);
-    if (!enabled || selectedInput.start !== selectedInput.end) {
-      return;
-    }
-
-    const autocompleted = bip39PassphraseAutocomplete(value, selectedInput.end, true);
-    if (autocompleted.value === value) {
-      return;
-    }
-
-    const cursor = Math.min(autocompleted.cursor, autocompleted.value.length);
-    setInputSelection({ end: cursor, start: cursor });
-    onChangePassphrase(autocompleted.value);
   }
 
   function insertInputCharacter(character: string) {
@@ -234,21 +218,6 @@ export function Bip39PassphraseView({
               value={options.buildFromBip39Words}
             />
           </View>
-          {options.buildFromBip39Words ? (
-            <View style={styles.autocompleteToggle}>
-              <Text style={[styles.bip39Label, { color: colors.text }]}>
-                {UPSTREAM_TEXT.passphrase.autocomplete}
-              </Text>
-              <Switch
-                accessibilityLabel={UPSTREAM_TEXT.passphrase.autocomplete}
-                onValueChange={changeAutocompleteEnabled}
-                testID="bip39-passphrase-autocomplete"
-                thumbColor={options.autocompleteEnabled ? colors.surface : colors.muted}
-                trackColor={{ false: colors.segment, true: colors.accent }}
-                value={options.autocompleteEnabled}
-              />
-            </View>
-          ) : null}
         </View>
         <View style={styles.inputHeader}>
           <Text style={[styles.label, { color: colors.muted }]}>
@@ -327,10 +296,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-  autocompleteToggle: {
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
   bip39Copy: {
     flex: 1,
     minWidth: 0,
@@ -346,7 +311,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   bip39Options: {
-    gap: 8,
     marginBottom: 14,
   },
   bip39Status: {

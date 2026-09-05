@@ -16,6 +16,7 @@ import {
   ReactTestRenderer,
 } from '../../test/testSupport';
 import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
+import { Bip39PassphraseView } from '../../src/features/seedPhrase/bip39Passphrase';
 
 describe('Dice Rolls / BIP39 passphrase', () => {
   test('opens a visible optional BIP39 passphrase screen separately from deriving', async () => {
@@ -27,6 +28,18 @@ describe('Dice Rolls / BIP39 passphrase', () => {
     let app: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(async () => {
       app = ReactTestRenderer.create(<App />);
+    });
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'app-tab-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'seed-phrase-autocomplete-setting' })
+        .props.onValueChange(false);
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'app-tab-method' }).props.onPress();
     });
 
     await openDiceEntry(app!);
@@ -82,29 +95,19 @@ describe('Dice Rolls / BIP39 passphrase', () => {
       app!.root.findByProps({ testID: 'bip39-passphrase-keypad-mode' }).props.disabled,
     ).toBe(true);
     expect(app!.root.findByProps({ testID: 'bip39-passphrase-key-a' }).props.disabled).toBe(true);
+    expect(app!.root.findAllByProps({ testID: 'bip39-passphrase-autocomplete' })).toHaveLength(0);
     expect(
-      app!.root.findByProps({ testID: 'bip39-passphrase-autocomplete' }).props.value,
-    ).toBe(true);
+      app!.root.findByType(Bip39PassphraseView).props.options.autocompleteEnabled,
+    ).toBe(false);
 
     mockBip39PassphraseKeyAllowed.mockReturnValue(true);
     mockBip39PassphraseAutocomplete.mockReturnValue({ cursor: 1, value: 'a' });
     await ReactTestRenderer.act(async () => {
-      app!
-        .root.findByProps({ testID: 'bip39-passphrase-autocomplete' })
-        .props.onValueChange(false);
-    });
-    await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'bip39-passphrase-key-a' }).props.onPress();
     });
-    mockBip39PassphraseAutocomplete.mockReturnValue({ cursor: 8, value: 'abandon ' });
-    await ReactTestRenderer.act(async () => {
-      app!
-        .root.findByProps({ testID: 'bip39-passphrase-autocomplete' })
-        .props.onValueChange(true);
-    });
-    expect(mockBip39PassphraseAutocomplete).toHaveBeenLastCalledWith('a', 1, true);
+    expect(mockBip39PassphraseAutocomplete).toHaveBeenLastCalledWith('a', 1, false);
     expect(app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.value).toBe(
-      'abandon ',
+      'a',
     );
 
     await ReactTestRenderer.act(async () => {

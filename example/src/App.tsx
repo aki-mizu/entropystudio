@@ -17,6 +17,7 @@ function App() {
   const isDarkMode = useColorScheme() === 'dark';
   const [activeTool, setActiveTool] = useState<EntropyTool>('dice');
   const [activeTab, setActiveTab] = useState<AppTab>('method');
+  const [seedPhraseAutocompleteEnabled, setSeedPhraseAutocompleteEnabled] = useState(true);
   const colors = diceColors(isDarkMode);
 
   return (
@@ -27,24 +28,28 @@ function App() {
           <View style={styles.content}>
             <DiceRollsScreen
               activeTool={activeTool}
+              autocompleteEnabled={seedPhraseAutocompleteEnabled}
               isActive={activeTool === 'dice' && activeTab === 'method'}
               isDarkMode={isDarkMode}
               onSelectTool={setActiveTool}
             />
             <CardsScreen
               activeTool={activeTool}
+              autocompleteEnabled={seedPhraseAutocompleteEnabled}
               isActive={activeTool === 'cards' && activeTab === 'method'}
               isDarkMode={isDarkMode}
               onSelectTool={setActiveTool}
             />
             <NumberBasesScreen
               activeTool={activeTool}
+              autocompleteEnabled={seedPhraseAutocompleteEnabled}
               isActive={activeTool === 'hex' && activeTab === 'method'}
               isDarkMode={isDarkMode}
               onSelectTool={setActiveTool}
             />
             <SeedPhraseScreen
               activeTool={activeTool}
+              autocompleteEnabled={seedPhraseAutocompleteEnabled}
               isActive={activeTool === 'seed' && activeTab === 'method'}
               isDarkMode={isDarkMode}
               onSelectTool={setActiveTool}
@@ -56,8 +61,10 @@ function App() {
               onSelectTool={setActiveTool}
             />
             <EntropySyncSettingsScreen
+              autocompleteEnabled={seedPhraseAutocompleteEnabled}
               isActive={activeTab === 'settings'}
               isDarkMode={isDarkMode}
+              onSetAutocompleteEnabled={setSeedPhraseAutocompleteEnabled}
               onReturnToMethod={() => setActiveTab('method')}
             />
           </View>

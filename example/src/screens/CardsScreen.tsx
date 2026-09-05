@@ -60,6 +60,7 @@ const EMPTY_CARD_SELECTION: CardSelectionState = {
 
 type Props = {
   readonly activeTool: EntropyTool;
+  readonly autocompleteEnabled: boolean;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onSelectTool: (tool: EntropyTool) => void;
@@ -67,6 +68,7 @@ type Props = {
 
 export function CardsScreen({
   activeTool,
+  autocompleteEnabled,
   isActive,
   isDarkMode,
   onSelectTool,
@@ -74,7 +76,7 @@ export function CardsScreen({
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<CardView>('setup');
   const [passphrase, setPassphrase] = useState('');
-  const passphraseOptions = useBip39PassphraseOptions(passphrase);
+  const passphraseOptions = useBip39PassphraseOptions(passphrase, autocompleteEnabled);
   const [selectedRank, setSelectedRank] = useState<CardRank | null>(null);
   const [selectedSuit, setSelectedSuit] = useState<CardSuit | null>(null);
   const entropySync = useEntropySync();

@@ -51,6 +51,7 @@ type InputSelection = { readonly end: number; readonly start: number };
 
 type Props = {
   readonly activeTool: EntropyTool;
+  readonly autocompleteEnabled: boolean;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onSelectTool: (tool: EntropyTool) => void;
@@ -106,17 +107,17 @@ function replaceInputSelection(value: string, selection: InputSelection, inserte
 
 export function SeedPhraseScreen({
   activeTool,
+  autocompleteEnabled,
   isActive,
   isDarkMode,
   onSelectTool,
 }: Props) {
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<SeedPhraseView>('setup');
-  const [autocompleteEnabled, setAutocompleteEnabled] = useState(true);
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
   const [numberInput, setNumberInput] = useState('');
   const [passphrase, setPassphrase] = useState('');
-  const passphraseOptions = useBip39PassphraseOptions(passphrase);
+  const passphraseOptions = useBip39PassphraseOptions(passphrase, autocompleteEnabled);
   const [result, setResult] = useState<DiceResult | null>(null);
   const [seedMethod, setSeedMethod] = useState<SeedPhraseEntryMethod>('words');
   const [wordInput, setWordInput] = useState('');
@@ -131,6 +132,12 @@ export function SeedPhraseScreen({
     [input, seedMethod, wordCount, zeroIndexed],
   );
   const methodRequirement = seedPhraseMethodRequirement(seedMethod, wordCount, zeroIndexed);
+  const inputHelp =
+    seedMethod === 'words'
+      ? UPSTREAM_UI_FALLBACK_COPY.seedPhrase.wordsHelp(wordCount, wordCount - 1)
+      : formatCopy(UPSTREAM_TEXT.seed.numbersHelp, {
+          range: zeroIndexed ? UPSTREAM_TEXT.seed.range0 : UPSTREAM_TEXT.seed.range1,
+        });
   const canDeleteInput = selectedInput.end > selectedInput.start || selectedInput.start > 0;
   const activePhrase = analysis.phrase;
   const previewWords = analysis.words;
@@ -207,27 +214,6 @@ export function SeedPhraseScreen({
       zeroIndexed,
     });
     return normalized;
-  }
-
-  function setSeedAutocompleteEnabled(enabled: boolean) {
-    setAutocompleteEnabled(enabled);
-    if (!enabled || seedMethod !== 'words') {
-      return;
-    }
-
-    const selection = normalizedInputSelection(wordInput, inputSelection);
-    if (selection.start !== selection.end) {
-      return;
-    }
-
-    const autocompleted = seedPhraseAutocomplete(wordInput, selection.end, wordCount, true);
-    if (autocompleted.value === wordInput) {
-      return;
-    }
-
-    const nextInput = updateInput(autocompleted.value);
-    const cursor = Math.min(autocompleted.cursor, nextInput.length);
-    setInputSelection({ end: cursor, start: cursor });
   }
 
   function canInsertInputCharacter(character: string): boolean {
@@ -456,32 +442,12 @@ export function SeedPhraseScreen({
                 : formatCopy(UPSTREAM_TEXT.seed.numbersLabel, { words: wordCount })}
             </Text>
           </View>
-          <Text style={[styles.inputHelp, { color: colors.muted }]}>
-            {seedMethod === 'words'
-              ? UPSTREAM_UI_FALLBACK_COPY.seedPhrase.wordsHelp(wordCount, wordCount - 1)
-              : formatCopy(UPSTREAM_TEXT.seed.numbersHelp, {
-                  range: zeroIndexed
-                    ? UPSTREAM_TEXT.seed.range0
-                    : UPSTREAM_TEXT.seed.range1,
-                })}
+          <Text
+            style={[styles.inputHelp, styles.staticInputHelp, { color: colors.muted }]}
+            testID="seed-phrase-help"
+          >
+            {inputHelp}
           </Text>
-          {seedMethod === 'words' && (
-            <View style={styles.autocompleteToggle}>
-              <View style={styles.autocompleteCopy}>
-                <Text style={[styles.autocompleteLabel, { color: colors.text }]}>
-                  {UPSTREAM_UI_FALLBACK_COPY.seedPhrase.autocomplete}
-                </Text>
-              </View>
-              <Switch
-                accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.seedPhrase.autocomplete}
-                onValueChange={setSeedAutocompleteEnabled}
-                testID="seed-phrase-autocomplete"
-                thumbColor={autocompleteEnabled ? colors.surface : colors.muted}
-                trackColor={{ false: colors.segment, true: colors.accent }}
-                value={autocompleteEnabled}
-              />
-            </View>
-          )}
           {seedMethod === 'numbers' && (
             <View style={styles.zeroIndexToggle}>
               <View style={styles.zeroIndexCopy}>
@@ -528,7 +494,11 @@ export function SeedPhraseScreen({
               selectionColor={colors.accent}
               showSoftInputOnFocus={false}
               spellCheck={false}
-              style={[styles.input, { color: colors.text }]}
+              style={[
+                styles.input,
+                wordCount === 24 && styles.twentyFourWordInput,
+                { color: colors.text },
+              ]}
               testID={seedMethod === 'words' ? 'seed-phrase-input' : 'seed-number-input'}
               textContentType="none"
               value={input}
@@ -610,20 +580,6 @@ export function SeedPhraseScreen({
 }
 
 const styles = StyleSheet.create({
-  autocompleteCopy: {
-    flex: 1,
-    minWidth: 0,
-    paddingRight: 12,
-  },
-  autocompleteLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  autocompleteToggle: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
   backButton: {
     justifyContent: 'center',
     minHeight: 44,
@@ -690,7 +646,6 @@ const styles = StyleSheet.create({
   inputHelp: {
     fontSize: 12,
     lineHeight: 17,
-    marginBottom: 10,
   },
   inputHeader: {
     alignItems: 'center',
@@ -766,6 +721,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 52,
   },
+  staticInputHelp: {
+    marginBottom: 10,
+  },
   status: {
     fontSize: 12,
     lineHeight: 17,
@@ -781,6 +739,9 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     lineHeight: 34,
+  },
+  twentyFourWordInput: {
+    minHeight: 56,
   },
   zeroIndexCopy: {
     flex: 1,

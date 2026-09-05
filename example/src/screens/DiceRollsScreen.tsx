@@ -42,6 +42,7 @@ type SheetName = 'final-word' | 'result' | null;
 
 type Props = {
   readonly activeTool: EntropyTool;
+  readonly autocompleteEnabled: boolean;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onSelectTool: (tool: EntropyTool) => void;
@@ -49,6 +50,7 @@ type Props = {
 
 export function DiceRollsScreen({
   activeTool,
+  autocompleteEnabled,
   isActive,
   isDarkMode,
   onSelectTool,
@@ -57,7 +59,7 @@ export function DiceRollsScreen({
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<DiceView>('setup');
   const [passphrase, setPassphrase] = useState('');
-  const passphraseOptions = useBip39PassphraseOptions(passphrase);
+  const passphraseOptions = useBip39PassphraseOptions(passphrase, autocompleteEnabled);
   const [transcriptSelection, setTranscriptSelection] =
     useState<DiceTranscriptSelection | null>(null);
   const [selectionRequestId, setSelectionRequestId] = useState(0);

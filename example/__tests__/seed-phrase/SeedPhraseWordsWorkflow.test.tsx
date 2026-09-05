@@ -14,6 +14,7 @@ import {
   selectSeedPhraseLength,
 } from '../../test/testSupport';
 import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
+import { SeedPhraseScreen } from '../../src/screens/SeedPhraseScreen';
 
 describe('Seed Phrase / Words', () => {
   test('validates a typed Seed Phrase through the native BIP39 binding', async () => {
@@ -127,7 +128,7 @@ describe('Seed Phrase / Words', () => {
       app!.root.findByProps({ testID: 'seed-phrase-input' }).props.onChangeText('aba');
     });
 
-    expect(app!.root.findByProps({ testID: 'seed-phrase-autocomplete' }).props.value).toBe(true);
+    expect(app!.root.findAllByProps({ testID: 'seed-phrase-autocomplete' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'seed-phrase-key-n' }).props.disabled).toBe(false);
     expect(app!.root.findByProps({ testID: 'seed-phrase-key-z' }).props.disabled).toBe(true);
     expect(app!.root.findByProps({ testID: 'seed-phrase-key-space' }).props.disabled).toBe(true);
@@ -161,6 +162,33 @@ describe('Seed Phrase / Words', () => {
 
     expect(app!.root.findByProps({ testID: 'seed-phrase-input' }).props.value).toBe(`${mnemonic} `);
     expect(app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.disabled).toBe(false);
+  });
+
+  test('uses the Settings preference for BIP39 word autocomplete', async () => {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'app-tab-settings' }).props.onPress();
+    });
+    const autocompleteSetting = app!.root.findByProps({
+      testID: 'seed-phrase-autocomplete-setting',
+    });
+    expect(autocompleteSetting.props.accessibilityLabel).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.seedPhrase.autocomplete,
+    );
+    expect(autocompleteSetting.props.value).toBe(true);
+    expect(app!.root.findByType(SeedPhraseScreen).props.autocompleteEnabled).toBe(true);
+
+    await ReactTestRenderer.act(async () => {
+      autocompleteSetting.props.onValueChange(false);
+    });
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-autocomplete-setting' }).props.value,
+    ).toBe(false);
+    expect(app!.root.findByType(SeedPhraseScreen).props.autocompleteEnabled).toBe(false);
   });
 
   test('opens an optional BIP39 passphrase screen separately from deriving a seed result', async () => {

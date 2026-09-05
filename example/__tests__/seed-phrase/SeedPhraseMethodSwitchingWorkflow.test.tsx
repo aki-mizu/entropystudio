@@ -19,6 +19,11 @@ test('converts a valid draft while switching Seed Phrase entry methods', async (
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
   });
+  expect(
+    app!
+      .root.findByProps({ testID: 'seed-phrase-entry-view' })
+      .findAllByProps({ testID: 'seed-phrase-help-scroll' }),
+  ).toHaveLength(0);
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'seed-phrase-input' }).props.onChangeText('abandon about');
   });
@@ -30,6 +35,11 @@ test('converts a valid draft while switching Seed Phrase entry methods', async (
     app!.root.findByProps({ testID: 'seed-method-numbers' }).props.onPress();
     app!.root.findByProps({ testID: 'open-seed-phrase-entry' }).props.onPress();
   });
+  expect(
+    app!
+      .root.findByProps({ testID: 'seed-phrase-entry-view' })
+      .findAllByProps({ testID: 'seed-phrase-help-scroll' }),
+  ).toHaveLength(0);
   expect(app!.root.findByProps({ testID: 'seed-number-input' }).props.value).toBe('1 4');
 
   await ReactTestRenderer.act(async () => {

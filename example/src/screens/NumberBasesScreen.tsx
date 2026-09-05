@@ -49,6 +49,7 @@ type InputSelection = { readonly end: number; readonly start: number };
 
 type Props = {
   readonly activeTool: EntropyTool;
+  readonly autocompleteEnabled: boolean;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onSelectTool: (tool: EntropyTool) => void;
@@ -203,6 +204,7 @@ function replaceInputSelection(value: string, selection: InputSelection, inserte
 
 export function NumberBasesScreen({
   activeTool,
+  autocompleteEnabled,
   isActive,
   isDarkMode,
   onSelectTool,
@@ -213,7 +215,7 @@ export function NumberBasesScreen({
   const [inputValues, setInputValues] = useState<InputValues>(EMPTY_INPUT_VALUES);
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
   const [passphrase, setPassphrase] = useState('');
-  const passphraseOptions = useBip39PassphraseOptions(passphrase);
+  const passphraseOptions = useBip39PassphraseOptions(passphrase, autocompleteEnabled);
   const [result, setResult] = useState<DiceResult | null>(null);
   const [wordCount, setWordCount] = useState<WordCount>(24);
   const entropySync = useEntropySync();
