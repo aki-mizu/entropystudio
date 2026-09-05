@@ -35,6 +35,32 @@ describe('Dice Rolls / BIP39 passphrase', () => {
     expect(app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.placeholder).toBe(
       UPSTREAM_TEXT.passphrase.placeholder,
     );
+    expect(
+      app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.showSoftInputOnFocus,
+    ).toBe(false);
+    expect(app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.multiline).toBe(true);
+    expect(
+      app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.scrollEnabled,
+    ).toBe(true);
+    expect(app!.root.findByProps({ testID: 'bip39-passphrase-keypad' })).toBeDefined();
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'bip39-passphrase-key-a' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.value).toBe('a');
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'bip39-passphrase-undo' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.value).toBe('');
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'bip39-passphrase-keypad-mode' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'bip39-passphrase-key-A' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.value).toBe('A');
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'dice-passphrase-input' }).props.onChangeText('TREZOR');
