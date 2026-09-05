@@ -425,15 +425,17 @@ export function SeedPhraseScreen({
             />
           </View>
 
-          <View style={styles.seedPreviewArea}>
-            <DiceWordList
-              compact
-              colors={colors}
-              slotCount={wordCount}
-              testID="seed-phrase-words"
-              words={previewWords}
-            />
-          </View>
+          {seedMethod === 'numbers' && (
+            <View style={styles.seedPreviewArea}>
+              <DiceWordList
+                compact
+                colors={colors}
+                slotCount={wordCount}
+                testID="seed-phrase-words"
+                words={previewWords}
+              />
+            </View>
+          )}
 
           <View style={styles.inputHeader}>
             <Text style={[styles.inputLabel, { color: colors.muted }]}>
@@ -468,7 +470,13 @@ export function SeedPhraseScreen({
               />
             </View>
           )}
-          <View style={[styles.inputSurface, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.inputSurface,
+              seedMethod === 'words' && styles.wordInputSurface,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <TextInput
               accessibilityLabel={
                 seedMethod === 'words'
@@ -497,6 +505,7 @@ export function SeedPhraseScreen({
               style={[
                 styles.input,
                 wordCount === 24 && styles.twentyFourWordInput,
+                seedMethod === 'words' && styles.wordInput,
                 { color: colors.text },
               ]}
               testID={seedMethod === 'words' ? 'seed-phrase-input' : 'seed-number-input'}
@@ -742,6 +751,12 @@ const styles = StyleSheet.create({
   },
   twentyFourWordInput: {
     minHeight: 56,
+  },
+  wordInput: {
+    flex: 1,
+  },
+  wordInputSurface: {
+    flex: 1,
   },
   zeroIndexCopy: {
     flex: 1,

@@ -71,12 +71,7 @@ describe('Seed Phrase / Words', () => {
       app!.root.findByProps({ testID: 'seed-phrase-input' }).props.onChangeText(mnemonic);
     });
 
-    expect(app!.root.findByProps({ testID: 'seed-phrase-words-word-1' }).props.children).toBe(
-      'abandon',
-    );
-    expect(app!.root.findByProps({ testID: 'seed-phrase-words-word-12' }).props.children).toBe(
-      'about',
-    );
+    expect(app!.root.findAllByProps({ testID: 'seed-phrase-words' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'seed-phrase-status' }).props.children).toBe(
       '12 of 12 BIP39 words entered · checksum valid · ready to derive',
     );
