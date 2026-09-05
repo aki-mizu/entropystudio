@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     flexShrink: 1,
     marginBottom: 10,
-    maxHeight: 68,
+    maxHeight: 51,
     minHeight: 0,
   },
   input: {
