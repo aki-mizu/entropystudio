@@ -16,7 +16,7 @@ import {
   ReactTestRenderer,
   ScrollView,
 } from '../../test/testSupport';
-import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
+import { formatCopy, UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
 describe(UPSTREAM_TEXT.dice.coleman.title, () => {
   test('uses EntropyLab help copy', () => {
@@ -58,7 +58,7 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
     expect(app!.root.findByProps({ testID: 'dice-setup-settings' })).toBeDefined();
     expect(app!.root.findAllByProps({ testID: 'dice-settings-sheet' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'dice-method-requirement' }).props.children).toBe(
-      UPSTREAM_UI_FALLBACK_COPY.common.seedLengthEntropy(24, 256),
+      formatCopy(UPSTREAM_TEXT.seedLength.entropy, { bits: 256, words: 24 }),
     );
     expect(app!.root.findByProps({ testID: 'dice-method-coldcard-title' }).props.children).toBe(
       UPSTREAM_TEXT.dice.coldcard.title,

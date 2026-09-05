@@ -13,7 +13,11 @@ import {
   selectEntropyTool,
   selectSeedPhraseLength,
 } from '../../test/testSupport';
-import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
+import {
+  formatCopy,
+  UPSTREAM_UI_FALLBACK_COPY,
+  UPSTREAM_TEXT,
+} from '../../src/features/upstreamUiCopy';
 
 describe('Hashed cards', () => {
   test('shows target-specific guidance for hashed and direct card methods', async () => {
@@ -24,12 +28,16 @@ describe('Hashed cards', () => {
 
     await selectEntropyTool(app!, 'cards');
     expect(app!.root.findByProps({ testID: 'cards-method-requirement' }).props.children).toBe(
-      UPSTREAM_UI_FALLBACK_COPY.cards.hashedRequirement24,
+      UPSTREAM_TEXT.cards.hashedRequirement24,
     );
 
     await selectSeedPhraseLength(app!, 12);
     expect(app!.root.findByProps({ testID: 'cards-method-requirement' }).props.children).toBe(
-      UPSTREAM_UI_FALLBACK_COPY.cards.hashedRequirement(12, 128, 25),
+      formatCopy(UPSTREAM_TEXT.cards.hashedRequirement, {
+        bits: 128,
+        first: 25,
+        words: 12,
+      }),
     );
 
     await selectSeedPhraseLength(app!, 24);
@@ -37,7 +45,11 @@ describe('Hashed cards', () => {
       app!.root.findByProps({ testID: 'card-method-direct' }).props.onPress();
     });
     expect(app!.root.findByProps({ testID: 'cards-method-requirement' }).props.children).toBe(
-      UPSTREAM_UI_FALLBACK_COPY.cards.directRequirement(24, 23, 1),
+      formatCopy(UPSTREAM_TEXT.cards.directRequirement, {
+        final: 1,
+        partial: 23,
+        words: 24,
+      }),
     );
   });
 

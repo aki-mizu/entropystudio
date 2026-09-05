@@ -18,17 +18,21 @@ const upstreamRenderedSource = readFileSync(upstreamAppFile, 'utf8');
 const upstreamLabelsSource = sourceFile(upstreamLabelsFile);
 const upstreamUiCopySource = sourceFile(upstreamUiCopyFile);
 const staticText = findStaticText(upstreamUiCopySource);
+const fallbackText = findFallbackText(upstreamUiCopySource);
 const upstreamLabelExports = new Set(findUpstreamLabelExports(upstreamUiCopySource));
 
 for (const entry of staticText) {
   assertCurrentUpstreamSource(entry.text, entry.location);
+}
+for (const entry of fallbackText) {
+  assertAbsentFromUpstreamSource(entry);
 }
 for (const name of upstreamLabelExports) {
   assertUpstreamLabelExport(name, upstreamLabelsSource);
 }
 
 console.log(
-  `Studio upstream UI copy is in sync (${new Set(staticText.map(entry => entry.text)).size} static alias value(s); ${upstreamLabelExports.size} label table(s))`,
+  `Studio upstream UI copy is in sync (${new Set(staticText.map(entry => entry.text)).size} static alias value(s); ${new Set(fallbackText.map(entry => entry.text)).size} fallback text value(s) absent from es.json; ${upstreamLabelExports.size} label table(s))`,
 );
 
 function readUpstreamSourceKeys() {
@@ -45,6 +49,21 @@ function readUpstreamSourceKeys() {
 function assertCurrentUpstreamSource(text, location) {
   if (!upstreamSourceSet.has(text) && !upstreamRenderedSource.includes(text)) {
     fail(`${location} is not current pinned upstream UI text: ${JSON.stringify(text)}.`);
+  }
+}
+
+function assertAbsentFromUpstreamSource(entry) {
+  const matchingSourceText = entry.sourcePattern
+    ? upstreamSourceKeys.find(sourceText => entry.sourcePattern.test(sourceText))
+    : upstreamSourceSet.has(entry.text)
+      ? entry.text
+      : undefined;
+
+  if (matchingSourceText) {
+    fail(
+      `${entry.location} in UPSTREAM_UI_FALLBACK_COPY matches pinned upstream es.json text: ` +
+        `${JSON.stringify(matchingSourceText)}. Move it to UPSTREAM_TEXT.`,
+    );
   }
 }
 
@@ -112,6 +131,74 @@ function findStaticText(source) {
 
   visit(initializer);
   return entries;
+}
+
+function findFallbackText(source) {
+  const filePath = source.fileName;
+  let initializer;
+
+  for (const statement of source.statements) {
+    if (!typescript.isVariableStatement(statement)) {
+      continue;
+    }
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        typescript.isIdentifier(declaration.name) &&
+        declaration.name.text === 'UPSTREAM_UI_FALLBACK_COPY' &&
+        declaration.initializer
+      ) {
+        initializer = declaration.initializer;
+      }
+    }
+  }
+
+  if (!initializer) {
+    fail(`${relative(root, filePath)} must export an UPSTREAM_UI_FALLBACK_COPY object.`);
+  }
+
+  const entries = [];
+
+  function addText(node, sourcePattern) {
+    const { line } = source.getLineAndCharacterOfPosition(node.getStart(source));
+    entries.push({
+      location: `${relative(root, filePath)}:${line + 1}`,
+      text: node.text,
+      sourcePattern,
+    });
+  }
+
+  function visit(node) {
+    while (typescript.isAsExpression(node) || typescript.isParenthesizedExpression(node)) {
+      node = node.expression;
+    }
+    if (typescript.isStringLiteral(node) || typescript.isNoSubstitutionTemplateLiteral(node)) {
+      addText(node);
+      return;
+    }
+    if (typescript.isTemplateExpression(node)) {
+      addText(node, templateSourcePattern(node));
+      for (const span of node.templateSpans) {
+        visit(span.expression);
+      }
+      return;
+    }
+    typescript.forEachChild(node, visit);
+  }
+
+  visit(initializer);
+  return entries;
+}
+
+function templateSourcePattern(node) {
+  const literalParts = [node.head.text, ...node.templateSpans.map(span => span.literal.text)];
+  const sourcePlaceholder = '(?:\\{[^{}]+\\}|\\d+)';
+  return new RegExp(
+    `^${literalParts.map(escapeRegularExpression).join(sourcePlaceholder)}$`,
+  );
+}
+
+function escapeRegularExpression(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function findUpstreamLabelExports(source) {

@@ -12,7 +12,11 @@ export const UPSTREAM_TEXT = {
     understand: 'I understand',
   },
   cards: {
+    hashedRequirement24:
+      '24 words need 256 bits. One deck is about 225.6 bits, so deal 52 unique cards, shuffle again, then deal 6 more.',
     coleman: 'Match Ian Coleman method',
+    directRequirement:
+      '{words} words use {partial} complete 11-bit rank selections plus {final} final rank draw(s).',
     direct: {
       desc: 'Ignore suits. Reshuffle and draw A–8, A–8, A–8, then A–4 for each full word. Finish with the shorter rank sequence shown for the checksum-valid final word.',
       title: 'Direct word selection',
@@ -23,6 +27,8 @@ export const UPSTREAM_TEXT = {
       recommendedN: '{n} cards are recommended',
       title: 'Hashed card transcript',
     },
+    hashedRequirement:
+      '{words} words need {bits} bits. Deal {first} unique cards from one shuffled deck.',
     how: 'How to turn cards into a {words}-word seed',
     instruct: {
       directFirst: 'Shuffle {set} (any suit) before the first draw.',
@@ -45,6 +51,9 @@ export const UPSTREAM_TEXT = {
     },
     transcript: 'Card transcript',
     undo: 'Undo last card',
+  },
+  common: {
+    cancel: 'Cancel',
   },
   dice: {
     bitbox: {
@@ -168,6 +177,17 @@ export const UPSTREAM_TEXT = {
     key: 'Private key',
     seed: 'Seed phrase',
   },
+  numberBases: {
+    mixedRemainder:
+      ' The final character is mixed-radix: it contributes only {n} bit(s) and must be one of {chars}.',
+    remainderBinary:
+      ' Enter {fullDigits} complete {shortLabel} characters; the controls and progress message then switch to {n} coin flip(s), using Heads (0) or Tails (1).',
+    requirement: '{words} words require exactly {digits} {unit}.',
+    setupRemainderBinary:
+      ' Enter {fullDigits} complete {shortLabel} characters followed by {n} coin flip(s), using Heads (0) or Tails (1).',
+    setupRemainderMixed:
+      ' The final character contributes {n} bit(s) and must be one of {chars}.',
+  },
   note: {
     bitboxSkippedMany: 'Skipped {n} faces of 5 or 6 on the first five dice of a word (reroll).',
     bitboxSkippedOne: 'Skipped {n} face of 5 or 6 on the first five dice of a word (reroll).',
@@ -194,6 +214,7 @@ export const UPSTREAM_TEXT = {
   },
   seed: {
     count: '{entered} of {words} BIP39 words entered',
+    finalPrefix: '{progress} · {n} valid checksum word(s) start with "{prefix}".',
     how: 'How to enter a seed phrase',
     lastWordLabel: 'Valid final word ({n} choices)',
     lastWordPlaceholder: 'Choose a confirmed final word',
@@ -216,26 +237,41 @@ export const UPSTREAM_TEXT = {
       wordsDesc: 'Type or paste the English BIP39 words themselves.',
     },
     nextWord: 'Next word',
+    noFinalPrefix: '{progress} · No valid checksum word starts with "{prefix}".',
     numbersHelp: 'Enter one {range} number for each word, separated by spaces. The corresponding BIP39 words appear below.',
     numbersLabel: 'Your {words} BIP39 word numbers',
     numbersPlaceholder0: '0 1 2 …',
     numbersPlaceholder1: '1 2 3 …',
     range0: '0 through 2047',
     range1: '1 through 2048',
+    requirementNumbers: 'Enter exactly {words} BIP39 word numbers using {range}.',
+    requirementWords: 'Enter exactly {words} BIP39 words. Extended keys ignore this selection.',
     zeroIndex: 'Use zero-indexed word numbers',
     zeroIndexNote: '(0–2047 instead of the default 1–2048)',
   },
   seedLength: {
+    entropy: '{words} words use {bits} bits of BIP39 entropy.',
     label: 'Seed phrase length',
     words: '{n} words',
   },
   sync: {
     description: '(Keeps non-hashed methods synchronized. Hashed inputs update them one way and are never overwritten.)',
     entropyUnknown: 'entropy unknown · only as strong as the text',
+    shortfall: '{n} bits of entropy · under {min}',
     status: 'Key synced',
     title: 'Sync entropy across methods',
   },
 } as const;
+
+export function formatCopy(
+  template: string,
+  values: Record<string, number | string>,
+): string {
+  return Object.entries(values).reduce(
+    (copy, [name, value]) => copy.replaceAll(`{${name}}`, String(value)),
+    template,
+  );
+}
 
 /** Direct upstream enum label tables used by Studio. */
 export const UPSTREAM_UI_LABELS = {
@@ -246,10 +282,6 @@ export const UPSTREAM_UI_LABELS = {
 export const UPSTREAM_UI_FALLBACK_COPY = {
   common: {
     back: 'Back',
-    cancel: 'Cancel',
-    seedLengthWords: (wordCount: number) => `${wordCount} words`,
-    seedLengthEntropy: (wordCount: number, bitCount: number) =>
-      `${wordCount} words use ${bitCount} bits of BIP39 entropy.`,
   },
   cards: {
     colemanNote: '(show and hash A♠ 2♣ instead of As 2c)',
@@ -259,8 +291,6 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
       `${entered} of ${needed} rank draws entered · checksum-valid ${wordCount}-word seed ready to derive`,
     directHelp: (partialWords: number) =>
       `For each of the first ${partialWords} words, shuffle and draw from A–8 three times, then A–4 once. Each four-character group selects one word; spaces separate the groups. The shorter final group supplies the remaining entropy bits, and EntropyLab calculates the BIP39 checksum bits.`,
-    directRequirement: (wordCount: number, partialWords: number, finalDraws: number) =>
-      `${wordCount} words use ${partialWords} complete 11-bit rank selections plus ${finalDraws} final rank draw(s).`,
     directProgress: (entered: number, needed: number, step: string) =>
       `${entered} of ${needed} rank draws entered · ${step}`,
     directTranscript: 'Rank-only draw transcript',
@@ -271,10 +301,6 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
       `Cards use rank then suit, like AS, 10H, or TD. Ignored: ${ignored}`,
     hashedInputHelp: (deal: string) =>
       `Each valid card updates a deterministic test seed. For real security, ${deal}. SHA-256 hashes the ASCII transcript (As 2c Td).`,
-    hashedRequirement: (wordCount: number, bitCount: number, firstShuffleCards: number) =>
-      `${wordCount} words need ${bitCount} bits. Deal ${firstShuffleCards} unique cards from one shuffled deck.`,
-    hashedRequirement24:
-      '24 words need 256 bits. One deck is about 225.6 bits, so deal 52 unique cards, shuffle again, then deal 6 more.',
     invalidRank: (count: number) => `${count} invalid rank highlighted`,
     invalidRanks: (count: number) => `${count} invalid ranks highlighted`,
     extraCard: (count: number) => `${count} extra card highlighted`,
@@ -333,8 +359,6 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
       `Each complete ${shortLabel} character contributes ${bitsPerDigit} bit${bitsPerDigit === 1 ? '' : 's'}${except}. Seed-word cards fill as enough bits arrive; the checksum-derived final word appears when all ${digits} characters are entered.${spaces}${remainder} No generator — enter entropy you already created.`,
     invalid: (count: number) =>
       ` · ${count} invalid character${count === 1 ? '' : 's'} highlighted`,
-    mixedRemainder: (bitCount: number, characters: string) =>
-      ` The final character is mixed-radix: it contributes only ${bitCount} bit(s) and must be one of ${characters}.`,
     progress: (
       entered: number,
       limit: number,
@@ -342,15 +366,7 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
       filled: number,
       wordCount: number,
     ) => `${entered} of ${limit} ${unit} · ${filled} of ${wordCount} seed words filled`,
-    requirement: (wordCount: number, digits: number, unit: string) =>
-      `${wordCount} words require exactly ${digits} ${unit}.`,
     ready: ' · ready to derive',
-    setupRemainderBinary: (fullDigits: number, shortLabel: string, bitCount: number) =>
-      ` Enter ${fullDigits} complete ${shortLabel} characters followed by ${bitCount} coin flip(s), using Heads (0) or Tails (1).`,
-    setupRemainderMixed: (bitCount: number, characters: string) =>
-      ` The final character contributes ${bitCount} bit(s) and must be one of ${characters}.`,
-    remainderBinary: (fullDigits: number, shortLabel: string, bitCount: number) =>
-      ` Enter ${fullDigits} complete ${shortLabel} characters; the controls and progress message then switch to ${bitCount} coin flip(s), using Heads (0) or Tails (1).`,
     spacesBin: ' Spaces are added every 11 bits.',
     coinNext: (digits: number, shortLabel: string, entered: number, total: number) =>
       `${digits} ${shortLabel} characters complete · coin flip ${entered} of ${total} · Heads (0) or Tails (1)`,
@@ -403,21 +419,9 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
   result: {
     masterSeedHex: 'Master seed hex',
   },
-  sync: {
-    shortfall: (entropyBits: number, minimumEntropyBits: number) =>
-      `${entropyBits} bits of entropy · under ${minimumEntropyBits}`,
-  },
   seedPhrase: {
     autocomplete: 'Autocomplete BIP39 words',
-    noFinalPrefix: (progress: string, prefix: string) =>
-      `${progress} · No valid checksum word starts with "${prefix}".`,
     placeholder: (wordCount: number) => `Enter exactly ${wordCount} BIP39 words`,
-    requirementNumbers: (wordCount: number, range: string) =>
-      `Enter exactly ${wordCount} BIP39 word numbers using ${range}.`,
-    requirementWords: (wordCount: number) =>
-      `Enter exactly ${wordCount} BIP39 words. Extended keys ignore this selection.`,
-    finalPrefix: (progress: string, count: number, prefix: string) =>
-      `${progress} · ${count} valid checksum word(s) start with "${prefix}".`,
     wordsHelp: (wordCount: number, partialWords: number) =>
       `Enter exactly ${wordCount} English BIP39 words. You can also paste an extended key here; the selected phrase length does not apply to extended keys. With ${partialWords} compatible diceware words, choose the final checksum word below.`,
     wordsLabel: (wordCount: number) => `Your ${wordCount}-word seed phrase`,

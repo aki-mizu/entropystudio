@@ -13,7 +13,11 @@ import {
   selectEntropyTool,
   selectSeedPhraseLength,
 } from '../../test/testSupport';
-import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
+import {
+  formatCopy,
+  UPSTREAM_TEXT,
+  UPSTREAM_UI_FALLBACK_COPY,
+} from '../../src/features/upstreamUiCopy';
 import { SeedPhraseScreen } from '../../src/screens/SeedPhraseScreen';
 
 describe('Seed Phrase / Words', () => {
@@ -37,7 +41,7 @@ describe('Seed Phrase / Words', () => {
     await selectEntropyTool(app!, 'seed');
 
     expect(app!.root.findByProps({ testID: 'seed-phrase-method-requirement' }).props.children).toBe(
-      UPSTREAM_UI_FALLBACK_COPY.seedPhrase.requirementWords(24),
+      formatCopy(UPSTREAM_TEXT.seed.requirementWords, { words: 24 }),
     );
 
     expect(app!.root.findByProps({ testID: 'seed-phrase-setup-view' })).toBeDefined();
@@ -50,7 +54,7 @@ describe('Seed Phrase / Words', () => {
 
     await selectSeedPhraseLength(app!, 12);
     expect(app!.root.findByProps({ testID: 'seed-phrase-method-requirement' }).props.children).toBe(
-      UPSTREAM_UI_FALLBACK_COPY.seedPhrase.requirementWords(12),
+      formatCopy(UPSTREAM_TEXT.seed.requirementWords, { words: 12 }),
     );
     await ReactTestRenderer.act(async () => {
       app!

@@ -16,7 +16,7 @@ import {
 import { EntropySyncSource } from '../src/native/entropyStudio';
 import type { EntropySyncSnapshot } from '../src/native/entropyStudio';
 import { STUDIO_UI_TEXT } from '../src/features/studioUiCopy';
-import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../src/features/upstreamUiCopy';
+import { formatCopy, UPSTREAM_TEXT } from '../src/features/upstreamUiCopy';
 
 const SYNCED_ZERO_ENTROPY_SNAPSHOT: EntropySyncSnapshot = {
   base4: '',
@@ -225,7 +225,13 @@ test('syncs entropy across methods through the native snapshot', async () => {
 
   expect(
     app!.root.findByProps({ testID: 'number-base-format-requirement' }).props.children,
-  ).toBe(UPSTREAM_UI_FALLBACK_COPY.numberBases.requirement(12, 128, 'binary digits'));
+  ).toBe(
+    formatCopy(UPSTREAM_TEXT.numberBases.requirement, {
+      digits: 128,
+      unit: 'binary digits',
+      words: 12,
+    }),
+  );
 
   await selectEntropyTool(app!, 'seed');
   await ReactTestRenderer.act(async () => {

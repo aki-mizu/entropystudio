@@ -12,8 +12,8 @@ import { EntropySyncSource } from '../../src/native/entropyStudio';
 import type { EntropySyncSnapshot } from '../../src/native/entropyStudio';
 import { STUDIO_UI_TEXT } from '../../src/features/studioUiCopy';
 import {
+  formatCopy,
   UPSTREAM_TEXT,
-  UPSTREAM_UI_FALLBACK_COPY,
 } from '../../src/features/upstreamUiCopy';
 
 const SYNCED_ENTROPY_SNAPSHOT: EntropySyncSnapshot = {
@@ -159,7 +159,7 @@ test('shows native shortfall and unknown-strength cautions for synced entropy', 
   });
 
   expect(app!.root.findByProps({ testID: 'entropy-sync-settings-caution' }).props.children).toBe(
-    UPSTREAM_UI_FALLBACK_COPY.sync.shortfall(15, 128),
+    formatCopy(UPSTREAM_TEXT.sync.shortfall, { min: 128, n: 15 }),
   );
 
   mockSynchronizeEntropy.mockReturnValue(SYNCED_UNKNOWN_ENTROPY_SNAPSHOT);

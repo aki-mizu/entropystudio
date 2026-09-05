@@ -19,7 +19,7 @@ import type {
   DirectDiceState,
   HashedDiceState,
 } from '../../native/entropyStudio';
-import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../upstreamUiCopy';
+import { formatCopy, UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../upstreamUiCopy';
 
 export const DICE_FACES = ['1', '2', '3', '4', '5', '6'] as const;
 export const D8_D16_FACES = [
@@ -296,10 +296,10 @@ export function diceScreenCopy(
     inputHelp,
     inputPlaceholder,
     lastWordPlaceholder: UPSTREAM_TEXT.seed.lastWordPlaceholder,
-    methodRequirement: UPSTREAM_UI_FALLBACK_COPY.common.seedLengthEntropy(
-      wordCount,
-      info.entropyBits,
-    ),
+    methodRequirement: formatCopy(UPSTREAM_TEXT.seedLength.entropy, {
+      bits: info.entropyBits,
+      words: wordCount,
+    }),
     mode: UPSTREAM_TEXT.mode.dice,
     resultEntropy: UPSTREAM_TEXT.result.entropyHex,
     resultMasterSeed: UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
@@ -421,13 +421,6 @@ function arrayBufferToHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer), byte =>
     byte.toString(16).padStart(2, '0'),
   ).join('');
-}
-
-function formatCopy(template: string, values: Record<string, number | string>): string {
-  return Object.entries(values).reduce(
-    (copy, [name, value]) => copy.replaceAll(`{${name}}`, String(value)),
-    template,
-  );
 }
 
 function upstreamDiceError(error: unknown, state: HashedDiceState): string {

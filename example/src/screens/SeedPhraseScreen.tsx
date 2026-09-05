@@ -30,7 +30,12 @@ import {
   Bip39PassphraseView,
   useBip39PassphraseOptions,
 } from '../features/seedPhrase/bip39Passphrase';
-import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '../features/upstreamUiCopy';
+import {
+  formatCopy,
+  UPSTREAM_UI_FALLBACK_COPY,
+  UPSTREAM_TEXT,
+  UPSTREAM_UI_LABELS,
+} from '../features/upstreamUiCopy';
 import {
   analyzeSeedPhrase,
   seedPhraseAutocomplete,
@@ -68,24 +73,17 @@ const SEED_METHOD_COPY = {
   },
 } as const;
 
-function formatCopy(template: string, values: Record<string, number | string>): string {
-  return Object.entries(values).reduce(
-    (copy, [key, value]) => copy.replaceAll(`{${key}}`, String(value)),
-    template,
-  );
-}
-
 function seedPhraseMethodRequirement(
   method: SeedPhraseEntryMethod,
   wordCount: WordCount,
   zeroIndexed: boolean,
 ): string {
   return method === 'numbers'
-    ? UPSTREAM_UI_FALLBACK_COPY.seedPhrase.requirementNumbers(
-        wordCount,
-        zeroIndexed ? UPSTREAM_TEXT.seed.range0 : UPSTREAM_TEXT.seed.range1,
-      )
-    : UPSTREAM_UI_FALLBACK_COPY.seedPhrase.requirementWords(wordCount);
+    ? formatCopy(UPSTREAM_TEXT.seed.requirementNumbers, {
+        range: zeroIndexed ? UPSTREAM_TEXT.seed.range0 : UPSTREAM_TEXT.seed.range1,
+        words: wordCount,
+      })
+    : formatCopy(UPSTREAM_TEXT.seed.requirementWords, { words: wordCount });
 }
 
 function entropyHex(entropy: ArrayBuffer): string {

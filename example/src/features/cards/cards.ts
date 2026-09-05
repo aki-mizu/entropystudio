@@ -17,7 +17,7 @@ import {
 } from '../../native/entropyStudio';
 import type { DirectCardState, HashedCardState } from '../../native/entropyStudio';
 import type { WordCount } from '../dice/dice';
-import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
+import { formatCopy, UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
 
 export const CARD_METHODS = ['hashed', 'direct'] as const;
 export const CARD_RANKS = [
@@ -127,7 +127,7 @@ export function cardScreenCopy(
     resultEntropy: UPSTREAM_TEXT.result.entropyHex,
     resultMasterSeed: UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
     seedLengthLabel: UPSTREAM_TEXT.seedLength.label,
-    seedLengthValue: UPSTREAM_UI_FALLBACK_COPY.common.seedLengthWords(wordCount),
+    seedLengthValue: formatCopy(UPSTREAM_TEXT.seedLength.words, { n: wordCount }),
   };
 }
 
@@ -138,23 +138,23 @@ function cardMethodRequirement(
 ): string {
   if (method === 'direct') {
     return directState
-      ? UPSTREAM_UI_FALLBACK_COPY.cards.directRequirement(
-          wordCount,
-          directState.partialWords,
-          directState.finalDraws,
-        )
+      ? formatCopy(UPSTREAM_TEXT.cards.directRequirement, {
+          final: directState.finalDraws,
+          partial: directState.partialWords,
+          words: wordCount,
+        })
       : '';
   }
 
   if (wordCount === 24) {
-    return UPSTREAM_UI_FALLBACK_COPY.cards.hashedRequirement24;
+    return UPSTREAM_TEXT.cards.hashedRequirement24;
   }
 
-  return UPSTREAM_UI_FALLBACK_COPY.cards.hashedRequirement(
-    wordCount,
-    bip39EntropyBits(wordCount),
-    getHashedCardState('', wordCount).firstShuffleCards,
-  );
+  return formatCopy(UPSTREAM_TEXT.cards.hashedRequirement, {
+    bits: bip39EntropyBits(wordCount),
+    first: getHashedCardState('', wordCount).firstShuffleCards,
+    words: wordCount,
+  });
 }
 
 export function hashedCardsNeeded(wordCount: WordCount): number {
@@ -421,13 +421,6 @@ function directRankSet(max: number): string {
 
 function arrayBufferToHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer), byte => byte.toString(16).padStart(2, '0')).join('');
-}
-
-function formatCopy(template: string, values: Record<string, number | string>): string {
-  return Object.entries(values).reduce(
-    (copy, [name, value]) => copy.replaceAll(`{${name}}`, String(value)),
-    template,
-  );
 }
 
 function upstreamCardError(error: unknown, state: HashedCardState): string {

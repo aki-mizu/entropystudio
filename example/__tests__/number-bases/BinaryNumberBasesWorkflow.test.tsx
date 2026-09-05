@@ -8,7 +8,7 @@ import {
   ReactTestRenderer,
   selectEntropyTool,
 } from '../../test/testSupport';
-import { UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
+import { formatCopy, UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
 describe('Number Bases / Binary', () => {
   test('keeps deletion outside the binary controls', async () => {
@@ -20,7 +20,13 @@ describe('Number Bases / Binary', () => {
     await selectEntropyTool(app!, 'hex');
     expect(
       app!.root.findByProps({ testID: 'number-base-format-requirement' }).props.children,
-    ).toBe(UPSTREAM_UI_FALLBACK_COPY.numberBases.requirement(24, 256, 'binary digits'));
+    ).toBe(
+      formatCopy(UPSTREAM_TEXT.numberBases.requirement, {
+        digits: 256,
+        unit: 'binary digits',
+        words: 24,
+      }),
+    );
     const numberBasesSetup = app!.root.findByProps({ testID: 'number-bases-setup-view' });
     await ReactTestRenderer.act(async () => {
       numberBasesSetup.findByProps({ testID: 'number-base-format-bin' }).props.onPress();

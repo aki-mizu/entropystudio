@@ -20,7 +20,7 @@ import type {
 } from '../../native/entropyStudio';
 import type { WordCount } from '../dice/dice';
 import type { SeedPhraseEntryMethod } from './components/SeedPhraseKeypad';
-import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
+import { formatCopy, UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../upstreamUiCopy';
 
 type InputSelection = { readonly end: number; readonly start: number };
 
@@ -157,13 +157,16 @@ export function seedPhraseStatusCopy(
     case SeedPhraseStatus.Ready:
       return formatCopy(UPSTREAM_TEXT.seed.meta.ready, { progress });
     case SeedPhraseStatus.FinalPrefix:
-      return UPSTREAM_UI_FALLBACK_COPY.seedPhrase.finalPrefix(
+      return formatCopy(UPSTREAM_TEXT.seed.finalPrefix, {
+        n: state.matchingFinalCandidates,
+        prefix: finalWord,
         progress,
-        state.matchingFinalCandidates,
-        finalWord,
-      );
+      });
     case SeedPhraseStatus.NoFinalPrefix:
-      return UPSTREAM_UI_FALLBACK_COPY.seedPhrase.noFinalPrefix(progress, finalWord);
+      return formatCopy(UPSTREAM_TEXT.seed.noFinalPrefix, {
+        prefix: finalWord,
+        progress,
+      });
     case SeedPhraseStatus.InvalidWord:
       return formatCopy(UPSTREAM_TEXT.seed.meta.invalidWord, {
         n: state.invalidPosition,
@@ -229,13 +232,6 @@ export function bip39PassphraseStatusCopy(state: Bip39PassphraseState): string {
 
 function nativeInputMethod(method: SeedPhraseEntryMethod) {
   return method === 'words' ? SeedPhraseInputMethod.Words : SeedPhraseInputMethod.Numbers;
-}
-
-function formatCopy(template: string, values: Record<string, number | string>): string {
-  return Object.entries(values).reduce(
-    (copy, [key, value]) => copy.replaceAll(`{${key}}`, String(value)),
-    template,
-  );
 }
 
 function formatPassphraseWordCountCopy(

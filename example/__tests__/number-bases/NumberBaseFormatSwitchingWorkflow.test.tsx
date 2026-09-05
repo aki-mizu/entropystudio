@@ -8,7 +8,11 @@ import {
   ReactTestRenderer,
   selectEntropyTool,
 } from '../../test/testSupport';
-import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_UI_LABELS } from '../../src/features/upstreamUiCopy';
+import {
+  formatCopy,
+  UPSTREAM_TEXT,
+  UPSTREAM_UI_LABELS,
+} from '../../src/features/upstreamUiCopy';
 
 test('preserves independent drafts while switching Number Bases formats', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
@@ -34,7 +38,15 @@ test('preserves independent drafts while switching Number Bases formats', async 
   });
   const base64 = UPSTREAM_UI_LABELS.hexFormat.base64;
   expect(app!.root.findByProps({ testID: 'number-base-format-requirement' }).props.children).toBe(
-    `${UPSTREAM_UI_FALLBACK_COPY.numberBases.requirement(24, 46, base64.unit)}${UPSTREAM_UI_FALLBACK_COPY.numberBases.setupRemainderBinary(42, base64.shortLabel, 4)}`,
+    `${formatCopy(UPSTREAM_TEXT.numberBases.requirement, {
+      digits: 46,
+      unit: base64.unit,
+      words: 24,
+    })}${formatCopy(UPSTREAM_TEXT.numberBases.setupRemainderBinary, {
+      fullDigits: 42,
+      n: 4,
+      shortLabel: base64.shortLabel,
+    })}`,
   );
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'open-number-bases-entry' }).props.onPress();

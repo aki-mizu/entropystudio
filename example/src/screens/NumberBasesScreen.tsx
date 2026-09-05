@@ -38,7 +38,12 @@ import {
   numberBaseFormatConfig,
 } from '../features/numberBases/numberBases';
 import type { NumberBaseFormat } from '../features/numberBases/numberBases';
-import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '../features/upstreamUiCopy';
+import {
+  formatCopy,
+  UPSTREAM_UI_FALLBACK_COPY,
+  UPSTREAM_TEXT,
+  UPSTREAM_UI_LABELS,
+} from '../features/upstreamUiCopy';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
@@ -68,28 +73,21 @@ function entropyHex(entropy: ArrayBuffer): string {
   return Array.from(new Uint8Array(entropy), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function formatCopy(template: string, values: Record<string, number | string>): string {
-  return Object.entries(values).reduce(
-    (copy, [key, value]) => copy.replaceAll(`{${key}}`, String(value)),
-    template,
-  );
-}
-
 function numberBaseInputHelp(
   format: NumberBaseFormat,
   config: ReturnType<typeof numberBaseFormatConfig>,
 ): string {
   const remainder = config.remainderBits
     ? config.binaryRemainder
-      ? UPSTREAM_UI_FALLBACK_COPY.numberBases.remainderBinary(
-          config.fullDigits,
-          config.shortLabel,
-          config.remainderBits,
-        )
-      : UPSTREAM_UI_FALLBACK_COPY.numberBases.mixedRemainder(
-          config.remainderBits,
-          [...config.finalCharacters].join(', '),
-        )
+      ? formatCopy(UPSTREAM_TEXT.numberBases.remainderBinary, {
+          fullDigits: config.fullDigits,
+          n: config.remainderBits,
+          shortLabel: config.shortLabel,
+        })
+      : formatCopy(UPSTREAM_TEXT.numberBases.mixedRemainder, {
+          chars: [...config.finalCharacters].join(', '),
+          n: config.remainderBits,
+        })
     : '';
 
   return UPSTREAM_UI_FALLBACK_COPY.numberBases.help(
@@ -106,11 +104,11 @@ function numberBaseSetupRequirement(
   wordCount: WordCount,
   config: ReturnType<typeof numberBaseFormatConfig>,
 ): string {
-  const requirement = UPSTREAM_UI_FALLBACK_COPY.numberBases.requirement(
-    wordCount,
-    config.digits,
-    config.unit,
-  );
+  const requirement = formatCopy(UPSTREAM_TEXT.numberBases.requirement, {
+    digits: config.digits,
+    unit: config.unit,
+    words: wordCount,
+  });
 
   if (!config.remainderBits) {
     return requirement;
@@ -118,15 +116,15 @@ function numberBaseSetupRequirement(
 
   return `${requirement}${
     config.binaryRemainder
-      ? UPSTREAM_UI_FALLBACK_COPY.numberBases.setupRemainderBinary(
-          config.fullDigits,
-          config.shortLabel,
-          config.remainderBits,
-        )
-      : UPSTREAM_UI_FALLBACK_COPY.numberBases.setupRemainderMixed(
-          config.remainderBits,
-          [...config.finalCharacters].join(', '),
-        )
+      ? formatCopy(UPSTREAM_TEXT.numberBases.setupRemainderBinary, {
+          fullDigits: config.fullDigits,
+          n: config.remainderBits,
+          shortLabel: config.shortLabel,
+        })
+      : formatCopy(UPSTREAM_TEXT.numberBases.setupRemainderMixed, {
+          chars: [...config.finalCharacters].join(', '),
+          n: config.remainderBits,
+        })
   }`;
 }
 

@@ -64,16 +64,6 @@ describe('Upstream UI copy provenance', () => {
 
   test('copies every dynamic formatter only from current upstream templates', () => {
     const dynamicFallbackTemplates = {
-      'common.seedLengthWords': {
-        source: upstreamShellHtml,
-        template:
-          /<option value="12">12 words<\/option><option value="15">15 words<\/option><option value="18">18 words<\/option><option value="21">21 words<\/option><option value="24" selected="selected">24 words<\/option>/,
-      },
-      'common.seedLengthEntropy': {
-        source: upstreamAppJs,
-        template:
-          /hodlTText\("\{words\} words use \{bits\} bits of BIP39 entropy\.", \{ words: config\.words, bits: config\.bits \}\)/,
-      },
       'cards.dealN': {
         source: upstreamAppJs,
         template: /deal \$\{needed\.first\} unique cards without putting them back/,
@@ -87,11 +77,6 @@ describe('Upstream UI copy provenance', () => {
         source: upstreamAppJs,
         template:
           /For each of the first \$\{config\.partialWords\} words, shuffle and draw from A\\u20138 three times, then A\\u20134 once\./,
-      },
-      'cards.directRequirement': {
-        source: upstreamAppJs,
-        template:
-          /"\{words\} words use \{partial\} complete 11-bit rank selections plus \{final\} final rank draw\(s\)\."/,
       },
       'cards.directProgress': {
         source: upstreamAppJs,
@@ -122,11 +107,6 @@ describe('Upstream UI copy provenance', () => {
           template:
             /Each valid card updates a deterministic test seed\. For real security, \$\{config\.words === 24 \? "deal all 52 unique cards, shuffle again, then deal 6 more" : `deal \$\{needed\.first\} unique cards without putting them back`\}\. SHA-256 hashes the ASCII transcript \(As 2c Td\)\./,
         },
-      'cards.hashedRequirement': {
-        source: upstreamAppJs,
-        template:
-          /"\{words\} words need \{bits\} bits\. Deal \{first\} unique cards from one shuffled deck\."/,
-      },
       'cards.invalidRank': {
         source: upstreamAppJs,
         template:
@@ -187,35 +167,10 @@ describe('Upstream UI copy provenance', () => {
         template:
           /\$\{analysis\.invalidCharacterCount\} invalid character\$\{analysis\.invalidCharacterCount === 1 \? "" : "s"\} highlighted/,
       },
-      'numberBases.mixedRemainder': {
-        source: upstreamAppJs,
-        template:
-          /The final character is mixed-radix: it contributes only \{n\} bit\(s\) and must be one of \{chars\}\./,
-      },
       'numberBases.progress': {
         source: upstreamAppJs,
         template:
           /\$\{analysis\.count\} of \$\{analysis\.limit\} \$\{definition\.unit\} \\xB7 \$\{words\.length\} of \$\{config\.words\} seed words filled/,
-      },
-      'numberBases.requirement': {
-        source: upstreamAppJs,
-        template:
-          /hodlTText\("\{words\} words require exactly \{digits\} \{unit\}\.", \{ words: config\.words, digits: format\.digits, unit: format\.unit \}\)/,
-      },
-      'numberBases.setupRemainderBinary': {
-        source: upstreamAppJs,
-        template:
-          /Enter \{fullDigits\} complete \{shortLabel\} characters followed by \{n\} coin flip\(s\), using Heads \(0\) or Tails \(1\)\./,
-      },
-      'numberBases.setupRemainderMixed': {
-        source: upstreamAppJs,
-        template:
-          /The final character contributes \{n\} bit\(s\) and must be one of \{chars\}\./,
-      },
-      'numberBases.remainderBinary': {
-        source: upstreamAppJs,
-        template:
-          /Enter \{fullDigits\} complete \{shortLabel\} characters; the controls and progress message then switch to \{n\} coin flip\(s\), using Heads \(0\) or Tails \(1\)\./,
       },
       'privateKey.progress.brain.empty': {
         source: upstreamAppJs,
@@ -281,25 +236,9 @@ describe('Upstream UI copy provenance', () => {
         template:
           /\$\{count2\} of \$\{required2\} WIF characters entered \\xB7 \$\{Math\.max\(0, required2 - count2\)\} remaining/,
       },
-      'seedPhrase.finalPrefix': {
-        source: upstreamAppJs,
-        template: /\{n\} valid checksum word\(s\) start with \\\"\{prefix\}\\\"\./,
-      },
-      'seedPhrase.noFinalPrefix': {
-        source: upstreamAppJs,
-        template: /No valid checksum word starts with \\\"\{prefix\}\\\"\./,
-      },
       'seedPhrase.placeholder': {
         source: upstreamAppJs,
         template: /placeholder="Enter exactly \$\{config\.words\} BIP39 words"/,
-      },
-      'seedPhrase.requirementNumbers': {
-        source: upstreamAppJs,
-        template: /Enter exactly \{words\} BIP39 word numbers using \{range\}\./,
-      },
-      'seedPhrase.requirementWords': {
-        source: upstreamAppJs,
-        template: /Enter exactly \{words\} BIP39 words\. Extended keys ignore this selection\./,
       },
       'seedPhrase.wordsHelp': {
         source: upstreamAppJs,
@@ -309,10 +248,6 @@ describe('Upstream UI copy provenance', () => {
       'seedPhrase.wordsLabel': {
         source: upstreamAppJs,
         template: /Your \$\{config\.words\}-word seed phrase/,
-      },
-      'sync.shortfall': {
-        source: upstreamAppJs,
-        template: /\{n\} bits of entropy · under \{min\}/,
       },
     };
 
@@ -427,7 +362,8 @@ function decodeJavaScriptEscapes(source) {
     )
     .replace(/\\x([0-9a-fA-F]{2})/g, (_, codeUnit) =>
       String.fromCharCode(Number.parseInt(codeUnit, 16)),
-    );
+    )
+    .replace(/\\(["'])/g, '$1');
 }
 
 function sourceFiles(directory) {
