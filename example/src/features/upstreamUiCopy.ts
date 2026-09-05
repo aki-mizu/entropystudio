@@ -118,6 +118,7 @@ export const UPSTREAM_TEXT = {
     generic: 'Could not calculate',
     priv: {
       brainEmpty: 'Enter the brain-wallet recovery passphrase.',
+      brainTrimmedEmpty: 'Trimming boundary whitespace leaves an empty brain-wallet recovery passphrase.',
       enter: 'Enter a private key.',
       hex: 'Enter exactly 64 hexadecimal characters (0–9 and a–f).',
       miniFormat: 'Mini keys must start with S and contain 22 or 30 Bitcoin Base58 characters.',
@@ -144,6 +145,7 @@ export const UPSTREAM_TEXT = {
   key: {
     brain: 'Brain wallet',
     brainDesc: 'Unsafe. SHA-256 of your text, as a single key pair or a 24-word seed.',
+    brainWalletTrim: 'Trim leading and trailing whitespace',
     formatHeading: 'Private key format',
     hex: 'Private key hex',
     hexDesc: 'Raw 32-byte private key as 64 hexadecimal characters.',
@@ -365,8 +367,14 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
   privateKey: {
     progress: {
       brain: {
+        boundaryWhitespaceWillBeTrimmed: 'boundary whitespace will be trimmed',
         empty: () => 'No text entered · brain wallets are unsafe',
-        entered: () => 'Text entered · exact text will be used · brain wallets are unsafe',
+        entered: (convention: string) => `Text entered · ${convention} · brain wallets are unsafe`,
+        exactText: 'exact text will be used',
+        exactTextWithBoundaryWhitespace: 'exact text will be used, including boundary whitespace',
+        trimEnabledNoBoundaryWhitespace: 'trim enabled; no boundary whitespace present',
+        trimmedEmpty: () =>
+          'Boundary whitespace trimming leaves an empty passphrase · enter non-whitespace text or turn trimming off',
       },
       hex: {
         excess: (enteredCount: number, requiredCount: number) =>

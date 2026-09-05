@@ -30,18 +30,23 @@ pub struct PrivateKeyInputState {
     pub excess_count: u32,
     pub can_derive: bool,
     pub status: PrivateKeyInputStatus,
+    pub has_boundary_whitespace: bool,
+    pub trimmed_to_empty: bool,
 }
 
 #[uniffi::export]
 pub fn private_key_input_state(
     mut value: String,
     format: PrivateKeyFormat,
+    trim_brain_wallet_boundary_whitespace: bool,
 ) -> PrivateKeyInputState {
     let state = match format {
         PrivateKeyFormat::Wif => wif_input_state(&value),
         PrivateKeyFormat::Hex => hex_input_state(&value),
         PrivateKeyFormat::MiniKey => mini_key_input_state(&value),
-        PrivateKeyFormat::BrainWallet => brain_wallet_input_state(&value),
+        PrivateKeyFormat::BrainWallet => {
+            brain_wallet_input_state(&value, trim_brain_wallet_boundary_whitespace)
+        }
     };
     wipe_string(&mut value);
     state
@@ -51,8 +56,9 @@ pub fn private_key_input_state(
 pub fn private_key_entropy(
     mut value: String,
     format: PrivateKeyFormat,
+    trim_brain_wallet_boundary_whitespace: bool,
 ) -> Result<Vec<u8>, EntropyStudioError> {
-    let result = private_key_entropy_inner(&value, format);
+    let result = private_key_entropy_inner(&value, format, trim_brain_wallet_boundary_whitespace);
     wipe_string(&mut value);
     result
 }
@@ -86,12 +92,15 @@ pub fn private_key_key_allowed(
 fn private_key_entropy_inner(
     value: &str,
     format: PrivateKeyFormat,
+    trim_brain_wallet_boundary_whitespace: bool,
 ) -> Result<Vec<u8>, EntropyStudioError> {
     let mut entropy = match format {
         PrivateKeyFormat::Wif => wif_entropy(value)?,
         PrivateKeyFormat::Hex => hex_entropy(value)?,
         PrivateKeyFormat::MiniKey => mini_key_entropy(value)?,
-        PrivateKeyFormat::BrainWallet => brain_wallet_entropy(value)?,
+        PrivateKeyFormat::BrainWallet => {
+            brain_wallet_entropy(value, trim_brain_wallet_boundary_whitespace)?
+        }
     };
     let result = entropy.to_vec();
     wipe_bytes(&mut entropy);
@@ -315,22 +324,42 @@ fn mini_key_input_state(value: &str) -> PrivateKeyInputState {
     )
 }
 
-fn brain_wallet_entropy(value: &str) -> Result<[u8; 32], EntropyStudioError> {
-    if value.is_empty() {
-        return Err(EntropyStudioError::EmptyBrainWallet);
+fn brain_wallet_entropy(
+    value: &str,
+    trim_boundary_whitespace: bool,
+) -> Result<[u8; 32], EntropyStudioError> {
+    let candidate = if trim_boundary_whitespace {
+        value.trim()
+    } else {
+        value
+    };
+    if candidate.is_empty() {
+        return Err(if trim_boundary_whitespace && !value.is_empty() {
+            EntropyStudioError::TrimmedBrainWalletEmpty
+        } else {
+            EntropyStudioError::EmptyBrainWallet
+        });
     }
 
-    Ok(sha256_digest(value.as_bytes()))
+    Ok(sha256_digest(candidate.as_bytes()))
 }
 
-fn brain_wallet_input_state(value: &str) -> PrivateKeyInputState {
+fn brain_wallet_input_state(value: &str, trim_boundary_whitespace: bool) -> PrivateKeyInputState {
     let entered_count = character_count(value);
-    let status = if value.is_empty() {
+    let candidate = if trim_boundary_whitespace {
+        value.trim()
+    } else {
+        value
+    };
+    let status = if candidate.is_empty() {
         PrivateKeyInputStatus::Empty
     } else {
         PrivateKeyInputStatus::Ready
     };
-    private_key_input_state_record(entered_count, 0, 0, 0, 0, 0, status)
+    let mut state = private_key_input_state_record(entered_count, 0, 0, 0, 0, 0, status);
+    state.has_boundary_whitespace = value != value.trim();
+    state.trimmed_to_empty = trim_boundary_whitespace && !value.is_empty() && candidate.is_empty();
+    state
 }
 
 fn private_key_input_state_record(
@@ -352,6 +381,8 @@ fn private_key_input_state_record(
         excess_count,
         can_derive: matches!(status, PrivateKeyInputStatus::Ready),
         status,
+        has_boundary_whitespace: false,
+        trimmed_to_empty: false,
     }
 }
 

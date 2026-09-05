@@ -68,7 +68,7 @@ describe('Private Key', () => {
     });
 
     expect(mockPrivateKeyKeyAllowed).toHaveBeenCalledWith('', 0, 0, '5', 0);
-    expect(mockPrivateKeyInputState).toHaveBeenCalledWith('5', 0);
+    expect(mockPrivateKeyInputState).toHaveBeenCalledWith('5', 0, false);
     expect(app!.root.findByProps({ testID: 'private-key-input' }).props.value).toBe('5');
     expect(app!.root.findByProps({ testID: 'private-key-progress' }).props.children).toBe(
       '1 of 51 WIF characters entered · 50 remaining',
@@ -89,7 +89,7 @@ describe('Private Key', () => {
       app!.root.findByProps({ testID: 'private-key-input' }).props.onChangeText(WIF);
     });
 
-    expect(mockPrivateKeyEntropy).toHaveBeenLastCalledWith(WIF, 0);
+    expect(mockPrivateKeyEntropy).toHaveBeenLastCalledWith(WIF, 0, false);
     expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(false);
     expect(app!.root.findByProps({ testID: 'private-key-progress' }).props.children).toBe(
       '52 of 52 WIF characters entered · Bitcoin mainnet checksum valid · ready to derive',
@@ -157,6 +157,65 @@ describe('Private Key', () => {
     expect(app!.root.findByProps({ testID: 'private-key-key-space' }).props.disabled).toBe(false);
     expect(app!.root.findByProps({ testID: 'private-key-progress' }).props.children).toBe(
       'No text entered · brain wallets are unsafe',
+    );
+  });
+
+  test('uses exact Brain wallet text by default and can trim boundary whitespace', async () => {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+
+    await selectEntropyTool(app!, 'key');
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'private-key-format-brain' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-private-key-entry' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'brain-wallet-warning-inline-acknowledge' }).props.onPress();
+    });
+
+    expect(app!.root.findByProps({ testID: 'brain-wallet-trim' }).props.accessibilityLabel).toBe(
+      UPSTREAM_TEXT.key.brainWalletTrim,
+    );
+    expect(app!.root.findByProps({ testID: 'brain-wallet-trim' }).props.accessibilityState).toEqual({
+      checked: false,
+    });
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'private-key-input' }).props.onChangeText(' recovery phrase ');
+    });
+
+    expect(mockPrivateKeyEntropy).toHaveBeenLastCalledWith(' recovery phrase ', 3, false);
+    expect(app!.root.findByProps({ testID: 'private-key-progress' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.privateKey.progress.brain.entered(
+        UPSTREAM_UI_FALLBACK_COPY.privateKey.progress.brain.exactTextWithBoundaryWhitespace,
+      ),
+    );
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'brain-wallet-trim' }).props.onPress();
+    });
+
+    expect(app!.root.findByProps({ testID: 'brain-wallet-trim' }).props.accessibilityState).toEqual({
+      checked: true,
+    });
+    expect(mockPrivateKeyEntropy).toHaveBeenLastCalledWith(' recovery phrase ', 3, true);
+    expect(app!.root.findByProps({ testID: 'private-key-progress' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.privateKey.progress.brain.entered(
+        UPSTREAM_UI_FALLBACK_COPY.privateKey.progress.brain.boundaryWhitespaceWillBeTrimmed,
+      ),
+    );
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'private-key-input' }).props.onChangeText(' \t\n ');
+    });
+
+    expect(app!.root.findByProps({ testID: 'derive-private-key' }).props.disabled).toBe(true);
+    expect(app!.root.findByProps({ testID: 'private-key-progress' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.privateKey.progress.brain.trimmedEmpty(),
     );
   });
 

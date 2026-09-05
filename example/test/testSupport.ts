@@ -43,8 +43,8 @@ export const mockNormalizeDirectCardTranscript = jest.fn<string, [string]>();
 export const mockAnalyzeNumberBaseInput = jest.fn<NumberBaseAnalysis, [string, number, number]>();
 export const mockBip39EntropyBits = jest.fn<number, [number]>();
 export const mockNumberBaseEntropy = jest.fn<ArrayBuffer, [string, number, number]>();
-export const mockPrivateKeyEntropy = jest.fn<ArrayBuffer, [string, number]>();
-export const mockPrivateKeyInputState = jest.fn<PrivateKeyInputState, [string, number]>();
+export const mockPrivateKeyEntropy = jest.fn<ArrayBuffer, [string, number, boolean]>();
+export const mockPrivateKeyInputState = jest.fn<PrivateKeyInputState, [string, number, boolean]>();
 export const mockPrivateKeyKeyAllowed = jest.fn<boolean, [string, number, number, string, number]>();
 export const mockSynchronizeEntropy = jest.fn<
   EntropySyncSnapshot,
@@ -133,6 +133,7 @@ jest.mock('entropystudio', () => ({
     PrivateKeyHex: 16,
     PrivateKeyMiniKey: 17,
     PrivateKeyBrainWallet: 18,
+    PrivateKeyBrainWalletTrimmed: 19,
   },
   NumberBaseFormat: {
     Bin: 0,
@@ -172,6 +173,7 @@ jest.mock('entropystudio', () => ({
     InvalidMiniPrivateKey: 'InvalidMiniPrivateKey',
     InvalidPrivateKeyRange: 'InvalidPrivateKeyRange',
     EmptyBrainWallet: 'EmptyBrainWallet',
+    TrimmedBrainWalletEmpty: 'TrimmedBrainWalletEmpty',
   },
   HashedCardInstruction: {
     Empty: 0,

@@ -19,6 +19,7 @@ pub enum EntropyStudioError {
     InvalidMiniPrivateKey,
     InvalidPrivateKeyRange,
     EmptyBrainWallet,
+    TrimmedBrainWalletEmpty,
 }
 
 impl fmt::Display for EntropyStudioError {

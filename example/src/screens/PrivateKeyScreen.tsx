@@ -100,6 +100,7 @@ export function PrivateKeyScreen({
   >({ hd: false, scalar: false });
   const [brainWalletWarningVisible, setBrainWalletWarningVisible] = useState(false);
   const [brainWalletOutput, setBrainWalletOutput] = useState<BrainWalletOutput>('scalar');
+  const [brainWalletTrim, setBrainWalletTrim] = useState(false);
   const [format, setFormat] = useState<PrivateKeyInputFormat>('wif');
   const [inputValues, setInputValues] = useState<PrivateKeyInputValues>(
     EMPTY_PRIVATE_KEY_INPUT_VALUES,
@@ -118,9 +119,9 @@ export function PrivateKeyScreen({
     ...(brainWalletOutput === 'hd' ? BRAIN_WALLET_WARNING_COPY.hdLines : []),
   ];
   const isPrivateKeyEntryVisible = format !== 'brain' || brainWalletWarningAcknowledged;
-  const inputState = privateKeyInputState(input, format);
+  const inputState = privateKeyInputState(input, format, brainWalletTrim);
   const inputHasError = privateKeyInputHasError(inputState);
-  const inputProgress = privateKeyProgressText(inputState, format);
+  const inputProgress = privateKeyProgressText(inputState, format, brainWalletTrim);
   const selectedInput = normalizedInputSelection(input, inputSelection);
   const canDeleteInput = selectedInput.end > selectedInput.start || selectedInput.start > 0;
   const canInsertInputSpace =
@@ -130,7 +131,7 @@ export function PrivateKeyScreen({
 
   if (inputState.canDerive || inputHasError) {
     try {
-      entropy = privateKeyEntropy(input, format);
+      entropy = privateKeyEntropy(input, format, brainWalletTrim);
     } catch (error) {
       inputError = privateKeyError(error);
     }
@@ -143,7 +144,7 @@ export function PrivateKeyScreen({
 
   useRegisterCurrentEntropySyncRequest(isActive, {
     selectedFinalWord: '',
-    source: privateKeyEntropySyncSource(format),
+    source: privateKeyEntropySyncSource(format, brainWalletTrim),
     targetWords: entropySync.targetWords,
     value: input,
     zeroIndexed: false,
@@ -199,6 +200,19 @@ export function PrivateKeyScreen({
     setBrainWalletOutput(value);
     setResult(null);
     setBrainWalletWarningVisible(false);
+  }
+
+  function toggleBrainWalletTrim() {
+    const next = !brainWalletTrim;
+    setBrainWalletTrim(next);
+    setResult(null);
+    entropySync.publish({
+      selectedFinalWord: '',
+      source: privateKeyEntropySyncSource(format, next),
+      targetWords: entropySync.targetWords,
+      value: input,
+      zeroIndexed: false,
+    });
   }
 
   function openPrivateKeyEntry() {
@@ -291,7 +305,7 @@ export function PrivateKeyScreen({
     setResult(null);
     entropySync.publish({
       selectedFinalWord: '',
-      source: privateKeyEntropySyncSource(format),
+      source: privateKeyEntropySyncSource(format, brainWalletTrim),
       targetWords: entropySync.targetWords,
       value,
       zeroIndexed: false,
@@ -502,6 +516,36 @@ export function PrivateKeyScreen({
                   );
                 })}
               </View>
+              <Pressable
+                accessibilityLabel={brainWalletLocale.trimBoundaryWhitespace}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: brainWalletTrim }}
+                onPress={toggleBrainWalletTrim}
+                style={({ pressed }) => [
+                  styles.brainWalletTrimToggle,
+                  { opacity: pressed ? 0.72 : 1 },
+                ]}
+                testID="brain-wallet-trim"
+              >
+                <View
+                  style={[
+                    styles.brainWalletTrimCheckbox,
+                    {
+                      backgroundColor: brainWalletTrim ? colors.accent : 'transparent',
+                      borderColor: colors.accent,
+                    },
+                  ]}
+                >
+                  {brainWalletTrim && (
+                    <Text style={[styles.brainWalletTrimCheckmark, { color: colors.onAccent }]}>
+                      {'\u2713'}
+                    </Text>
+                  )}
+                </View>
+                <Text style={[styles.brainWalletTrimLabel, { color: colors.text }]}>
+                  {brainWalletLocale.trimBoundaryWhitespace}
+                </Text>
+              </Pressable>
               {brainWalletWarningAcknowledged ? (
                 <Pressable
                   accessibilityRole="button"
@@ -748,6 +792,32 @@ const styles = StyleSheet.create({
   },
   brainWalletSection: {
     marginBottom: 10,
+  },
+  brainWalletTrimCheckbox: {
+    alignItems: 'center',
+    borderRadius: 2,
+    borderWidth: 2,
+    height: 20,
+    justifyContent: 'center',
+    marginRight: 10,
+    width: 20,
+  },
+  brainWalletTrimCheckmark: {
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+  brainWalletTrimLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  brainWalletTrimToggle: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginTop: 12,
+    minHeight: 36,
   },
   brainWalletInlineWarning: {
     borderTopWidth: StyleSheet.hairlineWidth,

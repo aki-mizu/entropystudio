@@ -33,7 +33,7 @@ The current public API intentionally stays small:
 - `directDiceState(rolls: string, method: DirectDiceMethod, targetWords: number): DirectDiceState`
 - `cardTranscriptToEntropy(transcript: string, method: CardHashMethod, targetWords: number): ArrayBuffer`
 - `directCardState(transcript: string, targetWords: number): DirectCardState`
-- `privateKeyEntropy(value: string, format: PrivateKeyFormat): ArrayBuffer`
+- `privateKeyEntropy(value: string, format: PrivateKeyFormat, trimBrainWalletBoundaryWhitespace: boolean): ArrayBuffer`
 
 `mnemonicToEntropy` expects an NFKD-normalized English BIP39 phrase. In
 TypeScript, call `phrase.normalize("NFKD")` before passing text to it.
@@ -90,8 +90,9 @@ input-format framing and dispatch.
 - `PrivateKeyFormat.MiniKey` accepts 22- or 30-character Casascius mini keys,
 	including the published SHA-256 checksum rule.
 - `PrivateKeyFormat.BrainWallet` hashes exact, nonempty UTF-8 text with
-	SHA-256. Boundary whitespace is significant and brain-wallet phrases are
-	generally unsafe for funds.
+	SHA-256 by default. Set `trimBrainWalletBoundaryWhitespace` to `true` to
+	remove leading and trailing whitespace before hashing; an all-whitespace
+	phrase is then rejected. Brain-wallet phrases are generally unsafe for funds.
 
 ## Setup
 

@@ -146,6 +146,39 @@ fn entropy_sync_marks_brain_wallet_strength_as_unknown() {
 }
 
 #[test]
+fn entropy_sync_trims_brain_wallet_boundary_whitespace_when_requested() {
+    let exact = synchronize_entropy(
+        " recovery phrase ".to_owned(),
+        EntropySyncSource::PrivateKeyBrainWallet,
+        24,
+        false,
+        String::new(),
+    )
+    .unwrap();
+    let trimmed = synchronize_entropy(
+        " recovery phrase ".to_owned(),
+        EntropySyncSource::PrivateKeyBrainWalletTrimmed,
+        24,
+        false,
+        String::new(),
+    )
+    .unwrap();
+    let expected = private_key_entropy(
+        "recovery phrase".to_owned(),
+        PrivateKeyFormat::BrainWallet,
+        false,
+    )
+    .unwrap()
+    .iter()
+    .map(|byte| format!("{byte:02X}"))
+    .collect::<String>();
+
+    assert_ne!(exact.hex, trimmed.hex);
+    assert_eq!(trimmed.hex, expected);
+    assert!(trimmed.entropy_strength_unknown);
+}
+
+#[test]
 fn entropy_sync_emits_a_mainnet_wif_for_a_valid_256_bit_private_key() {
     let key_one = format!("{}1", "0".repeat(63));
     let snapshot = synchronize_entropy(
@@ -163,7 +196,7 @@ fn entropy_sync_emits_a_mainnet_wif_for_a_valid_256_bit_private_key() {
         "KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn"
     );
     assert_eq!(
-        private_key_entropy(snapshot.wif_private_key, PrivateKeyFormat::Wif).unwrap(),
+        private_key_entropy(snapshot.wif_private_key, PrivateKeyFormat::Wif, false).unwrap(),
         {
             let mut entropy = vec![0u8; 31];
             entropy.push(1);

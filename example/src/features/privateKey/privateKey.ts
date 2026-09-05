@@ -50,6 +50,7 @@ export function brainWalletLocaleCopy() {
   return {
     acknowledgement: UPSTREAM_TEXT.beta.understand,
     label: PRIVATE_KEY_COPY.brain.title,
+    trimBoundaryWhitespace: UPSTREAM_TEXT.key.brainWalletTrim,
   };
 }
 
@@ -57,15 +58,28 @@ export function brainWalletOutputCopy(output: BrainWalletOutput) {
   return UPSTREAM_UI_FALLBACK_COPY.brainWallet.outputs[output];
 }
 
-export function privateKeyEntropy(value: string, format: PrivateKeyInputFormat): ArrayBuffer {
-  return nativePrivateKeyEntropy(value, nativePrivateKeyFormat(format));
+export function privateKeyEntropy(
+  value: string,
+  format: PrivateKeyInputFormat,
+  trimBrainWalletBoundaryWhitespace: boolean,
+): ArrayBuffer {
+  return nativePrivateKeyEntropy(
+    value,
+    nativePrivateKeyFormat(format),
+    trimBrainWalletBoundaryWhitespace,
+  );
 }
 
 export function privateKeyInputState(
   value: string,
   format: PrivateKeyInputFormat,
+  trimBrainWalletBoundaryWhitespace: boolean,
 ): PrivateKeyInputState {
-  return nativePrivateKeyInputState(value, nativePrivateKeyFormat(format));
+  return nativePrivateKeyInputState(
+    value,
+    nativePrivateKeyFormat(format),
+    trimBrainWalletBoundaryWhitespace,
+  );
 }
 
 export function privateKeyKeyAllowed(
@@ -92,6 +106,7 @@ export function privateKeyInputHasError(state: PrivateKeyInputState): boolean {
 export function privateKeyProgressText(
   state: PrivateKeyInputState,
   format: PrivateKeyInputFormat,
+  trimBrainWalletBoundaryWhitespace: boolean,
 ): string {
   const { progress } = UPSTREAM_UI_FALLBACK_COPY.privateKey;
 
@@ -126,10 +141,22 @@ export function privateKeyProgressText(
         return progress.mini.excess(state.enteredCount, state.maximumCount);
       }
       return progress.mini.remaining(state.enteredCount, state.requiredCount, state.remainingCount);
-    case 'brain':
-      return state.status === PrivateKeyInputStatus.Empty
-        ? progress.brain.empty()
-        : progress.brain.entered();
+    case 'brain': {
+      if (state.trimmedToEmpty) {
+        return progress.brain.trimmedEmpty();
+      }
+      if (state.status === PrivateKeyInputStatus.Empty) {
+        return progress.brain.empty();
+      }
+      const convention = trimBrainWalletBoundaryWhitespace
+        ? state.hasBoundaryWhitespace
+          ? progress.brain.boundaryWhitespaceWillBeTrimmed
+          : progress.brain.trimEnabledNoBoundaryWhitespace
+        : state.hasBoundaryWhitespace
+          ? progress.brain.exactTextWithBoundaryWhitespace
+          : progress.brain.exactText;
+      return progress.brain.entered(convention);
+    }
   }
 }
 
@@ -161,6 +188,9 @@ export function privateKeyError(error: unknown): string {
   }
   if (tag === EntropyStudioError_Tags.EmptyBrainWallet) {
     return UPSTREAM_TEXT.error.priv.brainEmpty;
+  }
+  if (tag === EntropyStudioError_Tags.TrimmedBrainWalletEmpty) {
+    return UPSTREAM_TEXT.error.priv.brainTrimmedEmpty;
   }
   return UPSTREAM_TEXT.error.generic;
 }

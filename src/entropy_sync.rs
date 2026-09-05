@@ -4,7 +4,9 @@ use crate::cards::{
 };
 use crate::direct_dice::{direct_dice_input_state, DirectDiceMethod};
 use crate::error::EntropyStudioError;
-use crate::hashed_dice::{dice_rolls_to_entropy, hashed_dice_state, is_dice_separator, DiceRollMethod};
+use crate::hashed_dice::{
+    dice_rolls_to_entropy, hashed_dice_state, is_dice_separator, DiceRollMethod,
+};
 use crate::number_bases::{number_base_bits, number_base_value_from_bits, NumberBaseFormat};
 use crate::private_key::{private_key_entropy, PrivateKeyFormat};
 use crate::seed_phrase::{seed_phrase_state, seed_phrase_words_to_numbers, SeedPhraseInputMethod};
@@ -33,6 +35,7 @@ pub enum EntropySyncSource {
     PrivateKeyHex,
     PrivateKeyMiniKey,
     PrivateKeyBrainWallet,
+    PrivateKeyBrainWalletTrimmed,
 }
 
 #[derive(Debug, uniffi::Record)]
@@ -115,7 +118,8 @@ fn effective_entropy_strength(
         EntropySyncSource::PrivateKeyMiniKey => {
             (value.trim().len().saturating_sub(1) as f64 * 58_f64.log2()).floor() as usize
         }
-        EntropySyncSource::PrivateKeyBrainWallet => {
+        EntropySyncSource::PrivateKeyBrainWallet
+        | EntropySyncSource::PrivateKeyBrainWalletTrimmed => {
             return Ok((bit_count as u16, true));
         }
         EntropySyncSource::DiceBitbox
@@ -197,11 +201,16 @@ fn source_bits(
             target_words,
             zero_indexed,
         ),
-        EntropySyncSource::PrivateKeyWif => private_key_bits(value, PrivateKeyFormat::Wif),
+        EntropySyncSource::PrivateKeyWif => private_key_bits(value, PrivateKeyFormat::Wif, false),
         EntropySyncSource::PrivateKeyHex => private_key_hex_bits(value),
-        EntropySyncSource::PrivateKeyMiniKey => private_key_bits(value, PrivateKeyFormat::MiniKey),
+        EntropySyncSource::PrivateKeyMiniKey => {
+            private_key_bits(value, PrivateKeyFormat::MiniKey, false)
+        }
         EntropySyncSource::PrivateKeyBrainWallet => {
-            private_key_bits(value, PrivateKeyFormat::BrainWallet)
+            private_key_bits(value, PrivateKeyFormat::BrainWallet, false)
+        }
+        EntropySyncSource::PrivateKeyBrainWalletTrimmed => {
+            private_key_bits(value, PrivateKeyFormat::BrainWallet, true)
         }
     }
 }
@@ -215,6 +224,7 @@ fn source_is_hashed(source: EntropySyncSource) -> bool {
             | EntropySyncSource::CardsHashedColeman
             | EntropySyncSource::PrivateKeyMiniKey
             | EntropySyncSource::PrivateKeyBrainWallet
+            | EntropySyncSource::PrivateKeyBrainWalletTrimmed
     )
 }
 
@@ -447,8 +457,16 @@ fn words_to_bits(words: &[String]) -> Result<String, EntropyStudioError> {
     result
 }
 
-fn private_key_bits(value: &str, format: PrivateKeyFormat) -> Result<String, EntropyStudioError> {
-    let mut entropy = private_key_entropy(value.to_owned(), format)?;
+fn private_key_bits(
+    value: &str,
+    format: PrivateKeyFormat,
+    trim_brain_wallet_boundary_whitespace: bool,
+) -> Result<String, EntropyStudioError> {
+    let mut entropy = private_key_entropy(
+        value.to_owned(),
+        format,
+        trim_brain_wallet_boundary_whitespace,
+    )?;
     let bits = bytes_to_bits(&entropy);
     wipe_bytes(&mut entropy);
     Ok(bits)
@@ -740,7 +758,8 @@ fn preserve_source_value(
         | EntropySyncSource::CardsHashedAscii
         | EntropySyncSource::CardsHashedColeman
         | EntropySyncSource::PrivateKeyMiniKey
-        | EntropySyncSource::PrivateKeyBrainWallet => {}
+        | EntropySyncSource::PrivateKeyBrainWallet
+        | EntropySyncSource::PrivateKeyBrainWalletTrimmed => {}
     }
 }
 

@@ -238,6 +238,11 @@ describe('Upstream UI copy provenance', () => {
         source: upstreamAppJs,
         template: /Text entered \\xB7 \$\{convention\} \\xB7 brain wallets are unsafe/,
       },
+      'privateKey.progress.brain.trimmedEmpty': {
+        source: upstreamAppJs,
+        template:
+          /Boundary whitespace trimming leaves an empty passphrase \\xB7 enter non-whitespace text or turn trimming off/,
+      },
       'privateKey.progress.hex.excess': {
         source: upstreamAppJs,
         template: /\$\{count2\} hexadecimal characters entered \\xB7 64 required/,

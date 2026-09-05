@@ -73,6 +73,7 @@ export const EntropySyncSource = {
   NumberBaseBin: GeneratedEntropySyncSource.NumberBaseBin,
   NumberBaseHex: GeneratedEntropySyncSource.NumberBaseHex,
   PrivateKeyBrainWallet: GeneratedEntropySyncSource.PrivateKeyBrainWallet,
+  PrivateKeyBrainWalletTrimmed: GeneratedEntropySyncSource.PrivateKeyBrainWalletTrimmed,
   PrivateKeyHex: GeneratedEntropySyncSource.PrivateKeyHex,
   PrivateKeyMiniKey: GeneratedEntropySyncSource.PrivateKeyMiniKey,
   PrivateKeyWif: GeneratedEntropySyncSource.PrivateKeyWif,

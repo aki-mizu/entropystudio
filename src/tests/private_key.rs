@@ -24,19 +24,20 @@ fn private_key_entropy_matches_mainnet_wif_hex_and_minikey_vectors() {
     };
 
     assert_eq!(
-        private_key_entropy(MAINNET_WIF.to_owned(), PrivateKeyFormat::Wif).unwrap(),
+        private_key_entropy(MAINNET_WIF.to_owned(), PrivateKeyFormat::Wif, false).unwrap(),
         expected_key_one
     );
     assert_eq!(
         private_key_entropy(
             format!("  0x{} {}  ", &KEY_ONE_HEX[..32], &KEY_ONE_HEX[32..]),
             PrivateKeyFormat::Hex,
+            false,
         )
         .unwrap(),
         expected_key_one
     );
     assert_eq!(
-        private_key_entropy(MINI_KEY.to_owned(), PrivateKeyFormat::MiniKey).unwrap(),
+        private_key_entropy(MINI_KEY.to_owned(), PrivateKeyFormat::MiniKey, false).unwrap(),
         vec![
             0x4c, 0x7a, 0x96, 0x40, 0xc7, 0x2d, 0xc2, 0x09, 0x9f, 0x23, 0x71, 0x5d, 0x0c, 0x8a,
             0x0d, 0x8a, 0x35, 0xf8, 0x90, 0x6e, 0x3c, 0xab, 0x61, 0xdd, 0x3f, 0x78, 0xb6, 0x7b,
@@ -48,7 +49,7 @@ fn private_key_entropy_matches_mainnet_wif_hex_and_minikey_vectors() {
 #[test]
 fn brain_wallet_entropy_hashes_exact_utf8_text() {
     assert_eq!(
-        private_key_entropy("abc".to_owned(), PrivateKeyFormat::BrainWallet).unwrap(),
+        private_key_entropy("abc".to_owned(), PrivateKeyFormat::BrainWallet, false).unwrap(),
         vec![
             0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea, 0x41, 0x41, 0x40, 0xde, 0x5d, 0xae,
             0x22, 0x23, 0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17, 0x7a, 0x9c, 0xb4, 0x10, 0xff, 0x61,
@@ -58,11 +59,35 @@ fn brain_wallet_entropy_hashes_exact_utf8_text() {
     assert_ne!(
         private_key_entropy(
             " recovery phrase ".to_owned(),
-            PrivateKeyFormat::BrainWallet
+            PrivateKeyFormat::BrainWallet,
+            false,
         )
         .unwrap(),
-        private_key_entropy("recovery phrase".to_owned(), PrivateKeyFormat::BrainWallet).unwrap()
+        private_key_entropy(
+            "recovery phrase".to_owned(),
+            PrivateKeyFormat::BrainWallet,
+            false
+        )
+        .unwrap()
     );
+    assert_eq!(
+        private_key_entropy(
+            " recovery phrase ".to_owned(),
+            PrivateKeyFormat::BrainWallet,
+            true,
+        )
+        .unwrap(),
+        private_key_entropy(
+            "recovery phrase".to_owned(),
+            PrivateKeyFormat::BrainWallet,
+            false
+        )
+        .unwrap()
+    );
+    assert!(matches!(
+        private_key_entropy(" \t\n ".to_owned(), PrivateKeyFormat::BrainWallet, true),
+        Err(EntropyStudioError::TrimmedBrainWalletEmpty)
+    ));
 }
 
 #[test]
@@ -109,7 +134,7 @@ fn private_key_key_admission_matches_upstream_prefix_rules() {
 
 #[test]
 fn private_key_input_state_owns_progress_and_readiness() {
-    let empty_wif = private_key_input_state(String::new(), PrivateKeyFormat::Wif);
+    let empty_wif = private_key_input_state(String::new(), PrivateKeyFormat::Wif, false);
     assert_eq!(empty_wif.entered_count, 0);
     assert_eq!(empty_wif.minimum_count, 51);
     assert_eq!(empty_wif.maximum_count, 52);
@@ -117,7 +142,7 @@ fn private_key_input_state_owns_progress_and_readiness() {
     assert!(matches!(empty_wif.status, PrivateKeyInputStatus::Prefix));
     assert!(!empty_wif.can_derive);
 
-    let wif_prefix = private_key_input_state("5".to_owned(), PrivateKeyFormat::Wif);
+    let wif_prefix = private_key_input_state("5".to_owned(), PrivateKeyFormat::Wif, false);
     assert_eq!(wif_prefix.entered_count, 1);
     assert_eq!(wif_prefix.required_count, 51);
     assert_eq!(wif_prefix.remaining_count, 50);
@@ -127,18 +152,18 @@ fn private_key_input_state_owns_progress_and_readiness() {
     ));
     assert!(!wif_prefix.can_derive);
 
-    let valid_wif = private_key_input_state(MAINNET_WIF.to_owned(), PrivateKeyFormat::Wif);
+    let valid_wif = private_key_input_state(MAINNET_WIF.to_owned(), PrivateKeyFormat::Wif, false);
     assert_eq!(valid_wif.entered_count, 52);
     assert_eq!(valid_wif.required_count, 52);
     assert_eq!(valid_wif.remaining_count, 0);
     assert!(matches!(valid_wif.status, PrivateKeyInputStatus::Ready));
     assert!(valid_wif.can_derive);
 
-    let testnet_wif = private_key_input_state(TESTNET_WIF.to_owned(), PrivateKeyFormat::Wif);
+    let testnet_wif = private_key_input_state(TESTNET_WIF.to_owned(), PrivateKeyFormat::Wif, false);
     assert!(matches!(testnet_wif.status, PrivateKeyInputStatus::Invalid));
     assert!(!testnet_wif.can_derive);
 
-    let hex_prefix = private_key_input_state("0x0".to_owned(), PrivateKeyFormat::Hex);
+    let hex_prefix = private_key_input_state("0x0".to_owned(), PrivateKeyFormat::Hex, false);
     assert_eq!(hex_prefix.entered_count, 1);
     assert_eq!(hex_prefix.required_count, 64);
     assert_eq!(hex_prefix.remaining_count, 63);
@@ -147,7 +172,7 @@ fn private_key_input_state_owns_progress_and_readiness() {
         PrivateKeyInputStatus::Incomplete
     ));
 
-    let mini_prefix = private_key_input_state("S".to_owned(), PrivateKeyFormat::MiniKey);
+    let mini_prefix = private_key_input_state("S".to_owned(), PrivateKeyFormat::MiniKey, false);
     assert_eq!(mini_prefix.entered_count, 1);
     assert_eq!(mini_prefix.required_count, 22);
     assert_eq!(mini_prefix.remaining_count, 21);
@@ -156,16 +181,42 @@ fn private_key_input_state_owns_progress_and_readiness() {
         PrivateKeyInputStatus::Incomplete
     ));
 
-    let brain_wallet = private_key_input_state("text".to_owned(), PrivateKeyFormat::BrainWallet);
+    let brain_wallet =
+        private_key_input_state("text".to_owned(), PrivateKeyFormat::BrainWallet, false);
     assert_eq!(brain_wallet.entered_count, 4);
     assert!(matches!(brain_wallet.status, PrivateKeyInputStatus::Ready));
     assert!(brain_wallet.can_derive);
+    assert!(!brain_wallet.has_boundary_whitespace);
+    assert!(!brain_wallet.trimmed_to_empty);
+
+    let trimmed_brain_wallet = private_key_input_state(
+        " recovery phrase ".to_owned(),
+        PrivateKeyFormat::BrainWallet,
+        true,
+    );
+    assert!(matches!(
+        trimmed_brain_wallet.status,
+        PrivateKeyInputStatus::Ready
+    ));
+    assert!(trimmed_brain_wallet.can_derive);
+    assert!(trimmed_brain_wallet.has_boundary_whitespace);
+    assert!(!trimmed_brain_wallet.trimmed_to_empty);
+
+    let whitespace_only_brain_wallet =
+        private_key_input_state(" \t\n ".to_owned(), PrivateKeyFormat::BrainWallet, true);
+    assert!(matches!(
+        whitespace_only_brain_wallet.status,
+        PrivateKeyInputStatus::Empty
+    ));
+    assert!(!whitespace_only_brain_wallet.can_derive);
+    assert!(whitespace_only_brain_wallet.has_boundary_whitespace);
+    assert!(whitespace_only_brain_wallet.trimmed_to_empty);
 }
 
 #[test]
 fn private_key_entropy_rejects_invalid_input() {
     assert!(matches!(
-        private_key_entropy("0".repeat(64), PrivateKeyFormat::Hex),
+        private_key_entropy("0".repeat(64), PrivateKeyFormat::Hex, false),
         Err(EntropyStudioError::InvalidPrivateKeyRange)
     ));
     let mut malformed_compressed_payload = [0u8; 34];
@@ -188,26 +239,27 @@ fn private_key_entropy_rejects_invalid_input() {
     wipe_bytes(&mut malformed_compressed_payload);
     wipe_bytes(&mut malformed_compressed_wif_bytes);
     assert!(matches!(
-        private_key_entropy(malformed_compressed_wif, PrivateKeyFormat::Wif),
+        private_key_entropy(malformed_compressed_wif, PrivateKeyFormat::Wif, false),
         Err(EntropyStudioError::InvalidWifPrivateKey)
     ));
     assert!(matches!(
-        private_key_entropy("not-a-key".to_owned(), PrivateKeyFormat::Wif),
+        private_key_entropy("not-a-key".to_owned(), PrivateKeyFormat::Wif, false),
         Err(EntropyStudioError::InvalidWifPrivateKey)
     ));
     assert!(matches!(
-        private_key_entropy(TESTNET_WIF.to_owned(), PrivateKeyFormat::Wif),
+        private_key_entropy(TESTNET_WIF.to_owned(), PrivateKeyFormat::Wif, false),
         Err(EntropyStudioError::InvalidWifPrivateKey)
     ));
     assert!(matches!(
         private_key_entropy(
             "S6c56bnXQiBjk9mqSYE7ykVQ7NzrRz".to_owned(),
-            PrivateKeyFormat::MiniKey
+            PrivateKeyFormat::MiniKey,
+            false,
         ),
         Err(EntropyStudioError::InvalidMiniPrivateKey)
     ));
     assert!(matches!(
-        private_key_entropy(String::new(), PrivateKeyFormat::BrainWallet),
+        private_key_entropy(String::new(), PrivateKeyFormat::BrainWallet, false),
         Err(EntropyStudioError::EmptyBrainWallet)
     ));
 }

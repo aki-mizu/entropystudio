@@ -269,6 +269,7 @@ export function seedEntropySyncSource(
 
 export function privateKeyEntropySyncSource(
   format: PrivateKeyInputFormat,
+  trimBrainWalletBoundaryWhitespace: boolean,
 ): EntropySyncSourceValue {
   switch (format) {
     case 'wif':
@@ -278,7 +279,9 @@ export function privateKeyEntropySyncSource(
     case 'mini':
       return EntropySyncSource.PrivateKeyMiniKey;
     case 'brain':
-      return EntropySyncSource.PrivateKeyBrainWallet;
+      return trimBrainWalletBoundaryWhitespace
+        ? EntropySyncSource.PrivateKeyBrainWalletTrimmed
+        : EntropySyncSource.PrivateKeyBrainWallet;
   }
 }
 

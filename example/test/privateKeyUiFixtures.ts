@@ -2,7 +2,7 @@ import type { PrivateKeyInputState } from '../src/native/entropyStudio';
 
 type PrivateKeyUiMockSetters = {
   readonly setPrivateKeyEntropy: (
-    implementation: (value: string, format: number) => ArrayBuffer,
+    implementation: (value: string, format: number, trimBrainWalletBoundaryWhitespace: boolean) => ArrayBuffer,
   ) => void;
   readonly setPrivateKeyKeyAllowed: (
     implementation: (
@@ -14,7 +14,11 @@ type PrivateKeyUiMockSetters = {
     ) => boolean,
   ) => void;
   readonly setPrivateKeyInputState: (
-    implementation: (value: string, format: number) => PrivateKeyInputState,
+    implementation: (
+      value: string,
+      format: number,
+      trimBrainWalletBoundaryWhitespace: boolean,
+    ) => PrivateKeyInputState,
   ) => void;
 };
 
@@ -22,13 +26,15 @@ const WIF = 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn';
 const ENTROPY = new Uint8Array(32).buffer;
 
 const PRIVATE_KEY_FIXTURES: Record<string, { readonly entropy?: ArrayBuffer; readonly tag?: string }> = {
-  [`0:${WIF}`]: { entropy: ENTROPY },
-  '0:5': { tag: 'InvalidWifPrivateKey' },
-  '0:not-a-wif': { tag: 'InvalidWifPrivateKey' },
-  '1:0': { tag: 'InvalidHexPrivateKey' },
-  '1:A': { tag: 'InvalidHexPrivateKey' },
-  '2:S': { tag: 'InvalidMiniPrivateKeyFormat' },
-  '3:brain wallet text': { entropy: ENTROPY },
+  [`0:${WIF}:false`]: { entropy: ENTROPY },
+  '0:5:false': { tag: 'InvalidWifPrivateKey' },
+  '0:not-a-wif:false': { tag: 'InvalidWifPrivateKey' },
+  '1:0:false': { tag: 'InvalidHexPrivateKey' },
+  '1:A:false': { tag: 'InvalidHexPrivateKey' },
+  '2:S:false': { tag: 'InvalidMiniPrivateKeyFormat' },
+  '3:brain wallet text:false': { entropy: ENTROPY },
+  '3: recovery phrase :false': { entropy: ENTROPY },
+  '3: recovery phrase :true': { entropy: ENTROPY },
 };
 
 const PRIVATE_KEY_KEY_ALLOWED_FIXTURES: Record<string, boolean> = {
@@ -44,7 +50,9 @@ const PRIVATE_KEY_KEY_ALLOWED_FIXTURES: Record<string, boolean> = {
 };
 
 const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
-  '0:': {
+  '0::false': {
+    hasBoundaryWhitespace: false,
+    trimmedToEmpty: false,
     canDerive: false,
     enteredCount: 0,
     excessCount: 0,
@@ -55,7 +63,9 @@ const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
     requiredCount: 0,
     status: 1,
   },
-  '0:5': {
+  '0:5:false': {
+    hasBoundaryWhitespace: false,
+    trimmedToEmpty: false,
     canDerive: false,
     enteredCount: 1,
     excessCount: 0,
@@ -66,7 +76,9 @@ const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
     requiredCount: 51,
     status: 2,
   },
-  [`0:${WIF}`]: {
+  [`0:${WIF}:false`]: {
+    hasBoundaryWhitespace: false,
+    trimmedToEmpty: false,
     canDerive: true,
     enteredCount: 52,
     excessCount: 0,
@@ -77,7 +89,9 @@ const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
     requiredCount: 52,
     status: 5,
   },
-  '0:not-a-wif': {
+  '0:not-a-wif:false': {
+    hasBoundaryWhitespace: false,
+    trimmedToEmpty: false,
     canDerive: false,
     enteredCount: 9,
     excessCount: 0,
@@ -88,7 +102,9 @@ const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
     requiredCount: 0,
     status: 3,
   },
-  '1:': {
+  '1::false': {
+    hasBoundaryWhitespace: false,
+    trimmedToEmpty: false,
     canDerive: false,
     enteredCount: 0,
     excessCount: 0,
@@ -99,7 +115,9 @@ const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
     requiredCount: 64,
     status: 2,
   },
-  '1:0': {
+  '1:0:false': {
+    hasBoundaryWhitespace: false,
+    trimmedToEmpty: false,
     canDerive: false,
     enteredCount: 1,
     excessCount: 0,
@@ -110,7 +128,9 @@ const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
     requiredCount: 64,
     status: 2,
   },
-  '1:A': {
+  '1:A:false': {
+    hasBoundaryWhitespace: false,
+    trimmedToEmpty: false,
     canDerive: false,
     enteredCount: 1,
     excessCount: 0,
@@ -121,7 +141,9 @@ const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
     requiredCount: 64,
     status: 2,
   },
-  '2:': {
+  '2::false': {
+    hasBoundaryWhitespace: false,
+    trimmedToEmpty: false,
     canDerive: false,
     enteredCount: 0,
     excessCount: 0,
@@ -132,7 +154,9 @@ const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
     requiredCount: 22,
     status: 1,
   },
-  '2:S': {
+  '2:S:false': {
+    hasBoundaryWhitespace: false,
+    trimmedToEmpty: false,
     canDerive: false,
     enteredCount: 1,
     excessCount: 0,
@@ -143,7 +167,9 @@ const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
     requiredCount: 22,
     status: 2,
   },
-  '3:': {
+  '3::false': {
+    hasBoundaryWhitespace: false,
+    trimmedToEmpty: false,
     canDerive: false,
     enteredCount: 0,
     excessCount: 0,
@@ -154,7 +180,9 @@ const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
     requiredCount: 0,
     status: 0,
   },
-  '3:brain wallet text': {
+  '3:brain wallet text:false': {
+    hasBoundaryWhitespace: false,
+    trimmedToEmpty: false,
     canDerive: true,
     enteredCount: 17,
     excessCount: 0,
@@ -165,6 +193,45 @@ const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
     requiredCount: 0,
     status: 5,
   },
+  '3: recovery phrase :false': {
+    hasBoundaryWhitespace: true,
+    trimmedToEmpty: false,
+    canDerive: true,
+    enteredCount: 17,
+    excessCount: 0,
+    invalidCharacterCount: 0,
+    maximumCount: 0,
+    minimumCount: 0,
+    remainingCount: 0,
+    requiredCount: 0,
+    status: 5,
+  },
+  '3: recovery phrase :true': {
+    hasBoundaryWhitespace: true,
+    trimmedToEmpty: false,
+    canDerive: true,
+    enteredCount: 17,
+    excessCount: 0,
+    invalidCharacterCount: 0,
+    maximumCount: 0,
+    minimumCount: 0,
+    remainingCount: 0,
+    requiredCount: 0,
+    status: 5,
+  },
+  '3: \t\n :true': {
+    hasBoundaryWhitespace: true,
+    trimmedToEmpty: true,
+    canDerive: false,
+    enteredCount: 4,
+    excessCount: 0,
+    invalidCharacterCount: 0,
+    maximumCount: 0,
+    minimumCount: 0,
+    remainingCount: 0,
+    requiredCount: 0,
+    status: 0,
+  },
 };
 
 export function installPrivateKeyUiFixtures({
@@ -172,8 +239,8 @@ export function installPrivateKeyUiFixtures({
   setPrivateKeyInputState,
   setPrivateKeyKeyAllowed,
 }: PrivateKeyUiMockSetters) {
-  setPrivateKeyEntropy((value, format) => {
-    const fixture = PRIVATE_KEY_FIXTURES[`${format}:${value}`];
+  setPrivateKeyEntropy((value, format, trimBrainWalletBoundaryWhitespace) => {
+    const fixture = PRIVATE_KEY_FIXTURES[`${format}:${value}:${trimBrainWalletBoundaryWhitespace}`];
     if (!fixture) {
       throw new Error('Missing static private-key fixture');
     }
@@ -182,8 +249,11 @@ export function installPrivateKeyUiFixtures({
     }
     return fixture.entropy!;
   });
-  setPrivateKeyInputState((value, format) => {
-    const fixture = PRIVATE_KEY_INPUT_STATE_FIXTURES[`${format}:${value}`];
+  setPrivateKeyInputState((value, format, trimBrainWalletBoundaryWhitespace) => {
+    const fixture =
+      PRIVATE_KEY_INPUT_STATE_FIXTURES[
+        `${format}:${value}:${trimBrainWalletBoundaryWhitespace}`
+      ];
     if (!fixture) {
       throw new Error('Missing static private-key input-state fixture');
     }
