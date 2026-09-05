@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
   },
   longSetupActionArea: {
     flex: 0,
-    marginTop: 16,
+    marginTop: 4,
   },
   seedPreviewArea: {
     flex: 1,
