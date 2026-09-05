@@ -353,6 +353,7 @@ export function CardsScreen({
             <DiceWordList
               compact
               colors={colors}
+              dense={wordCount === 24}
               finalWord={directState?.finalWord}
               slotCount={wordCount}
               testID="live-card-words"
@@ -944,8 +945,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   setupActionArea: {
-    flex: 1,
-    justifyContent: 'flex-end',
+    flex: 0,
+    marginTop: 16,
   },
   setupContent: {
     flex: 1,
