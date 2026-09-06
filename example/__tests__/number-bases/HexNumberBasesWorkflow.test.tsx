@@ -51,8 +51,8 @@ describe('Number Bases / Hexadecimal', () => {
 
     expect(app!.root.findByProps({ testID: 'number-bases-entry-view' })).toBeDefined();
     expect(
-      app!.root.findByProps({ testID: 'number-bases-entry-header-copy' }).props.children,
-    ).toBeUndefined();
+      app!.root.findByProps({ testID: 'number-bases-master-fingerprint-label' }).props.children,
+    ).toBe(UPSTREAM_TEXT.fingerprint.master);
     expect(app!.root.findByProps({ testID: 'number-base-input' }).props.placeholder).toBe(
       UPSTREAM_TEXT.hex.placeholder
         .replace('{digits}', '32')

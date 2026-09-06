@@ -42,6 +42,7 @@ import {
 import {
   Bip39PassphraseButton,
   Bip39PassphraseView,
+  MasterFingerprintHeader,
   useBip39PassphraseOptions,
 } from '../features/seedPhrase/bip39Passphrase';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
@@ -344,7 +345,14 @@ export function CardsScreen({
                 {UPSTREAM_UI_FALLBACK_COPY.common.back}
               </Text>
             </Pressable>
-            <View style={styles.entryHeaderCopy} testID="cards-entry-header-copy" />
+            <View style={styles.entryHeaderCopy} testID="cards-entry-header-copy">
+              <MasterFingerprintHeader
+                colors={colors}
+                mnemonic={directState?.mnemonic || result?.mnemonic || ''}
+                passphrase={passphrase}
+                testID="cards-master-fingerprint"
+              />
+            </View>
             <Bip39PassphraseButton
               compact
               colors={colors}

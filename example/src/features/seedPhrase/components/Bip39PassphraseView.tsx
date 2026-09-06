@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
@@ -10,6 +10,7 @@ import {
   bip39PassphraseStatusCopy,
 } from '../seedPhrase';
 import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
+import { mnemonicToMasterFingerprint } from '../../../native/entropyStudio';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
@@ -17,6 +18,13 @@ type ButtonProps = {
   readonly compact?: boolean;
   readonly colors: DiceColors;
   readonly onPress: () => void;
+  readonly testID: string;
+};
+
+type MasterFingerprintHeaderProps = {
+  readonly colors: DiceColors;
+  readonly mnemonic: string;
+  readonly passphrase: string;
   readonly testID: string;
 };
 
@@ -104,6 +112,46 @@ export function Bip39PassphraseButton({
         {UPSTREAM_TEXT.passphrase.label}
       </Text>
     </Pressable>
+  );
+}
+
+export function MasterFingerprintHeader({
+  colors,
+  mnemonic,
+  passphrase,
+  testID,
+}: MasterFingerprintHeaderProps) {
+  const fingerprint = useMemo(() => {
+    if (!mnemonic) {
+      return '';
+    }
+    try {
+      return mnemonicToMasterFingerprint(mnemonic, passphrase);
+    } catch {
+      return '';
+    }
+  }, [mnemonic, passphrase]);
+
+  return (
+    <View style={styles.masterFingerprint} testID={testID}>
+      <Text
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+        numberOfLines={1}
+        style={[styles.masterFingerprintLabel, { color: colors.text }]}
+        testID={`${testID}-label`}
+      >
+        {UPSTREAM_TEXT.fingerprint.master}
+      </Text>
+      {fingerprint ? (
+        <Text
+          style={[styles.masterFingerprintValue, { color: colors.accent }]}
+          testID={`${testID}-value`}
+        >
+          {fingerprint}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -398,6 +446,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     minWidth: 0,
     paddingRight: 12,
+  },
+  masterFingerprint: {
+    minWidth: 0,
+  },
+  masterFingerprintLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  masterFingerprintValue: {
+    fontFamily: 'monospace',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
   },
   title: {
     fontSize: 20,

@@ -29,6 +29,7 @@ import { NumberBaseKeypad } from '../features/numberBases/components/NumberBaseK
 import {
   Bip39PassphraseButton,
   Bip39PassphraseView,
+  MasterFingerprintHeader,
   useBip39PassphraseOptions,
 } from '../features/seedPhrase/bip39Passphrase';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
@@ -243,11 +244,13 @@ export function NumberBasesScreen({
     [format, input, supportsCalculations, wordCount],
   );
   const canDeriveWithPassphrase = Boolean(entropy) && passphraseOptions.canDerive;
+  let mnemonic = '';
   let words = [...analysis.previewWords];
 
   if (entropy) {
     try {
-      words = entropyToMnemonic(entropy).split(' ');
+      mnemonic = entropyToMnemonic(entropy);
+      words = mnemonic.split(' ');
     } catch {
       words = [];
     }
@@ -470,7 +473,14 @@ export function NumberBasesScreen({
                 {UPSTREAM_UI_FALLBACK_COPY.common.back}
               </Text>
             </Pressable>
-            <View style={styles.entryHeaderCopy} testID="number-bases-entry-header-copy" />
+            <View style={styles.entryHeaderCopy} testID="number-bases-entry-header-copy">
+              <MasterFingerprintHeader
+                colors={colors}
+                mnemonic={mnemonic}
+                passphrase={passphrase}
+                testID="number-bases-master-fingerprint"
+              />
+            </View>
             <Bip39PassphraseButton
               compact
               colors={colors}

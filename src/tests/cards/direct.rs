@@ -20,6 +20,7 @@ fn direct_card_state_matches_entropylab_rank_draws_for_all_seed_lengths() {
         assert_eq!(state.final_word, state.candidates[0]);
 
         let phrase = format!("{} {}", state.words.join(" "), state.final_word);
+        assert_eq!(state.mnemonic, phrase);
         assert_eq!(mnemonic_to_entropy(phrase).unwrap(), vec![0; entropy_bytes]);
     }
 }

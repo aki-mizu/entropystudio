@@ -162,6 +162,9 @@ export const UPSTREAM_TEXT = {
       wif: 'Enter a valid {network} WIF private key ({hint}).',
     },
   },
+  fingerprint: {
+    master: 'Master fingerprint',
+  },
   hex: {
     format: {
       base32: 'Crockford Base32',

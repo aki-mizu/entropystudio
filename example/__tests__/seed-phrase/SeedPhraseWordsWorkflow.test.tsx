@@ -7,6 +7,7 @@ import {
   App,
   mockEntropyToMnemonic,
   mockMnemonicToEntropy,
+  mockMnemonicToMasterFingerprint,
   mockMnemonicToSeed,
   React,
   ReactTestRenderer,
@@ -25,6 +26,7 @@ describe('Seed Phrase / Words', () => {
     const mnemonic =
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
     const entropy = new Uint8Array(16).buffer;
+    mockMnemonicToMasterFingerprint.mockClear();
     mockMnemonicToSeed.mockClear();
     mockMnemonicToEntropy.mockImplementation(phrase => {
       if (phrase !== mnemonic) {
@@ -64,8 +66,11 @@ describe('Seed Phrase / Words', () => {
 
     expect(app!.root.findByProps({ testID: 'seed-phrase-entry-view' })).toBeDefined();
     expect(
-      app!.root.findByProps({ testID: 'seed-phrase-entry-header-copy' }).props.children,
-    ).toBeUndefined();
+      app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-label' }).props.children,
+    ).toBe(UPSTREAM_TEXT.fingerprint.master);
+    expect(app!.root.findAllByProps({ testID: 'seed-phrase-master-fingerprint-value' })).toHaveLength(
+      0,
+    );
     expect(app!.root.findByProps({ testID: 'seed-phrase-input' }).props.showSoftInputOnFocus).toBe(
       false,
     );
@@ -84,6 +89,10 @@ describe('Seed Phrase / Words', () => {
     );
     expect(app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.disabled).toBe(false);
     expect(mockMnemonicToEntropy).toHaveBeenLastCalledWith(mnemonic);
+    expect(mockMnemonicToMasterFingerprint).toHaveBeenLastCalledWith(mnemonic, '');
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-value' }).props.children,
+    ).toBe('73c5da0a');
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.onPress();
@@ -197,6 +206,7 @@ describe('Seed Phrase / Words', () => {
     const mnemonic =
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
     const entropy = new Uint8Array(16).buffer;
+    mockMnemonicToMasterFingerprint.mockClear();
     mockMnemonicToEntropy.mockImplementation(phrase => {
       if (phrase !== mnemonic) {
         throw new Error('Invalid mnemonic');
@@ -246,6 +256,7 @@ describe('Seed Phrase / Words', () => {
       app!
         .root.findByProps({ testID: 'close-seed-phrase-passphrase' }).props.onPress();
     });
+    expect(mockMnemonicToMasterFingerprint).toHaveBeenLastCalledWith(mnemonic, 'TREZOR');
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'open-seed-phrase-passphrase' }).props.onPress();
     });

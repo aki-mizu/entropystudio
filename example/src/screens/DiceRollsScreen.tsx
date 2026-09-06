@@ -23,6 +23,7 @@ import { DirectDiceCalculationsScreen } from './CalculationsScreen';
 import {
   Bip39PassphraseButton,
   Bip39PassphraseView,
+  MasterFingerprintHeader,
   useBip39PassphraseOptions,
 } from '../features/seedPhrase/bip39Passphrase';
 import { D8_D16_FACES } from '../features/dice/dice';
@@ -295,7 +296,14 @@ export function DiceRollsScreen({
                 {UPSTREAM_UI_FALLBACK_COPY.common.back}
               </Text>
             </Pressable>
-            <View style={styles.entryHeaderCopy} testID="dice-entry-header-copy" />
+            <View style={styles.entryHeaderCopy} testID="dice-entry-header-copy">
+              <MasterFingerprintHeader
+                colors={colors}
+                mnemonic={directState?.mnemonic || result?.mnemonic || ''}
+                passphrase={passphrase}
+                testID="dice-master-fingerprint"
+              />
+            </View>
             <Bip39PassphraseButton
               compact
               colors={colors}

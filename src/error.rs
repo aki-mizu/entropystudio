@@ -5,6 +5,7 @@ use std::fmt;
 pub enum EntropyStudioError {
     InvalidMnemonic,
     InvalidEntropy,
+    InvalidMasterKey,
     InvalidNumberBaseInput,
     InvalidDiceRolls,
     NoDiceRolls,

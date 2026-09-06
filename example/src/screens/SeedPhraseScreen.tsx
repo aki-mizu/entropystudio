@@ -28,6 +28,7 @@ import type { SeedPhraseEntryMethod } from '../features/seedPhrase/components/Se
 import {
   Bip39PassphraseButton,
   Bip39PassphraseView,
+  MasterFingerprintHeader,
   useBip39PassphraseOptions,
 } from '../features/seedPhrase/bip39Passphrase';
 import {
@@ -407,7 +408,14 @@ export function SeedPhraseScreen({
                 {UPSTREAM_UI_FALLBACK_COPY.common.back}
               </Text>
             </Pressable>
-            <View style={styles.entryHeaderCopy} testID="seed-phrase-entry-header-copy" />
+            <View style={styles.entryHeaderCopy} testID="seed-phrase-entry-header-copy">
+              <MasterFingerprintHeader
+                colors={colors}
+                mnemonic={analysis.canDerive ? activePhrase : ''}
+                passphrase={passphrase}
+                testID="seed-phrase-master-fingerprint"
+              />
+            </View>
             <Bip39PassphraseButton
               compact
               colors={colors}

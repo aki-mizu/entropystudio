@@ -85,7 +85,9 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
     });
     await openDiceEntry(app!);
     expect(app!.root.findByProps({ testID: 'dice-rolls-view' })).toBeDefined();
-    expect(app!.root.findByProps({ testID: 'dice-entry-header-copy' }).props.children).toBeUndefined();
+    expect(
+      app!.root.findByProps({ testID: 'dice-master-fingerprint-label' }).props.children,
+    ).toBe(UPSTREAM_TEXT.fingerprint.master);
     expect(app!.root.findByType(DiceGrid).props.columns).toBe(6);
     expectPlaceholderSeedGrid(app!, 'live-dice-words', 24);
     await closeDiceEntry(app!);

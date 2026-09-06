@@ -45,6 +45,20 @@ fn mnemonic_to_seed_returns_bip39_master_seed() {
 }
 
 #[test]
+fn mnemonic_to_master_fingerprint_matches_entropylab_bip32() {
+    let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+    assert_eq!(
+        mnemonic_to_master_fingerprint(phrase.to_owned(), String::new()).unwrap(),
+        "73c5da0a"
+    );
+    assert_eq!(
+        mnemonic_to_master_fingerprint(phrase.to_owned(), "TREZOR".to_owned()).unwrap(),
+        "b4e3f5ed"
+    );
+}
+
+#[test]
 fn mnemonic_to_seed_nfkd_normalizes_the_passphrase() {
     let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let composed = mnemonic_to_seed(phrase.to_owned(), "\u{00e9}".to_owned());

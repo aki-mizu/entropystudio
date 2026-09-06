@@ -60,6 +60,60 @@ pub fn mnemonic_to_seed(mut phrase: String, mut passphrase: String) -> Vec<u8> {
 }
 
 #[uniffi::export]
+pub fn mnemonic_to_master_fingerprint(
+    phrase: String,
+    passphrase: String,
+) -> Result<String, EntropyStudioError> {
+    let mut seed = mnemonic_to_seed(phrase, passphrase);
+    let result = master_fingerprint_from_seed(&seed);
+    wipe_bytes(&mut seed);
+    result
+}
+
+fn master_fingerprint_from_seed(seed: &[u8]) -> Result<String, EntropyStudioError> {
+    let mut master = [0u8; 78];
+    let mut child = [0u8; 78];
+    let master_length = unsafe {
+        entropylab_wasm::el_hd_master(seed.as_ptr(), seed.len(), master.as_mut_ptr())
+    };
+
+    if master_length != 78 {
+        wipe_bytes(&mut master);
+        wipe_bytes(&mut child);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+
+    let mut child_index = 0u32;
+    loop {
+        let child_length = unsafe {
+            entropylab_wasm::el_hd_ckd_priv(master.as_ptr(), child_index, child.as_mut_ptr())
+        };
+        if child_length == 78 {
+            let fingerprint = child[5..9]
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect();
+            wipe_bytes(&mut master);
+            wipe_bytes(&mut child);
+            return Ok(fingerprint);
+        }
+        if child_length != 1 {
+            wipe_bytes(&mut master);
+            wipe_bytes(&mut child);
+            return Err(EntropyStudioError::InvalidMasterKey);
+        }
+        child_index = match child_index.checked_add(1) {
+            Some(next_index) => next_index,
+            None => {
+                wipe_bytes(&mut master);
+                wipe_bytes(&mut child);
+                return Err(EntropyStudioError::InvalidMasterKey);
+            }
+        };
+    }
+}
+
+#[uniffi::export]
 pub fn entropy_to_mnemonic(mut entropy: Vec<u8>) -> Result<String, EntropyStudioError> {
     let mut phrase = [0u8; 256];
     let length = unsafe {

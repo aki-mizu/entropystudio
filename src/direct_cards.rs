@@ -16,6 +16,7 @@ pub struct DirectCardState {
     pub words: Vec<String>,
     pub candidates: Vec<String>,
     pub final_word: String,
+    pub mnemonic: String,
     pub step: DirectCardStep,
     pub complete: bool,
     pub invalid_count: u32,
@@ -150,11 +151,17 @@ fn direct_card_state_inner(
     } else {
         (DirectCardStep::Correction, partial_words, 0, 0)
     };
+    let mnemonic = if complete {
+        format!("{} {}", words.join(" "), final_word)
+    } else {
+        String::new()
+    };
 
     Ok(DirectCardState {
         words,
         candidates,
         final_word,
+        mnemonic,
         step,
         complete,
         invalid_count,
