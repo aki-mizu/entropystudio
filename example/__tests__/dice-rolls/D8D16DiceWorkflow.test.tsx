@@ -22,7 +22,7 @@ test('uses EntropyLab D8/D16 help copy', () => {
   expect(diceScreenCopy('d8d16', 24).inputHelp).toBe(
     UPSTREAM_TEXT.dice.help.dplus.replace(
       '{finalHelp}',
-      UPSTREAM_TEXT.dice.dplus.helpOne.replace('{die}', 'D8'),
+      UPSTREAM_TEXT.dice.dplus.helpOne.replace('{die}', UPSTREAM_TEXT.calculations.d8),
     ),
   );
 });

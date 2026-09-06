@@ -19,16 +19,19 @@ pub use cards::{
 };
 pub use direct_cards::{direct_card_state, DirectCardState, DirectCardStep};
 pub use direct_dice::{
-	dice_method_info, direct_dice_input_state, direct_dice_state, format_dice_transcript,
-	DiceFinalStep, DiceInputMethod, DiceMethodInfo, DirectDiceMethod, DirectDiceState,
-	DirectDiceStep,
+	dice_method_info, direct_dice_calculations, direct_dice_input_state, direct_dice_state,
+	format_dice_transcript, DiceFinalStep, DiceInputMethod, DiceMethodInfo,
+	DirectDiceCalculationRow, DirectDiceCalculationTerm, DirectDiceCalculationTermKind,
+	DirectDiceMethod, DirectDiceState, DirectDiceStep,
 };
 pub use entropy_sync::{synchronize_entropy, EntropySyncSnapshot, EntropySyncSource};
 pub use error::EntropyStudioError;
 pub use hash::sha256;
 pub use hashed_dice::{dice_rolls_to_entropy, hashed_dice_state, DiceRollMethod, HashedDiceState};
 pub use number_bases::{
-	analyze_number_base_input, number_base_entropy, NumberBaseAnalysis, NumberBaseFormat,
+	analyze_number_base_input, number_base_calculations, number_base_entropy,
+	NumberBaseAnalysis, NumberBaseCalculationRow, NumberBaseCalculationTerm,
+	NumberBaseCalculations, NumberBaseDigitValue, NumberBaseFormat,
 };
 pub use private_key::{
 	private_key_entropy, private_key_input_state, private_key_key_allowed, PrivateKeyFormat,

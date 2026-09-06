@@ -1,6 +1,7 @@
 use crate::bip39::{bip39_entropy_bytes, bip39_word};
 use crate::error::EntropyStudioError;
-use crate::wipe::wipe_string;
+use crate::hash::sha256;
+use crate::wipe::{wipe_bytes, wipe_string};
 
 #[derive(Debug, Clone, Copy, uniffi::Enum)]
 pub enum NumberBaseFormat {
@@ -29,6 +30,33 @@ pub struct NumberBaseAnalysis {
     pub invalid_character_count: u32,
     pub is_ready: bool,
     pub preview_words: Vec<String>,
+}
+
+#[derive(Debug, uniffi::Record)]
+pub struct NumberBaseCalculationTerm {
+    pub bit: u8,
+    pub bit_weight: u16,
+    pub contribution: u16,
+}
+
+#[derive(Debug, uniffi::Record)]
+pub struct NumberBaseCalculationRow {
+    pub number: u8,
+    pub word: String,
+    pub index: u16,
+    pub terms: Vec<NumberBaseCalculationTerm>,
+}
+
+#[derive(Debug, uniffi::Record)]
+pub struct NumberBaseDigitValue {
+    pub digit: String,
+    pub bits: String,
+}
+
+#[derive(Debug, uniffi::Record)]
+pub struct NumberBaseCalculations {
+    pub digit_values: Vec<NumberBaseDigitValue>,
+    pub rows: Vec<NumberBaseCalculationRow>,
 }
 
 struct NumberBaseConfig {
@@ -77,6 +105,24 @@ pub fn number_base_entropy(
     let entropy = bits_to_bytes(&parsed.bits);
     wipe_string(&mut parsed.bits);
     Ok(entropy)
+}
+
+#[uniffi::export]
+pub fn number_base_calculations(
+    mut value: String,
+    format: NumberBaseFormat,
+    target_words: u8,
+) -> Result<NumberBaseCalculations, EntropyStudioError> {
+    let mut parsed = parse_number_base_input(&value, format, target_words)?;
+    wipe_string(&mut value);
+    let result = number_base_calculation_rows(&parsed.bits, &parsed.analysis).map(|rows| {
+        NumberBaseCalculations {
+            digit_values: number_base_digit_values(&parsed.analysis),
+            rows,
+        }
+    });
+    wipe_string(&mut parsed.bits);
+    result
 }
 
 pub(crate) fn number_base_bits(
@@ -139,6 +185,83 @@ pub(crate) fn number_base_value_from_bits(
     }
 
     Ok(value)
+}
+
+fn number_base_calculation_rows(
+    bits: &str,
+    analysis: &NumberBaseAnalysis,
+) -> Result<Vec<NumberBaseCalculationRow>, EntropyStudioError> {
+    if analysis.digit_count == 0 || analysis.invalid_character_count > 0 || analysis.final_invalid {
+        return Ok(Vec::new());
+    }
+
+    let mut rows = Vec::with_capacity(bits.len() / 11 + usize::from(analysis.is_ready));
+    for group in bits.as_bytes().chunks_exact(11) {
+        rows.push(number_base_calculation_row(rows.len() as u8 + 1, group)?);
+    }
+
+    if analysis.is_ready {
+        let mut checksum = sha256(bits_to_bytes(bits));
+        let mut final_group = String::with_capacity(11);
+        final_group.push_str(&bits[rows.len() * 11..]);
+        for position in 0..bits.len() / 32 {
+            final_group.push(if checksum[0] & (1 << (7 - position)) != 0 {
+                '1'
+            } else {
+                '0'
+            });
+        }
+        wipe_bytes(&mut checksum);
+        let row = number_base_calculation_row(rows.len() as u8 + 1, final_group.as_bytes());
+        wipe_string(&mut final_group);
+        rows.push(row?);
+    }
+
+    Ok(rows)
+}
+
+fn number_base_calculation_row(
+    number: u8,
+    bits: &[u8],
+) -> Result<NumberBaseCalculationRow, EntropyStudioError> {
+    let terms = bits
+        .iter()
+        .enumerate()
+        .map(|(position, bit)| {
+            let bit = u8::from(*bit == b'1');
+            let bit_weight = 1u16 << (10 - position);
+            NumberBaseCalculationTerm {
+                bit,
+                bit_weight,
+                contribution: u16::from(bit) * bit_weight,
+            }
+        })
+        .collect::<Vec<_>>();
+    let index = terms
+        .iter()
+        .fold(0u16, |total, term| total + term.contribution);
+
+    Ok(NumberBaseCalculationRow {
+        number,
+        word: bip39_word(usize::from(index))?,
+        index,
+        terms,
+    })
+}
+
+fn number_base_digit_values(analysis: &NumberBaseAnalysis) -> Vec<NumberBaseDigitValue> {
+    analysis
+        .alphabet
+        .chars()
+        .enumerate()
+        .map(|(index, digit)| NumberBaseDigitValue {
+            digit: digit.to_string(),
+            bits: format!(
+                "{index:0width$b}",
+                width = usize::from(analysis.bits_per_digit)
+            ),
+        })
+        .collect()
 }
 
 fn parse_number_base_input(

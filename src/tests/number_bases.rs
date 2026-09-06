@@ -69,3 +69,38 @@ fn number_base_formats_and_zero_entropy_vectors_are_native_owned() {
         assert_eq!(number_base_entropy(input, format, 12).unwrap(), vec![0; 16]);
     }
 }
+
+#[test]
+fn number_base_calculation_rows_are_owned_by_rust() {
+    let partial = number_base_calculations(
+        "10000000000".to_owned(),
+        NumberBaseFormat::Bin,
+        12,
+    )
+    .unwrap();
+    assert_eq!(partial.rows.len(), 1);
+    assert_eq!(partial.rows[0].number, 1);
+    assert_eq!(partial.rows[0].index, 1024);
+    assert_eq!(partial.rows[0].terms.len(), 11);
+    assert_eq!(partial.rows[0].terms[0].bit_weight, 1024);
+    assert_eq!(partial.rows[0].terms[0].bit, 1);
+    assert_eq!(partial.rows[0].terms[0].contribution, 1024);
+    assert_eq!(partial.rows[0].terms[1].contribution, 0);
+
+    let complete = number_base_calculations("0".repeat(128), NumberBaseFormat::Bin, 12)
+        .unwrap();
+    assert_eq!(complete.rows.len(), 12);
+    assert_eq!(complete.rows[0].word, "abandon");
+    assert_eq!(complete.rows[0].index, 0);
+    assert_eq!(complete.rows[11].word, "about");
+    assert_eq!(complete.rows[11].index, 3);
+
+    let base4 = number_base_calculations(String::new(), NumberBaseFormat::Base4, 12).unwrap();
+    assert_eq!(base4.digit_values[3].digit, "3");
+    assert_eq!(base4.digit_values[3].bits, "11");
+
+    assert!(number_base_calculations("X0".to_owned(), NumberBaseFormat::Bin, 12)
+        .unwrap()
+        .rows
+        .is_empty());
+}

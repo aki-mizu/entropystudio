@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BackHandler,
   Pressable,
@@ -17,6 +17,7 @@ import { entropyToMnemonic, mnemonicToSeed } from '../native/entropyStudio';
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
+import { NumberBaseCalculationsScreen } from './CalculationsScreen';
 import type { DiceResult, WordCount } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
 import {
@@ -34,6 +35,7 @@ import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import {
   NUMBER_BASE_FORMATS,
   analyzeNumberBaseInput,
+  numberBaseCalculations,
   numberBaseEntropy,
   numberBaseFormatConfig,
 } from '../features/numberBases/numberBases';
@@ -47,7 +49,7 @@ import {
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
-type NumberBasesView = 'entry' | 'passphrase' | 'setup';
+type NumberBasesView = 'calculations' | 'entry' | 'passphrase' | 'setup';
 type SheetName = 'result' | null;
 type InputValues = Record<NumberBaseFormat, string>;
 type InputSelection = { readonly end: number; readonly start: number };
@@ -234,6 +236,12 @@ export function NumberBasesScreen({
   );
   const formatRequirement = numberBaseSetupRequirement(wordCount, analysis.config);
   const hasLongSetupGuidance = format === 'base32' || format === 'base64';
+  const supportsCalculations =
+    format === 'bin' || format === 'base4' || format === 'base8' || format === 'hex';
+  const calculations = useMemo(
+    () => (supportsCalculations ? numberBaseCalculations(input, format, wordCount) : null),
+    [format, input, supportsCalculations, wordCount],
+  );
   const canDeriveWithPassphrase = Boolean(entropy) && passphraseOptions.canDerive;
   let words = [...analysis.previewWords];
 
@@ -275,7 +283,7 @@ export function NumberBasesScreen({
     }
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      setActiveView(view => (view === 'passphrase' ? 'entry' : 'setup'));
+      setActiveView(view => (view === 'passphrase' || view === 'calculations' ? 'entry' : 'setup'));
       return true;
     });
     return () => subscription.remove();
@@ -599,24 +607,59 @@ export function NumberBasesScreen({
             onInsert={insertInputCharacter}
           />
 
-          <Pressable
-            accessibilityRole="button"
-            disabled={!canDeriveWithPassphrase}
-            onPress={showResult}
-            style={({ pressed }) => [
-              styles.button,
-              {
-                backgroundColor: colors.accent,
-                opacity: !canDeriveWithPassphrase ? 0.45 : pressed ? 0.82 : 1,
-              },
-            ]}
-            testID="derive-number-base-phrase"
-          >
-            <Text style={[styles.buttonText, { color: colors.onAccent }]}>
-              {UPSTREAM_TEXT.action.derive}
-            </Text>
-          </Pressable>
+          <View style={styles.actionBar}>
+            {supportsCalculations && calculations ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setActiveView('calculations')}
+                style={({ pressed }) => [
+                  styles.calculationButton,
+                  {
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.72 : 1,
+                  },
+                ]}
+                testID="open-number-base-calculations"
+              >
+                <Text
+                  adjustsFontSizeToFit
+                  numberOfLines={2}
+                  style={[styles.calculationButtonText, { color: colors.accent }]}
+                >
+                  {UPSTREAM_TEXT.calculations.show}
+                </Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              disabled={!canDeriveWithPassphrase}
+              onPress={showResult}
+              style={({ pressed }) => [
+                styles.button,
+                {
+                  backgroundColor: colors.accent,
+                  opacity: !canDeriveWithPassphrase ? 0.45 : pressed ? 0.82 : 1,
+                },
+              ]}
+              testID="derive-number-base-phrase"
+            >
+              <Text style={[styles.buttonText, { color: colors.onAccent }]}>
+                {UPSTREAM_TEXT.action.derive}
+              </Text>
+            </Pressable>
+          </View>
         </View>
+      ) : activeView === 'calculations' ? (
+        calculations ? (
+          <NumberBaseCalculationsScreen
+            calculations={calculations}
+            colors={colors}
+            formatLabel={analysis.config.label}
+            onBack={() => setActiveView('entry')}
+            shortLabel={analysis.config.shortLabel}
+            showConversion={format !== 'bin'}
+          />
+        ) : null
       ) : (
         <Bip39PassphraseView
           backTestID="close-number-bases-passphrase"
@@ -649,6 +692,11 @@ export function NumberBasesScreen({
 }
 
 const styles = StyleSheet.create({
+  actionBar: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
   backButton: {
     justifyContent: 'center',
     minHeight: 44,
@@ -667,13 +715,28 @@ const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
     borderRadius: 6,
+    flex: 1,
     justifyContent: 'center',
-    marginTop: 12,
     minHeight: 50,
   },
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  calculationButton: {
+    alignItems: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 50,
+    paddingHorizontal: 8,
+  },
+  calculationButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 18,
+    textAlign: 'center',
   },
   entryContent: {
     flex: 1,

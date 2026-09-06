@@ -1,4 +1,7 @@
-import type { NumberBaseAnalysis } from '../src/native/entropyStudio';
+import type {
+  NumberBaseAnalysis,
+  NumberBaseCalculations,
+} from '../src/native/entropyStudio';
 
 type NumberBaseUiMockSetters = {
   readonly setAnalyzeNumberBaseInput: (
@@ -6,6 +9,9 @@ type NumberBaseUiMockSetters = {
   ) => void;
   readonly setNumberBaseEntropy: (
     implementation: (value: string, format: number, targetWords: number) => ArrayBuffer,
+  ) => void;
+  readonly setNumberBaseCalculations: (
+    implementation: (value: string, format: number, targetWords: number) => NumberBaseCalculations,
   ) => void;
 };
 
@@ -194,6 +200,7 @@ const NUMBER_BASE_ENTROPIES: Record<string, ArrayBuffer> = {
 
 export function installNumberBaseUiFixtures({
   setAnalyzeNumberBaseInput,
+  setNumberBaseCalculations,
   setNumberBaseEntropy,
 }: NumberBaseUiMockSetters) {
   setAnalyzeNumberBaseInput(
@@ -209,4 +216,5 @@ export function installNumberBaseUiFixtures({
     }
     return entropy;
   });
+  setNumberBaseCalculations(() => ({ digitValues: [], rows: [] }));
 }

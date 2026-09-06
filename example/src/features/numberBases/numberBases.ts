@@ -2,9 +2,13 @@ import { UPSTREAM_UI_LABELS } from '../upstreamUiCopy';
 import {
   NumberBaseFormat as NativeNumberBaseFormat,
   analyzeNumberBaseInput as nativeAnalyzeNumberBaseInput,
+  numberBaseCalculations as nativeNumberBaseCalculations,
   numberBaseEntropy as nativeNumberBaseEntropy,
 } from '../../native/entropyStudio';
-import type { NumberBaseAnalysis as NativeNumberBaseAnalysis } from '../../native/entropyStudio';
+import type {
+  NumberBaseAnalysis as NativeNumberBaseAnalysis,
+  NumberBaseCalculations as NativeNumberBaseCalculations,
+} from '../../native/entropyStudio';
 import type { WordCount } from '../dice/dice';
 
 export const NUMBER_BASE_FORMATS = [
@@ -84,6 +88,14 @@ export function numberBaseEntropy(
   } catch {
     return null;
   }
+}
+
+export function numberBaseCalculations(
+  value: string,
+  format: NumberBaseFormat,
+  wordCount: WordCount,
+): NativeNumberBaseCalculations {
+  return nativeNumberBaseCalculations(value, nativeFormat(format), wordCount);
 }
 
 export function numberBasePreviewWords(

@@ -64,6 +64,27 @@ describe('Upstream UI copy provenance', () => {
 
   test('copies every dynamic formatter only from current upstream templates', () => {
     const dynamicFallbackTemplates = {
+      'calculations.die': {
+        source: upstreamAppJs,
+        template: /Die \$\{index \+ 1\}/,
+      },
+      'calculations.numberBaseConversion': {
+        source: upstreamAppJs,
+        template:
+          /Each \$\{meta\.shortLabel\} digit uses the binary value shown below before the 11-bit BIP39 calculations\./,
+      },
+      'calculations.numberBaseDigitValues': {
+        source: upstreamAppJs,
+        template: /\$\{meta\.shortLabel\} digit values/,
+      },
+      'calculations.numberBaseTitle': {
+        source: upstreamAppJs,
+        template: /\$\{meta\.label\} calculations/,
+      },
+      'calculations.word': {
+        source: upstreamAppJs,
+        template: /Word \$\{row\.number\}/,
+      },
       'cards.dealN': {
         source: upstreamAppJs,
         template: /deal \$\{needed\.first\} unique cards without putting them back/,

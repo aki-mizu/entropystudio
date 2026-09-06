@@ -5,6 +5,7 @@ import {
   DirectDiceMethod,
   DirectDiceStep,
   diceMethodInfo as nativeDiceMethodInfo,
+  directDiceCalculations as nativeDirectDiceCalculations,
   directDiceInputState as nativeDirectDiceInputState,
   diceRollsToEntropy,
   entropyToMnemonic,
@@ -16,6 +17,7 @@ import {
 } from '../../native/entropyStudio';
 import type {
   DiceMethodInfo,
+  DirectDiceCalculationRow,
   DirectDiceState,
   HashedDiceState,
 } from '../../native/entropyStudio';
@@ -318,10 +320,22 @@ export function getDirectDiceState(
 ): DirectDiceState {
   return nativeDirectDiceInputState(
     rolls,
-    method === 'bitbox' ? DirectDiceMethod.Bitbox : DirectDiceMethod.D8D16,
+    nativeDirectDiceMethod(method),
     wordCount,
     selectedFinalWord,
   );
+}
+
+export function getDirectDiceCalculations(
+  rolls: string,
+  method: DirectDiceMethodId,
+  wordCount: WordCount,
+): DirectDiceCalculationRow[] {
+  return nativeDirectDiceCalculations(rolls, nativeDirectDiceMethod(method), wordCount);
+}
+
+function nativeDirectDiceMethod(method: DirectDiceMethodId): number {
+  return method === 'bitbox' ? DirectDiceMethod.Bitbox : DirectDiceMethod.D8D16;
 }
 
 export function directDiceCanDerive(state: DirectDiceState): boolean {
@@ -407,14 +421,18 @@ function d8D16StepLabel(step: DiceFinalStep): string {
   if (step === DiceFinalStep.Coin) {
     return UPSTREAM_TEXT.dice.dplus.aCoinFlip;
   }
-  return step === DiceFinalStep.D8 ? 'D8' : 'D16';
+  return step === DiceFinalStep.D8
+    ? UPSTREAM_TEXT.calculations.d8
+    : UPSTREAM_TEXT.calculations.d16;
 }
 
 function d8D16HelpStepLabel(step: DiceFinalStep): string {
   if (step === DiceFinalStep.Coin) {
     return UPSTREAM_TEXT.dice.dplus.coinFlip;
   }
-  return step === DiceFinalStep.D8 ? 'D8' : 'D16';
+  return step === DiceFinalStep.D8
+    ? UPSTREAM_TEXT.calculations.d8
+    : UPSTREAM_TEXT.calculations.d16;
 }
 
 function arrayBufferToHex(buffer: ArrayBuffer): string {

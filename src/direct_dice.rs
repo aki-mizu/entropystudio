@@ -68,6 +68,31 @@ pub struct DirectDiceState {
     pub progress: f64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum DirectDiceCalculationTermKind {
+    BitboxDie,
+    BitboxCoin,
+    D8,
+    D16,
+}
+
+#[derive(Debug, uniffi::Record)]
+pub struct DirectDiceCalculationTerm {
+    pub kind: DirectDiceCalculationTermKind,
+    pub face: String,
+    pub value: u16,
+    pub multiplier: u16,
+    pub contribution: u16,
+}
+
+#[derive(Debug, uniffi::Record)]
+pub struct DirectDiceCalculationRow {
+    pub number: u8,
+    pub word: String,
+    pub index: u16,
+    pub terms: Vec<DirectDiceCalculationTerm>,
+}
+
 #[uniffi::export]
 pub fn direct_dice_state(
     mut rolls: String,
@@ -93,6 +118,17 @@ pub fn direct_dice_input_state(
 }
 
 #[uniffi::export]
+pub fn direct_dice_calculations(
+    mut rolls: String,
+    method: DirectDiceMethod,
+    target_words: u8,
+) -> Result<Vec<DirectDiceCalculationRow>, EntropyStudioError> {
+    let result = direct_dice_calculations_inner(&rolls, method, target_words);
+    wipe_string(&mut rolls);
+    result
+}
+
+#[uniffi::export]
 pub fn dice_method_info(target_words: u8) -> Result<DiceMethodInfo, EntropyStudioError> {
     let entropy_bits = bip39_entropy_bytes(target_words)? * 8;
     let checksum_bits = entropy_bits / 32;
@@ -112,6 +148,144 @@ pub fn dice_method_info(target_words: u8) -> Result<DiceMethodInfo, EntropyStudi
         partial_words: target_words - 1,
         recommended_rolls: recommended_dice_rolls(target_words)?,
     })
+}
+
+fn direct_dice_calculations_inner(
+    rolls: &str,
+    method: DirectDiceMethod,
+    target_words: u8,
+) -> Result<Vec<DirectDiceCalculationRow>, EntropyStudioError> {
+    match method {
+        DirectDiceMethod::Bitbox => bitbox_dice_calculations(rolls, target_words),
+        DirectDiceMethod::D8D16 => d8_d16_dice_calculations(rolls, target_words),
+    }
+}
+
+fn bitbox_dice_calculations(
+    rolls: &str,
+    target_words: u8,
+) -> Result<Vec<DirectDiceCalculationRow>, EntropyStudioError> {
+    const BITBOX_MULTIPLIERS: [u16; 5] = [512, 128, 32, 8, 2];
+
+    let partial_words = direct_dice_partial_words(target_words)?;
+    let mut rows = Vec::with_capacity(usize::from(partial_words));
+    let mut dice_faces = Vec::with_capacity(5);
+
+    for character in rolls.chars() {
+        let face = match character {
+            '1'..='6' => character as u8 - b'0',
+            _ => continue,
+        };
+
+        if rows.len() >= usize::from(partial_words) {
+            break;
+        }
+        if dice_faces.len() < 5 {
+            if face <= 4 {
+                dice_faces.push(face);
+            }
+            continue;
+        }
+
+        let coin_value = if face >= 4 { 1 } else { 0 };
+        let index = dice_faces
+            .iter()
+            .fold(0u16, |value, die| value * 4 + u16::from(*die - 1))
+            * 2
+            + coin_value;
+        let mut terms = dice_faces
+            .iter()
+            .enumerate()
+            .map(|(position, die)| {
+                let value = u16::from(*die - 1);
+                let multiplier = BITBOX_MULTIPLIERS[position];
+                DirectDiceCalculationTerm {
+                    kind: DirectDiceCalculationTermKind::BitboxDie,
+                    face: die.to_string(),
+                    value,
+                    multiplier,
+                    contribution: value * multiplier,
+                }
+            })
+            .collect::<Vec<_>>();
+        terms.push(DirectDiceCalculationTerm {
+            kind: DirectDiceCalculationTermKind::BitboxCoin,
+            face: face.to_string(),
+            value: coin_value,
+            multiplier: 1,
+            contribution: coin_value,
+        });
+        rows.push(DirectDiceCalculationRow {
+            number: rows.len() as u8 + 1,
+            word: bip39_word(usize::from(index))?,
+            index,
+            terms,
+        });
+        wipe_bytes(&mut dice_faces);
+        dice_faces.clear();
+    }
+
+    wipe_bytes(&mut dice_faces);
+    Ok(rows)
+}
+
+fn d8_d16_dice_calculations(
+    rolls: &str,
+    target_words: u8,
+) -> Result<Vec<DirectDiceCalculationRow>, EntropyStudioError> {
+    let partial_words = direct_dice_partial_words(target_words)?;
+    let entries: Vec<char> = rolls
+        .chars()
+        .filter(|character| !is_dice_separator(*character))
+        .map(|character| character.to_ascii_uppercase())
+        .collect();
+    let mut rows = Vec::with_capacity(usize::from(partial_words));
+
+    for group_index in 0..usize::from(partial_words) {
+        let start = group_index * 3;
+        let Some(group) = entries.get(start..start + 3) else {
+            break;
+        };
+        let (Some(d8_value), Some(first_d16_value), Some(second_d16_value)) = (
+            d8_d16_step_value(D8D16FinalStep::D8, group[0]),
+            d8_d16_value(group[1]),
+            d8_d16_value(group[2]),
+        ) else {
+            continue;
+        };
+        let index = d8_value * 256 + first_d16_value * 16 + second_d16_value;
+        let terms = vec![
+            DirectDiceCalculationTerm {
+                kind: DirectDiceCalculationTermKind::D8,
+                face: group[0].to_string(),
+                value: d8_value as u16,
+                multiplier: 256,
+                contribution: (d8_value * 256) as u16,
+            },
+            DirectDiceCalculationTerm {
+                kind: DirectDiceCalculationTermKind::D16,
+                face: group[1].to_string(),
+                value: first_d16_value as u16,
+                multiplier: 16,
+                contribution: (first_d16_value * 16) as u16,
+            },
+            DirectDiceCalculationTerm {
+                kind: DirectDiceCalculationTermKind::D16,
+                face: group[2].to_string(),
+                value: second_d16_value as u16,
+                multiplier: 1,
+                contribution: second_d16_value as u16,
+            },
+        ];
+        rows.push(DirectDiceCalculationRow {
+            number: group_index as u8 + 1,
+            word: bip39_word(index)?,
+            index: index as u16,
+            terms,
+        });
+    }
+
+    Ok(rows)
 }
 
 #[uniffi::export]

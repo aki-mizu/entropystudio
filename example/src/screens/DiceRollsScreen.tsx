@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BackHandler,
   Pressable,
@@ -19,6 +19,7 @@ import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceTranscriptInput } from '../features/dice/components/DiceTranscriptInput';
 import type { DiceTranscriptSelection } from '../features/dice/components/DiceTranscriptInput';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
+import { DirectDiceCalculationsScreen } from './CalculationsScreen';
 import {
   Bip39PassphraseButton,
   Bip39PassphraseView,
@@ -27,6 +28,10 @@ import {
 import { D8_D16_FACES } from '../features/dice/dice';
 import type { DiceInputFace } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
+import {
+  getDirectDiceCalculations,
+  isDirectDiceMethod,
+} from '../features/dice/dice';
 import {
   diceEntropySyncSource,
   useEntropySync,
@@ -42,7 +47,7 @@ import {
 import { useDiceRolls } from '../features/dice/useDiceRolls';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
-type DiceView = 'entry' | 'passphrase' | 'setup';
+type DiceView = 'calculations' | 'entry' | 'passphrase' | 'setup';
 type SheetName = 'final-word' | 'result' | null;
 
 type Props = {
@@ -118,6 +123,10 @@ export function DiceRollsScreen({
   const canDeriveWithPassphrase = canDerive && passphraseOptions.canDerive;
   const isBitboxCoinTurn =
     method === 'bitbox' && directState?.step === DirectDiceStep.BitboxCoin;
+  const directCalculations = useMemo(
+    () => (isDirectDiceMethod(method) ? getDirectDiceCalculations(rolls, method, wordCount) : []),
+    [method, rolls, wordCount],
+  );
 
   useRegisterCurrentEntropySyncRequest(isActive, {
     selectedFinalWord,
@@ -133,7 +142,7 @@ export function DiceRollsScreen({
     }
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      setActiveView(view => (view === 'passphrase' ? 'entry' : 'setup'));
+      setActiveView(view => (view === 'passphrase' || view === 'calculations' ? 'entry' : 'setup'));
       return true;
     });
     return () => subscription.remove();
@@ -378,8 +387,39 @@ export function DiceRollsScreen({
             />
           </View>
 
-          <View style={styles.actionBar}>{renderDeriveButton()}</View>
+          <View style={styles.actionBar}>
+            {directState ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setActiveView('calculations')}
+                style={({ pressed }) => [
+                  styles.calculationButton,
+                  {
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.72 : 1,
+                  },
+                ]}
+                testID="open-direct-dice-calculations"
+              >
+                <Text
+                  adjustsFontSizeToFit
+                  numberOfLines={2}
+                  style={[styles.calculationButtonText, { color: colors.accent }]}
+                >
+                  {UPSTREAM_TEXT.calculations.show}
+                </Text>
+              </Pressable>
+            ) : null}
+            {renderDeriveButton()}
+          </View>
         </View>
+      ) : activeView === 'calculations' ? (
+        <DirectDiceCalculationsScreen
+          colors={colors}
+          method={method === 'bitbox' ? 'bitbox' : 'd8d16'}
+          onBack={() => setActiveView('entry')}
+          rows={directCalculations}
+        />
       ) : (
         <Bip39PassphraseView
           backTestID="close-dice-passphrase"
@@ -434,6 +474,7 @@ export function DiceRollsScreen({
 const styles = StyleSheet.create({
   actionBar: {
     flexDirection: 'row',
+    gap: 8,
     marginTop: 12,
   },
   backButton: {
@@ -451,6 +492,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     minHeight: 50,
+  },
+  calculationButton: {
+    alignItems: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 50,
+    paddingHorizontal: 8,
+  },
+  calculationButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 18,
+    textAlign: 'center',
   },
   buttonText: {
     fontSize: 16,

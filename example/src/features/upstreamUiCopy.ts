@@ -52,6 +52,28 @@ export const UPSTREAM_TEXT = {
     transcript: 'Card transcript',
     undo: 'Undo last card',
   },
+  calculations: {
+    bit: 'Bit',
+    bitWeight: 'Bit weight',
+    bip39Index: 'BIP39 index',
+    bitboxDescription:
+      'Each D4 contributes one base-4 value and the final die contributes the coin bit, giving 4⁵ × 2 = 2048 possible indices.',
+    bitboxTitle: 'BitBox diceware calculations',
+    coinBit: 'Coin bit',
+    contribution: 'Contribution',
+    conversionArrow: '→',
+    d16: 'D16',
+    d8: 'D8',
+    directDiceNote: '(show how direct word selection produces each BIP39 index)',
+    dplusDescription:
+      'D8 contributes 8 values and each hexadecimal D16 contributes 16 values, giving 8 × 16 × 16 = 2048 possible indices.',
+    dplusTitle: 'D++ calculations',
+    numberBaseDescription:
+      'Each 11-bit group is interpreted as a big-endian binary integer. Multiply each bit by its bit weight, then sum the contributions to get the zero-based BIP39 index. The corresponding word number is the index plus 1.',
+    numberBaseNote: '(show how each BIP39 word number is calculated)',
+    show: 'Show calculations',
+    wordNumber: 'word number',
+  },
   common: {
     cancel: 'Cancel',
   },
@@ -286,6 +308,14 @@ export const UPSTREAM_UI_LABELS = {
 export const UPSTREAM_UI_FALLBACK_COPY = {
   common: {
     back: 'Back',
+  },
+  calculations: {
+    die: (number: number) => `Die ${number}`,
+    numberBaseConversion: (shortLabel: string) =>
+      `Each ${shortLabel} digit uses the binary value shown below before the 11-bit BIP39 calculations.`,
+    numberBaseDigitValues: (shortLabel: string) => `${shortLabel} digit values`,
+    numberBaseTitle: (label: string) => `${label} calculations`,
+    word: (number: number) => `Word ${number}`,
   },
   cards: {
     colemanNote: '(show and hash A♠ 2♣ instead of As 2c)',

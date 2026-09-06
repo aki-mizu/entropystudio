@@ -1,3 +1,5 @@
+import type { DirectDiceCalculationRow } from '../src/native/entropyStudio';
+
 type DiceUiMockSetters = {
   readonly getDirectDiceState: (
     rolls: string,
@@ -12,6 +14,13 @@ type DiceUiMockSetters = {
       targetWords: number,
       selectedFinalWord: string,
     ) => unknown,
+  ) => void;
+  readonly setDirectDiceCalculations: (
+    implementation: (
+      rolls: string,
+      method: number,
+      targetWords: number,
+    ) => DirectDiceCalculationRow[],
   ) => void;
   readonly setFormatDiceTranscript: (
     implementation: (rolls: string, method: number, targetWords: number) => string,
@@ -145,12 +154,14 @@ function hashedDiceFixture(
 
 export function installDiceUiFixtures({
   getDirectDiceState,
+  setDirectDiceCalculations,
   setDiceMethodInfo,
   setDirectDiceInputState,
   setFormatDiceTranscript,
   setHashedDiceState,
 }: DiceUiMockSetters) {
   setDiceMethodInfo(targetWords => DICE_METHOD_INFO[targetWords]);
+  setDirectDiceCalculations(() => []);
   setDirectDiceInputState((rolls, method, targetWords, _selectedFinalWord) => ({
     allowedFaces: [],
     canDerive: false,

@@ -1,6 +1,7 @@
 use super::*;
 
 mod bitbox;
+mod calculations;
 mod d8_d16;
 mod hashed;
 

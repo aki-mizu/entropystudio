@@ -3,8 +3,10 @@ import ReactTestRenderer from 'react-test-renderer';
 import { ScrollView } from 'react-native';
 import type { WordCount } from '../src/features/dice/dice';
 import type {
+  DirectDiceCalculationRow,
   HashedCardState,
   NumberBaseAnalysis,
+  NumberBaseCalculations,
   PrivateKeyInputState,
   EntropySyncSnapshot,
 } from '../src/native/entropyStudio';
@@ -16,6 +18,10 @@ import { installPrivateKeyUiFixtures } from './privateKeyUiFixtures';
 import { installSeedPhraseUiFixtures } from './seedPhraseUiFixtures';
 
 export const mockDiceRollsToEntropy = jest.fn<ArrayBuffer, [string, number, number]>();
+export const mockDirectDiceCalculations = jest.fn<
+  DirectDiceCalculationRow[],
+  [string, number, number]
+>();
 export const mockDirectDiceState = jest.fn();
 export const mockDiceMethodInfo = jest.fn();
 export const mockDirectDiceInputState = jest.fn();
@@ -47,6 +53,10 @@ export const mockNormalizeDirectCardTranscript = jest.fn<string, [string]>();
 export const mockAnalyzeNumberBaseInput = jest.fn<NumberBaseAnalysis, [string, number, number]>();
 export const mockBip39EntropyBits = jest.fn<number, [number]>();
 export const mockNumberBaseEntropy = jest.fn<ArrayBuffer, [string, number, number]>();
+export const mockNumberBaseCalculations = jest.fn<
+  NumberBaseCalculations,
+  [string, number, number]
+>();
 export const mockPrivateKeyEntropy = jest.fn<ArrayBuffer, [string, number, boolean]>();
 export const mockPrivateKeyInputState = jest.fn<PrivateKeyInputState, [string, number, boolean]>();
 export const mockPrivateKeyKeyAllowed = jest.fn<boolean, [string, number, number, string, number]>();
@@ -97,6 +107,12 @@ jest.mock('entropystudio', () => ({
   DirectDiceMethod: {
     Bitbox: 0,
     D8d16: 1,
+  },
+  DirectDiceCalculationTermKind: {
+    BitboxDie: 0,
+    BitboxCoin: 1,
+    D8: 2,
+    D16: 3,
   },
   DirectDiceStep: {
     BitboxDie: 0,
@@ -196,6 +212,7 @@ jest.mock('entropystudio', () => ({
   bip39PassphraseState: mockBip39PassphraseState,
   diceMethodInfo: mockDiceMethodInfo,
   directCardState: mockDirectCardState,
+  directDiceCalculations: mockDirectDiceCalculations,
   directDiceInputState: mockDirectDiceInputState,
   directDiceState: mockDirectDiceState,
   diceRollsToEntropy: mockDiceRollsToEntropy,
@@ -207,6 +224,7 @@ jest.mock('entropystudio', () => ({
   mnemonicToSeed: mockMnemonicToSeed,
   normalizeCardToken: mockNormalizeCardToken,
   normalizeDirectCardTranscript: mockNormalizeDirectCardTranscript,
+  numberBaseCalculations: mockNumberBaseCalculations,
   numberBaseEntropy: mockNumberBaseEntropy,
   privateKeyEntropy: mockPrivateKeyEntropy,
   privateKeyInputState: mockPrivateKeyInputState,
@@ -235,6 +253,8 @@ installCardUiFixtures({
 installNumberBaseUiFixtures({
   setAnalyzeNumberBaseInput: implementation =>
     mockAnalyzeNumberBaseInput.mockImplementation(implementation),
+  setNumberBaseCalculations: implementation =>
+    mockNumberBaseCalculations.mockImplementation(implementation),
   setNumberBaseEntropy: implementation => mockNumberBaseEntropy.mockImplementation(implementation),
 });
 installPrivateKeyUiFixtures({
@@ -248,6 +268,8 @@ installDiceUiFixtures({
   getDirectDiceState: (rolls, method, targetWords) =>
     mockDirectDiceState(rolls, method, targetWords) as Record<string, unknown> | undefined,
   setDiceMethodInfo: implementation => mockDiceMethodInfo.mockImplementation(implementation),
+  setDirectDiceCalculations: implementation =>
+    mockDirectDiceCalculations.mockImplementation(implementation),
   setDirectDiceInputState: implementation =>
     mockDirectDiceInputState.mockImplementation(implementation),
   setFormatDiceTranscript: implementation => mockFormatDiceTranscript.mockImplementation(implementation),
