@@ -61,7 +61,11 @@ function App() {
       <EntropySyncProvider>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <View style={styles.app}>
-          <SafeAreaView edges={['top']} style={styles.workspace}>
+          <SafeAreaView
+            edges={['top']}
+            style={[styles.workspace, { backgroundColor: colors.background }]}
+            testID="app-workspace-safe-area"
+          >
             {activeTab === 'method' ? (
               <KeyStationTabs
                 activeTabId={activeKeyStationTabId}

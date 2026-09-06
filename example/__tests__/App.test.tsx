@@ -18,6 +18,7 @@ import {
 } from '../test/testSupport';
 import { EntropySyncSource } from '../src/native/entropyStudio';
 import type { EntropySyncSnapshot } from '../src/native/entropyStudio';
+import { diceColors } from '../src/features/dice/diceTheme';
 import { STUDIO_UI_TEXT } from '../src/features/studioUiCopy';
 import { formatCopy, UPSTREAM_TEXT } from '../src/features/upstreamUiCopy';
 
@@ -56,6 +57,9 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
   });
 
   expect(app!.root.findByProps({ testID: 'dice-setup-view' })).toBeDefined();
+  expect(app!.root.findByProps({ testID: 'app-workspace-safe-area' }).props.style).toContainEqual({
+    backgroundColor: diceColors(false).background,
+  });
   expectStartAction(app!, 'open-dice-entry');
   expect(app!.root.findByProps({ testID: 'app-tab-method' }).props.children.props.children).toBe(
     UPSTREAM_TEXT.keys.tabLabel,
