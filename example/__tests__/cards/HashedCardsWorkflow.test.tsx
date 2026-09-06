@@ -77,6 +77,13 @@ describe('Hashed cards', () => {
     expect(
       app!.root.findByProps({ testID: 'cards-master-fingerprint-label' }).props.children,
     ).toBe(UPSTREAM_TEXT.fingerprint.master);
+    expect(
+      app!.root.findByProps({ testID: 'cards-master-fingerprint-base-label' }).props.children,
+    ).toBe(UPSTREAM_TEXT.fingerprint.baseSeed);
+    expect(
+      app!.root.findByProps({ testID: 'cards-master-fingerprint-passphrase-label' }).props
+        .children,
+    ).toBe(UPSTREAM_TEXT.fingerprint.withPassphrase);
     expect(app!.root.findByProps({ testID: 'card-input-label' }).props.children).toBe(
       UPSTREAM_TEXT.cards.transcript,
     );

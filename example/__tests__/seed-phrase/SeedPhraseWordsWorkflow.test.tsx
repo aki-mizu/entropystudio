@@ -68,9 +68,20 @@ describe('Seed Phrase / Words', () => {
     expect(
       app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-label' }).props.children,
     ).toBe(UPSTREAM_TEXT.fingerprint.master);
-    expect(app!.root.findAllByProps({ testID: 'seed-phrase-master-fingerprint-value' })).toHaveLength(
-      0,
-    );
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-base-label' }).props
+        .children,
+    ).toBe(UPSTREAM_TEXT.fingerprint.baseSeed);
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-passphrase-label' }).props
+        .children,
+    ).toBe(UPSTREAM_TEXT.fingerprint.withPassphrase);
+    expect(
+      app!.root.findAllByProps({ testID: 'seed-phrase-master-fingerprint-base-value' }),
+    ).toHaveLength(0);
+    expect(
+      app!.root.findAllByProps({ testID: 'seed-phrase-master-fingerprint-passphrase-value' }),
+    ).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'seed-phrase-input' }).props.showSoftInputOnFocus).toBe(
       false,
     );
@@ -91,8 +102,11 @@ describe('Seed Phrase / Words', () => {
     expect(mockMnemonicToEntropy).toHaveBeenLastCalledWith(mnemonic);
     expect(mockMnemonicToMasterFingerprint).toHaveBeenLastCalledWith(mnemonic, '');
     expect(
-      app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-value' }).props.children,
+      app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-base-value' }).props.children,
     ).toBe('73c5da0a');
+    expect(
+      app!.root.findAllByProps({ testID: 'seed-phrase-master-fingerprint-passphrase-value' }),
+    ).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.onPress();
@@ -257,6 +271,14 @@ describe('Seed Phrase / Words', () => {
         .root.findByProps({ testID: 'close-seed-phrase-passphrase' }).props.onPress();
     });
     expect(mockMnemonicToMasterFingerprint).toHaveBeenLastCalledWith(mnemonic, 'TREZOR');
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-base-value' }).props.children,
+    ).toBe('73c5da0a');
+    expect(
+      app!
+        .root.findByProps({ testID: 'seed-phrase-master-fingerprint-passphrase-value' }).props
+        .children,
+    ).toBe('b4e3f5ed');
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'open-seed-phrase-passphrase' }).props.onPress();
     });

@@ -45,11 +45,17 @@ export const mockEntropyToMnemonic = jest.fn<string, [ArrayBuffer]>();
 export const mockHashedCardState = jest.fn<HashedCardState, [string, number]>();
 export const mockMnemonicToEntropy = jest.fn<ArrayBuffer, [string]>();
 const MASTER_SEED_FIXTURE = new Uint8Array(64).buffer;
+const BIP39_MNEMONIC_FIXTURE =
+  'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+const MASTER_FINGERPRINT_FIXTURES: Record<string, string> = {
+  [`${BIP39_MNEMONIC_FIXTURE}\u0000`]: '73c5da0a',
+  [`${BIP39_MNEMONIC_FIXTURE}\u0000TREZOR`]: 'b4e3f5ed',
+};
 export const mockMnemonicToSeed = jest.fn<ArrayBuffer, [string, string]>(
   () => MASTER_SEED_FIXTURE.slice(0),
 );
 export const mockMnemonicToMasterFingerprint = jest.fn<string, [string, string]>(
-  () => '73c5da0a',
+  (phrase, passphrase) => MASTER_FINGERPRINT_FIXTURES[`${phrase}\u0000${passphrase}`] ?? '',
 );
 export const mockNormalizeCardToken = jest.fn<string, [string]>();
 export const mockNormalizeDirectCardTranscript = jest.fn<string, [string]>();

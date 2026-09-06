@@ -163,7 +163,9 @@ export const UPSTREAM_TEXT = {
     },
   },
   fingerprint: {
+    baseSeed: 'Base seed',
     master: 'Master fingerprint',
+    withPassphrase: 'With passphrase',
   },
   hex: {
     format: {

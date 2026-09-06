@@ -121,8 +121,18 @@ export function MasterFingerprintHeader({
   passphrase,
   testID,
 }: MasterFingerprintHeaderProps) {
-  const fingerprint = useMemo(() => {
+  const baseFingerprint = useMemo(() => {
     if (!mnemonic) {
+      return '';
+    }
+    try {
+      return mnemonicToMasterFingerprint(mnemonic, '');
+    } catch {
+      return '';
+    }
+  }, [mnemonic]);
+  const passphraseFingerprint = useMemo(() => {
+    if (!mnemonic || !passphrase) {
       return '';
     }
     try {
@@ -143,14 +153,50 @@ export function MasterFingerprintHeader({
       >
         {UPSTREAM_TEXT.fingerprint.master}
       </Text>
-      {fingerprint ? (
+      <View style={styles.masterFingerprintRow}>
         <Text
-          style={[styles.masterFingerprintValue, { color: colors.accent }]}
-          testID={`${testID}-value`}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+          numberOfLines={1}
+          style={[styles.masterFingerprintRowLabel, { color: colors.muted }]}
+          testID={`${testID}-base-label`}
         >
-          {fingerprint}
+          {UPSTREAM_TEXT.fingerprint.baseSeed}
         </Text>
-      ) : null}
+        {baseFingerprint ? (
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            numberOfLines={1}
+            style={[styles.masterFingerprintValue, { color: colors.accent }]}
+            testID={`${testID}-base-value`}
+          >
+            {baseFingerprint}
+          </Text>
+        ) : null}
+      </View>
+      <View style={styles.masterFingerprintRow}>
+        <Text
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+          numberOfLines={1}
+          style={[styles.masterFingerprintRowLabel, { color: colors.muted }]}
+          testID={`${testID}-passphrase-label`}
+        >
+          {UPSTREAM_TEXT.fingerprint.withPassphrase}
+        </Text>
+        {passphraseFingerprint ? (
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            numberOfLines={1}
+            style={[styles.masterFingerprintValue, { color: colors.accent }]}
+            testID={`${testID}-passphrase-value`}
+          >
+            {passphraseFingerprint}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -455,11 +501,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 18,
   },
+  masterFingerprintRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    minWidth: 0,
+  },
+  masterFingerprintRowLabel: {
+    flexShrink: 1,
+    fontSize: 11,
+    lineHeight: 14,
+    minWidth: 0,
+  },
   masterFingerprintValue: {
+    flexShrink: 1,
     fontFamily: 'monospace',
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
-    lineHeight: 18,
+    lineHeight: 14,
+    marginLeft: 4,
+    minWidth: 0,
   },
   title: {
     fontSize: 20,

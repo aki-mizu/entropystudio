@@ -53,6 +53,14 @@ describe('Number Bases / Hexadecimal', () => {
     expect(
       app!.root.findByProps({ testID: 'number-bases-master-fingerprint-label' }).props.children,
     ).toBe(UPSTREAM_TEXT.fingerprint.master);
+    expect(
+      app!.root.findByProps({ testID: 'number-bases-master-fingerprint-base-label' }).props
+        .children,
+    ).toBe(UPSTREAM_TEXT.fingerprint.baseSeed);
+    expect(
+      app!.root.findByProps({ testID: 'number-bases-master-fingerprint-passphrase-label' }).props
+        .children,
+    ).toBe(UPSTREAM_TEXT.fingerprint.withPassphrase);
     expect(app!.root.findByProps({ testID: 'number-base-input' }).props.placeholder).toBe(
       UPSTREAM_TEXT.hex.placeholder
         .replace('{digits}', '32')
