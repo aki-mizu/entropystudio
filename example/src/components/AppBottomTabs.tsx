@@ -35,7 +35,7 @@ export function AppBottomTabs({ activeTab, colors, onSelectTab }: Props) {
           <Text
             style={[styles.label, { color: activeTab === 'method' ? colors.text : colors.muted }]}
           >
-            {UPSTREAM_TEXT.keys.methodLabel}
+            {UPSTREAM_TEXT.keys.tabLabel}
           </Text>
         </Pressable>
         <Pressable

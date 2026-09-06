@@ -200,6 +200,7 @@ export const UPSTREAM_TEXT = {
   },
   keys: {
     methodLabel: 'Method',
+    tabLabel: 'Keys',
   },
   mode: {
     cards: 'Cards',
