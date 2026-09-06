@@ -49,9 +49,7 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
         .findByProps({ testID: 'dice-screen-safe-area' })
         .findAllByType(ScrollView),
     ).toHaveLength(0);
-    expect(app!.root.findByProps({ testID: 'dice-screen-safe-area' }).props.edges).toEqual([
-      'top',
-    ]);
+    expect(app!.root.findByProps({ testID: 'dice-screen-safe-area' }).props.edges).toEqual([]);
     expect(app!.root.findByProps({ testID: 'dice-setup-view' })).toBeDefined();
     expect(app!.root.findAllByType(DiceGrid)).toHaveLength(0);
     expect(app!.root.findAllByType(DiceWordList)).toHaveLength(0);
@@ -163,7 +161,10 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
       app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
     });
 
-    expect(app!.root.findByProps({ testID: 'dice-result-sheet' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.children.props.children).toBe(
+      '73c5da0a',
+    );
+    expect(app!.root.findByProps({ testID: 'key-station-result-screen' })).toBeDefined();
     expect(app!.root.findAllByProps({ testID: 'mnemonic-output' })).toHaveLength(0);
     expect(app!.root.findAllByProps({ testID: 'result-phrase-label' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'entropy-output' }).props.children).toBe(

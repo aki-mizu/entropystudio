@@ -117,6 +117,48 @@ describe('Number Bases / Hexadecimal', () => {
     );
   });
 
+  test('keeps a native derivation error visible without opening a Key Station tab', async () => {
+    const mnemonic =
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    mockEntropyToMnemonic.mockReturnValue(mnemonic);
+
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+
+    await selectEntropyTool(app!, 'hex');
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'number-bases-setup-view' })
+        .findByProps({ testID: 'number-base-format-hex' }).props.onPress();
+    });
+    await selectSeedPhraseLength(app!, 12);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-number-bases-entry' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'number-base-input' }).props.onChangeText('0'.repeat(32));
+    });
+    expect(app!.root.findByProps({ testID: 'derive-number-base-phrase' }).props.disabled).toBe(false);
+    mockMnemonicToSeed.mockImplementation(() => {
+      throw new Error('native failure');
+    });
+
+    try {
+      await ReactTestRenderer.act(async () => {
+        app!.root.findByProps({ testID: 'derive-number-base-phrase' }).props.onPress();
+      });
+
+      expect(app!.root.findByProps({ testID: 'number-base-derive-error' }).props.children).toBe(
+        UPSTREAM_TEXT.error.generic,
+      );
+      expect(app!.root.findAllByProps({ testID: 'key-station-tab-1' })).toHaveLength(0);
+    } finally {
+      mockMnemonicToSeed.mockImplementation(() => new Uint8Array(64).buffer);
+    }
+  });
+
   test('opens an optional BIP39 passphrase screen from number-base seed input', async () => {
     let app: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(async () => {

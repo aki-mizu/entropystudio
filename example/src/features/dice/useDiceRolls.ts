@@ -153,16 +153,24 @@ export function useDiceRolls(options: UseDiceRollsOptions = {}) {
     notifyInputChange(rolls, value);
   }
 
-  function derivePhrase() {
+  function derivePhrase(): DiceResult | null {
     if (!canDerive) {
-      return;
+      return null;
     }
 
     if (isHashedDiceMethod(method) && hashedState) {
-      setResult(deriveDiceResult(rolls, method, wordCount, hashedState, passphrase));
-    } else if (directState) {
-      setResult(deriveDirectDiceResult(directState, passphrase));
+      const derivedResult = deriveDiceResult(rolls, method, wordCount, hashedState, passphrase);
+      setResult(derivedResult);
+      return derivedResult;
     }
+
+    if (directState) {
+      const derivedResult = deriveDirectDiceResult(directState, passphrase);
+      setResult(derivedResult);
+      return derivedResult;
+    }
+
+    return null;
   }
 
   return {

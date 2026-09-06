@@ -41,7 +41,7 @@ export function EntropySyncSettingsScreen({
 
   return (
     <SafeAreaView
-      edges={['top']}
+      edges={[]}
       importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
       pointerEvents={isActive ? 'auto' : 'none'}
       style={[

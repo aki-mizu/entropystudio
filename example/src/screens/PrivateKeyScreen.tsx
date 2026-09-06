@@ -11,8 +11,6 @@ import type { TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
-import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
-import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { diceColors } from '../features/dice/diceTheme';
 import {
@@ -23,7 +21,8 @@ import {
 import { PrivateKeyKeypad } from '../features/privateKey/components/PrivateKeyKeypad';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
-import { entropyToMnemonic } from '../native/entropyStudio';
+import { entropyToMnemonic, mnemonicToSeed } from '../native/entropyStudio';
+import type { KeyStationDerivation } from '../features/keyStation/keyStation';
 import {
   BRAIN_WALLET_OUTPUTS,
   BRAIN_WALLET_WARNING_COPY,
@@ -46,18 +45,14 @@ import type {
 const CONTENT_HORIZONTAL_PADDING = 24;
 
 type PrivateKeyView = 'entry' | 'setup';
-type SheetName = 'result' | null;
 type InputSelection = { readonly end: number; readonly start: number };
-type PrivateKeyResult =
-  | { readonly kind: 'private-key'; readonly entropy: string }
-  | { readonly kind: 'brain-wallet-hd'; readonly entropy: string; readonly mnemonic: string }
-  | { readonly kind: 'error'; readonly error: string };
 type PrivateKeyInputValues = Record<PrivateKeyInputFormat, string>;
 
 type Props = {
   readonly activeTool: EntropyTool;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
+  readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
 };
 
@@ -89,11 +84,11 @@ export function PrivateKeyScreen({
   activeTool,
   isActive,
   isDarkMode,
+  onDeriveKey,
   onSelectTool,
 }: Props) {
   const inputRef = useRef<TextInputInstance>(null);
   const appliedSelectionRequestId = useRef(0);
-  const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<PrivateKeyView>('setup');
   const [brainWalletWarningAcknowledgements, setBrainWalletWarningAcknowledgements] = useState<
     Record<BrainWalletOutput, boolean>
@@ -101,12 +96,12 @@ export function PrivateKeyScreen({
   const [brainWalletWarningVisible, setBrainWalletWarningVisible] = useState(false);
   const [brainWalletOutput, setBrainWalletOutput] = useState<BrainWalletOutput>('scalar');
   const [brainWalletTrim, setBrainWalletTrim] = useState(false);
+  const [deriveError, setDeriveError] = useState<string | null>(null);
   const [format, setFormat] = useState<PrivateKeyInputFormat>('wif');
   const [inputValues, setInputValues] = useState<PrivateKeyInputValues>(
     EMPTY_PRIVATE_KEY_INPUT_VALUES,
   );
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
-  const [result, setResult] = useState<PrivateKeyResult | null>(null);
   const [selectionRequestId, setSelectionRequestId] = useState(0);
   const entropySync = useEntropySync();
   const colors = diceColors(isDarkMode);
@@ -162,7 +157,6 @@ export function PrivateKeyScreen({
       hex: snapshot.hexPrivateKey,
       wif: snapshot.wifPrivateKey,
     }));
-    setResult(null);
   }, [entropySync.snapshot]);
 
   useEffect(() => {
@@ -187,25 +181,25 @@ export function PrivateKeyScreen({
   }, [selectedInput, selectionRequestId]);
 
   function selectFormat(value: PrivateKeyInputFormat) {
+    setDeriveError(null);
     setFormat(value);
     if (!entropySync.enabled) {
       setInputValues(EMPTY_PRIVATE_KEY_INPUT_VALUES);
     }
     setInputSelection(null);
-    setResult(null);
     setBrainWalletWarningVisible(false);
   }
 
   function selectBrainWalletOutput(value: BrainWalletOutput) {
+    setDeriveError(null);
     setBrainWalletOutput(value);
-    setResult(null);
     setBrainWalletWarningVisible(false);
   }
 
   function toggleBrainWalletTrim() {
+    setDeriveError(null);
     const next = !brainWalletTrim;
     setBrainWalletTrim(next);
-    setResult(null);
     entropySync.publish({
       selectedFinalWord: '',
       source: privateKeyEntropySyncSource(format, next),
@@ -301,8 +295,8 @@ export function PrivateKeyScreen({
   }
 
   function updateInput(value: string) {
+    setDeriveError(null);
     setInputValues(previous => ({ ...previous, [format]: value }));
-    setResult(null);
     entropySync.publish({
       selectedFinalWord: '',
       source: privateKeyEntropySyncSource(format, brainWalletTrim),
@@ -351,29 +345,31 @@ export function PrivateKeyScreen({
 
     try {
       if (format === 'brain' && brainWalletOutput === 'hd') {
-        setResult({
+        const mnemonic = entropyToMnemonic(entropy);
+        const masterSeed = mnemonicToSeed(mnemonic, '');
+        setDeriveError(null);
+        onDeriveKey({
           entropy: entropyHex(entropy),
-          kind: 'brain-wallet-hd',
-          mnemonic: entropyToMnemonic(entropy),
+          kind: 'bip39',
+          masterSeed: entropyHex(masterSeed),
+          mnemonic,
+          passphrase: '',
         });
       } else {
-        setResult({
+        setDeriveError(null);
+        onDeriveKey({
           entropy: entropyHex(entropy),
           kind: 'private-key',
         });
       }
     } catch {
-      setResult({
-        error: UPSTREAM_TEXT.error.generic,
-        kind: 'error',
-      });
+      setDeriveError(UPSTREAM_TEXT.error.generic);
     }
-    setActiveSheet('result');
   }
 
   return (
     <SafeAreaView
-      edges={['top']}
+      edges={[]}
       importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
       pointerEvents={isActive ? 'auto' : 'none'}
       style={[
@@ -658,45 +654,13 @@ export function PrivateKeyScreen({
               {UPSTREAM_TEXT.action.derive}
             </Text>
           </Pressable>
+          {deriveError ? (
+            <Text style={[styles.deriveError, { color: colors.error }]} testID="private-key-derive-error">
+              {deriveError}
+            </Text>
+          ) : null}
         </View>
       )}
-
-      <NativeSheet
-        colors={colors}
-        onDismiss={() => setActiveSheet(null)}
-        testID="private-key-result-sheet"
-        title={UPSTREAM_TEXT.action.derive}
-        visible={activeSheet === 'result' && Boolean(result)}
-      >
-        {result?.kind === 'brain-wallet-hd' ? (
-          <>
-            <DiceWordList
-              compact
-              colors={colors}
-              slotCount={24}
-              testID="private-key-brain-seed-words"
-              words={result.mnemonic.split(' ')}
-            />
-            <DiceResultPanel
-              colors={colors}
-              entropyLabel={UPSTREAM_TEXT.result.entropyHex}
-              result={{ entropy: result.entropy }}
-            />
-          </>
-        ) : (
-          <DiceResultPanel
-            colors={colors}
-            entropyLabel={UPSTREAM_TEXT.result.privateKey}
-            result={
-              result?.kind === 'error'
-                ? { error: result.error }
-                : result
-                  ? { entropy: result.entropy }
-                  : null
-            }
-          />
-        )}
-      </NativeSheet>
 
       <NativeSheet
         colors={colors}
@@ -845,6 +809,11 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  deriveError: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 10,
   },
   entryContent: {
     flex: 1,

@@ -199,7 +199,11 @@ export const UPSTREAM_TEXT = {
     wifDesc: 'Bitcoin wallet import format (Base58Check).',
   },
   keys: {
+    add: 'Open Key Station to derive another key',
+    defaultTab: 'Key {n}',
+    delete: 'Delete current key',
     methodLabel: 'Method',
+    station: 'Key Station',
     tabLabel: 'Keys',
   },
   mode: {

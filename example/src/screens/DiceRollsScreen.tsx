@@ -15,7 +15,6 @@ import { DirectDiceFinalWordPicker } from '../features/dice/components/DirectDic
 import { DiceGrid } from '../features/dice/components/DiceGrid';
 import { DiceWordList, DirectDicePreview } from '../features/dice/components/DirectDicePreview';
 import { DiceMethodSelector } from '../features/dice/components/DiceMethodSelector';
-import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceTranscriptInput } from '../features/dice/components/DiceTranscriptInput';
 import type { DiceTranscriptSelection } from '../features/dice/components/DiceTranscriptInput';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
@@ -45,16 +44,18 @@ import {
   UPSTREAM_UI_FALLBACK_COPY,
 } from '../features/upstreamUiCopy';
 import { useDiceRolls } from '../features/dice/useDiceRolls';
+import type { KeyStationDerivation } from '../features/keyStation/keyStation';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 type DiceView = 'calculations' | 'entry' | 'passphrase' | 'setup';
-type SheetName = 'final-word' | 'result' | null;
+type SheetName = 'final-word' | null;
 
 type Props = {
   readonly activeTool: EntropyTool;
   readonly autocompleteEnabled: boolean;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
+  readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
 };
 
@@ -63,11 +64,13 @@ export function DiceRollsScreen({
   autocompleteEnabled,
   isActive,
   isDarkMode,
+  onDeriveKey,
   onSelectTool,
 }: Props) {
   const { height: windowHeight } = useWindowDimensions();
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<DiceView>('setup');
+  const [deriveError, setDeriveError] = useState<string | null>(null);
   const [passphrase, setPassphrase] = useState('');
   const passphraseOptions = useBip39PassphraseOptions(passphrase, autocompleteEnabled);
   const [transcriptSelection, setTranscriptSelection] =
@@ -99,6 +102,7 @@ export function DiceRollsScreen({
   } = useDiceRolls({
     passphrase,
     onInputChange: change => {
+      setDeriveError(null);
       entropySync.publish({
         selectedFinalWord: change.selectedFinalWord,
         source: diceEntropySyncSource(change.method),
@@ -152,8 +156,22 @@ export function DiceRollsScreen({
     if (!canDeriveWithPassphrase) {
       return;
     }
-    derivePhrase();
-    setActiveSheet('result');
+    const derivedResult = derivePhrase();
+    if (!derivedResult) {
+      return;
+    }
+    if (typeof derivedResult.error === 'string') {
+      setDeriveError(derivedResult.error);
+      return;
+    }
+    setDeriveError(null);
+    onDeriveKey({
+      entropy: derivedResult.entropy,
+      kind: 'bip39',
+      masterSeed: derivedResult.masterSeed,
+      mnemonic: derivedResult.mnemonic,
+      passphrase,
+    });
   }
 
   function openPassphrase() {
@@ -166,6 +184,7 @@ export function DiceRollsScreen({
   }
 
   function changeMethod(value: typeof method) {
+    setDeriveError(null);
     setTranscriptSelection(null);
     selectMethod(value);
   }
@@ -211,7 +230,7 @@ export function DiceRollsScreen({
 
   return (
     <SafeAreaView
-      edges={['top']}
+      edges={[]}
       importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
       pointerEvents={isActive ? 'auto' : 'none'}
       style={[
@@ -424,6 +443,11 @@ export function DiceRollsScreen({
             ) : null}
             {renderDeriveButton()}
           </View>
+          {deriveError ? (
+            <Text style={[styles.deriveError, { color: colors.error }]} testID="dice-error">
+              {deriveError}
+            </Text>
+          ) : null}
         </View>
       ) : activeView === 'calculations' ? (
         <DirectDiceCalculationsScreen
@@ -466,20 +490,6 @@ export function DiceRollsScreen({
         ) : null}
       </NativeSheet>
 
-      <NativeSheet
-        colors={colors}
-        onDismiss={() => setActiveSheet(null)}
-        testID="dice-result-sheet"
-        title={copy.deriveAction}
-        visible={activeSheet === 'result' && Boolean(result)}
-      >
-        <DiceResultPanel
-          colors={colors}
-          entropyLabel={copy.resultEntropy}
-          masterSeedLabel={copy.resultMasterSeed}
-          result={result}
-        />
-      </NativeSheet>
     </SafeAreaView>
   );
 }
@@ -531,6 +541,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 18,
     textAlign: 'center',
+  },
+  deriveError: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 10,
   },
   buttonText: {
     fontSize: 16,

@@ -120,7 +120,7 @@ describe('Dice Rolls / BIP39 passphrase', () => {
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
     });
-    expect(app!.root.findByProps({ testID: 'dice-result-sheet' }).props.visible).toBe(false);
+    expect(app!.root.findAllByProps({ testID: 'key-station-tab-1' })).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'open-dice-passphrase' }).props.onPress();

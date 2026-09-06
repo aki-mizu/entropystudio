@@ -174,23 +174,29 @@ export function useCards(options: UseCardsOptions = {}) {
     notifyInputChange(nextTranscript, value);
   }
 
-  function derivePhrase() {
+  function derivePhrase(): CardResult | null {
     if (!canDerive) {
-      return;
+      return null;
     }
     if (isHashedCardMethod(method) && hashedState) {
-      setResult(
-        deriveHashedCardResult(
-          hashedTranscript,
-          matchesIanColeman,
-          wordCount,
-          hashedState,
-          passphrase,
-        ),
+      const derivedResult = deriveHashedCardResult(
+        hashedTranscript,
+        matchesIanColeman,
+        wordCount,
+        hashedState,
+        passphrase,
       );
-    } else if (directState) {
-      setResult(deriveDirectCardResult(directState, passphrase));
+      setResult(derivedResult);
+      return derivedResult;
     }
+
+    if (directState) {
+      const derivedResult = deriveDirectCardResult(directState, passphrase);
+      setResult(derivedResult);
+      return derivedResult;
+    }
+
+    return null;
   }
 
   return {

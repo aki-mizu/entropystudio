@@ -14,11 +14,9 @@ import { BackspaceIconButton } from '../components/BackspaceKey';
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
 import { entropyToMnemonic, mnemonicToSeed } from '../native/entropyStudio';
-import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceWordList } from '../features/dice/components/DirectDicePreview';
-import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { NumberBaseCalculationsScreen } from './CalculationsScreen';
-import type { DiceResult, WordCount } from '../features/dice/dice';
+import type { WordCount } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
 import {
   numberBaseEntropySyncSource,
@@ -41,6 +39,7 @@ import {
   numberBaseFormatConfig,
 } from '../features/numberBases/numberBases';
 import type { NumberBaseFormat } from '../features/numberBases/numberBases';
+import type { KeyStationDerivation } from '../features/keyStation/keyStation';
 import {
   formatCopy,
   UPSTREAM_UI_FALLBACK_COPY,
@@ -51,7 +50,6 @@ import {
 const CONTENT_HORIZONTAL_PADDING = 24;
 
 type NumberBasesView = 'calculations' | 'entry' | 'passphrase' | 'setup';
-type SheetName = 'result' | null;
 type InputValues = Record<NumberBaseFormat, string>;
 type InputSelection = { readonly end: number; readonly start: number };
 
@@ -60,6 +58,7 @@ type Props = {
   readonly autocompleteEnabled: boolean;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
+  readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
 };
 
@@ -208,16 +207,16 @@ export function NumberBasesScreen({
   autocompleteEnabled,
   isActive,
   isDarkMode,
+  onDeriveKey,
   onSelectTool,
 }: Props) {
-  const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<NumberBasesView>('setup');
+  const [deriveError, setDeriveError] = useState<string | null>(null);
   const [format, setFormat] = useState<NumberBaseFormat>('bin');
   const [inputValues, setInputValues] = useState<InputValues>(EMPTY_INPUT_VALUES);
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
   const [passphrase, setPassphrase] = useState('');
   const passphraseOptions = useBip39PassphraseOptions(passphrase, autocompleteEnabled);
-  const [result, setResult] = useState<DiceResult | null>(null);
   const [wordCount, setWordCount] = useState<WordCount>(24);
   const entropySync = useEntropySync();
   const colors = diceColors(isDarkMode);
@@ -275,7 +274,6 @@ export function NumberBasesScreen({
         bin: entropySync.snapshot.bin,
         hex: entropySync.snapshot.hex,
       });
-      setResult(null);
     }
     setWordCount(entropySync.targetWords);
   }, [entropySync.snapshot, entropySync.targetWords]);
@@ -293,8 +291,8 @@ export function NumberBasesScreen({
   }, [activeView, isActive]);
 
   function updateInput(value: string) {
+    setDeriveError(null);
     setInputValues(previous => ({ ...previous, [format]: value }));
-    setResult(null);
     entropySync.publish({
       selectedFinalWord: '',
       source: numberBaseEntropySyncSource(format),
@@ -338,9 +336,9 @@ export function NumberBasesScreen({
   }
 
   function selectFormat(value: NumberBaseFormat) {
+    setDeriveError(null);
     setFormat(value);
     setInputSelection(null);
-    setResult(null);
   }
 
   function openPassphrase() {
@@ -353,21 +351,24 @@ export function NumberBasesScreen({
     }
 
     try {
-      const mnemonic = entropyToMnemonic(entropy);
-      setResult({
+      const derivedMnemonic = entropyToMnemonic(entropy);
+      const masterSeed = mnemonicToSeed(derivedMnemonic, passphrase);
+      setDeriveError(null);
+      onDeriveKey({
         entropy: entropyHex(entropy),
-        masterSeed: entropyHex(mnemonicToSeed(mnemonic, passphrase)),
-        mnemonic,
+        kind: 'bip39',
+        masterSeed: entropyHex(masterSeed),
+        mnemonic: derivedMnemonic,
+        passphrase,
       });
     } catch {
-      setResult({ error: UPSTREAM_TEXT.error.generic });
+      setDeriveError(UPSTREAM_TEXT.error.generic);
     }
-    setActiveSheet('result');
   }
 
   return (
     <SafeAreaView
-      edges={['top']}
+      edges={[]}
       importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
       pointerEvents={isActive ? 'auto' : 'none'}
       style={[
@@ -663,6 +664,11 @@ export function NumberBasesScreen({
               </Text>
             </Pressable>
           </View>
+          {deriveError ? (
+            <Text style={[styles.deriveError, { color: colors.error }]} testID="number-base-derive-error">
+              {deriveError}
+            </Text>
+          ) : null}
         </View>
       ) : activeView === 'calculations' ? (
         calculations ? (
@@ -689,20 +695,6 @@ export function NumberBasesScreen({
         />
       )}
 
-      <NativeSheet
-        colors={colors}
-        onDismiss={() => setActiveSheet(null)}
-        testID="number-base-result-sheet"
-        title={UPSTREAM_TEXT.action.derive}
-        visible={activeSheet === 'result' && Boolean(result)}
-      >
-        <DiceResultPanel
-          colors={colors}
-          entropyLabel={UPSTREAM_TEXT.result.entropyHex}
-          masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
-          result={result}
-        />
-      </NativeSheet>
     </SafeAreaView>
   );
 }
@@ -764,6 +756,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 18,
     textAlign: 'center',
+  },
+  deriveError: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 10,
   },
   entryContent: {
     flex: 1,

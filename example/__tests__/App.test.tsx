@@ -5,9 +5,12 @@
 import {
   activeMethodList,
   App,
+  mockDiceRollsToEntropy,
+  mockEntropyToMnemonic,
   React,
   ReactTestRenderer,
   ScrollView,
+  openDiceEntry,
   selectDiceMethod,
   selectEntropyTool,
   selectSeedPhraseLength,
@@ -151,6 +154,75 @@ test('keeps native workflow trees mounted while changing methods', async () => {
   expect(app!.root.findByProps({ testID: 'cards-screen-safe-area' }).props.pointerEvents).toBe(
     'none',
   );
+});
+
+test('keeps derived keys in removable Key Station tabs', async () => {
+  const entropy = new Uint8Array(16).buffer;
+  const mnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  mockDiceRollsToEntropy.mockReturnValue(entropy);
+  mockEntropyToMnemonic.mockReturnValue(mnemonic);
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  expect(app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.children.props.children).toBe(
+    UPSTREAM_TEXT.keys.station,
+  );
+  expect(app!.root.findByProps({ testID: 'key-station-add' }).props.accessibilityLabel).toBe(
+    UPSTREAM_TEXT.keys.add,
+  );
+  expect(app!.root.findByProps({ testID: 'key-station-delete' }).props.disabled).toBe(true);
+
+  await openDiceEntry(app!);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1');
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.children.props.children).toBe(
+    '73c5da0a',
+  );
+  expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.accessibilityState).toEqual({
+    selected: true,
+  });
+  expect(app!.root.findByProps({ testID: 'key-station-delete' }).props.disabled).toBe(false);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-add' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.accessibilityState).toEqual({
+    selected: true,
+  });
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'key-station-tab-2' })).toBeDefined();
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-tab-1' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-delete' }).props.onPress();
+  });
+
+  expect(app!.root.findAllByProps({ testID: 'key-station-tab-1' })).toHaveLength(0);
+  expect(app!.root.findByProps({ testID: 'key-station-tab-2' }).props.accessibilityState).toEqual({
+    selected: true,
+  });
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-delete' }).props.onPress();
+  });
+  expect(app!.root.findAllByProps({ testID: 'key-station-tab-2' })).toHaveLength(0);
+  expect(app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.accessibilityState).toEqual({
+    selected: true,
+  });
 });
 
 test('keeps every method setup view fixed', async () => {

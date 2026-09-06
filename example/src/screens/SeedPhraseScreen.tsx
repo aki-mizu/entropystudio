@@ -12,10 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
-import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import { DiceWordList } from '../features/dice/components/DirectDicePreview';
-import { NativeSheet } from '../features/dice/components/NativeSheet';
-import type { DiceResult, WordCount } from '../features/dice/dice';
+import type { WordCount } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
 import {
   seedEntropySyncSource,
@@ -23,6 +21,7 @@ import {
   useRegisterCurrentEntropySyncRequest,
 } from '../features/entropySync';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
+import type { KeyStationDerivation } from '../features/keyStation/keyStation';
 import { SeedPhraseKeypad } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import type { SeedPhraseEntryMethod } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import {
@@ -52,7 +51,6 @@ import { mnemonicToEntropy, mnemonicToSeed } from '../native/entropyStudio';
 const CONTENT_HORIZONTAL_PADDING = 24;
 
 type SeedPhraseView = 'entry' | 'passphrase' | 'setup';
-type SheetName = 'result' | null;
 type InputSelection = { readonly end: number; readonly start: number };
 
 type Props = {
@@ -60,6 +58,7 @@ type Props = {
   readonly autocompleteEnabled: boolean;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
+  readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
 };
 
@@ -109,15 +108,14 @@ export function SeedPhraseScreen({
   autocompleteEnabled,
   isActive,
   isDarkMode,
+  onDeriveKey,
   onSelectTool,
 }: Props) {
-  const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<SeedPhraseView>('setup');
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
   const [numberInput, setNumberInput] = useState('');
   const [passphrase, setPassphrase] = useState('');
   const passphraseOptions = useBip39PassphraseOptions(passphrase, autocompleteEnabled);
-  const [result, setResult] = useState<DiceResult | null>(null);
   const [seedMethod, setSeedMethod] = useState<SeedPhraseEntryMethod>('words');
   const [wordInput, setWordInput] = useState('');
   const [wordCount, setWordCount] = useState<WordCount>(24);
@@ -174,7 +172,6 @@ export function SeedPhraseScreen({
           ? entropySync.snapshot.seedNumbersZeroIndexed
           : entropySync.snapshot.seedNumbersOneIndexed,
       );
-      setResult(null);
       setWordInput(entropySync.snapshot.seedWords);
     }
     setWordCount(entropySync.targetWords);
@@ -204,7 +201,6 @@ export function SeedPhraseScreen({
     } else {
       setNumberInput(normalized);
     }
-    setResult(null);
     entropySync.publish({
       selectedFinalWord: '',
       source: seedEntropySyncSource(seedMethod),
@@ -273,7 +269,6 @@ export function SeedPhraseScreen({
       }
     }
     setInputSelection(null);
-    setResult(null);
     setSeedMethod(method);
   }
 
@@ -284,7 +279,6 @@ export function SeedPhraseScreen({
 
     setNumberInput(translateSeedNumberIndices(numberInput, zeroIndexed, nextZeroIndexed));
     setInputSelection(null);
-    setResult(null);
     setZeroIndexed(nextZeroIndexed);
   }
 
@@ -297,17 +291,18 @@ export function SeedPhraseScreen({
       return;
     }
 
-    setResult({
+    onDeriveKey({
       entropy: entropyHex(entropy),
+      kind: 'bip39',
       masterSeed: entropyHex(mnemonicToSeed(activePhrase, passphrase)),
       mnemonic: activePhrase,
+      passphrase,
     });
-    setActiveSheet('result');
   }
 
   return (
     <SafeAreaView
-      edges={['top']}
+      edges={[]}
       importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
       pointerEvents={isActive ? 'auto' : 'none'}
       style={[
@@ -570,20 +565,6 @@ export function SeedPhraseScreen({
         />
       )}
 
-      <NativeSheet
-        colors={colors}
-        onDismiss={() => setActiveSheet(null)}
-        testID="seed-phrase-result-sheet"
-        title={UPSTREAM_TEXT.action.derive}
-        visible={activeSheet === 'result' && Boolean(result)}
-      >
-        <DiceResultPanel
-          colors={colors}
-          entropyLabel={UPSTREAM_TEXT.result.entropyHex}
-          masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
-          result={result}
-        />
-      </NativeSheet>
     </SafeAreaView>
   );
 }

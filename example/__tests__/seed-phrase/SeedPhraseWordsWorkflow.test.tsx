@@ -128,7 +128,16 @@ describe('Seed Phrase / Words', () => {
       app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.onPress();
     });
 
-    expect(app!.root.findByProps({ testID: 'seed-phrase-result-sheet' }).props.visible).toBe(true);
+    expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.accessibilityState).toEqual({
+      selected: true,
+    });
+    expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.children.props.children).toBe(
+      '73c5da0a',
+    );
+    expect(app!.root.findByProps({ testID: 'key-station-result-screen' })).toBeDefined();
+    expect(app!.root.findAllByProps({ testID: 'key-station-master-fingerprint-value' })).toHaveLength(0);
+    expect(app!.root.findAllByProps({ testID: 'key-station-seed-words' })).toHaveLength(0);
+    expect(app!.root.findAllByProps({ testID: 'seed-phrase-result-sheet' })).toHaveLength(0);
     expect(app!.root.findAllByProps({ testID: 'seed-phrase-passphrase-view' })).toHaveLength(0);
     expect(mockMnemonicToSeed).toHaveBeenLastCalledWith(mnemonic, '');
     expect(app!.root.findByProps({ testID: 'master-seed-label' }).props.children).toBe(

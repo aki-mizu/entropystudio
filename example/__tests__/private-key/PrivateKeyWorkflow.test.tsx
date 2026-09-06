@@ -6,6 +6,7 @@ import {
   activeMethodList,
   App,
   mockEntropyToMnemonic,
+  mockMnemonicToMasterFingerprint,
   mockPrivateKeyEntropy,
   mockPrivateKeyInputState,
   mockPrivateKeyKeyAllowed,
@@ -448,13 +449,19 @@ describe('Private Key', () => {
       app!.root.findByProps({ testID: 'derive-private-key' }).props.onPress();
     });
     expect(mockEntropyToMnemonic).not.toHaveBeenCalled();
+    expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.children.props.children).toBe(
+      'Key 1',
+    );
+    expect(app!.root.findByProps({ testID: 'key-station-private-key-title' }).props.children).toBe(
+      'Key 1',
+    );
     expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
       UPSTREAM_TEXT.result.privateKey,
     );
-    expect(app!.root.findAllByProps({ testID: 'private-key-brain-seed-words' })).toHaveLength(0);
+    expect(app!.root.findAllByProps({ testID: 'key-station-seed-words' })).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'private-key-result-sheet-close' }).props.onPress();
+      app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.onPress();
     });
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'brain-wallet-output-hd' }).props.onPress();
@@ -467,20 +474,59 @@ describe('Private Key', () => {
       selected: false,
     });
 
+    mockMnemonicToMasterFingerprint.mockReturnValue('d34db33f');
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'derive-private-key' }).props.onPress();
     });
 
     expect(mockEntropyToMnemonic).toHaveBeenLastCalledWith(expect.any(ArrayBuffer));
-    expect(app!.root.findByProps({ testID: 'private-key-brain-seed-words-word-1' }).props.children).toBe(
-      'word1',
+    expect(app!.root.findByProps({ testID: 'key-station-tab-2' }).props.children.props.children).toBe(
+      'd34db33f',
     );
-    expect(app!.root.findByProps({ testID: 'private-key-brain-seed-words-word-24' }).props.children).toBe(
-      'word24',
-    );
+    expect(app!.root.findAllByProps({ testID: 'key-station-master-fingerprint-value' })).toHaveLength(0);
+    expect(app!.root.findAllByProps({ testID: 'key-station-seed-words' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
       UPSTREAM_TEXT.result.entropyHex,
     );
+  });
+
+  test('keeps a native HD derivation error visible without opening a Key Station tab', async () => {
+    mockEntropyToMnemonic.mockImplementationOnce(() => {
+      throw new Error('native failure');
+    });
+
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+
+    await selectEntropyTool(app!, 'key');
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'private-key-format-brain' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-private-key-entry' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'brain-wallet-warning-inline-acknowledge' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'brain-wallet-output-hd' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'brain-wallet-warning-inline-acknowledge' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'private-key-input' }).props.onChangeText('brain wallet text');
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'derive-private-key' }).props.onPress();
+    });
+
+    expect(app!.root.findByProps({ testID: 'private-key-derive-error' }).props.children).toBe(
+      UPSTREAM_TEXT.error.generic,
+    );
+    expect(app!.root.findAllByProps({ testID: 'key-station-tab-1' })).toHaveLength(0);
   });
 
   test('keeps format selection in the UI and renders native validation errors', async () => {

@@ -26,13 +26,11 @@ import {
 import type {
   CardMethod,
   CardRank,
-  CardResult,
   CardSelectionState,
   CardSuit,
 } from '../features/cards/cards';
 import { useCards } from '../features/cards/useCards';
 import { DiceWordList } from '../features/dice/components/DirectDicePreview';
-import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { diceColors } from '../features/dice/diceTheme';
 import {
   cardEntropySyncSource,
@@ -47,10 +45,10 @@ import {
 } from '../features/seedPhrase/bip39Passphrase';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
+import type { KeyStationDerivation } from '../features/keyStation/keyStation';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 type CardView = 'entry' | 'passphrase' | 'setup';
-type SheetName = 'result' | null;
 
 const EMPTY_CARD_SELECTION: CardSelectionState = {
   availableRanks: [],
@@ -64,6 +62,7 @@ type Props = {
   readonly autocompleteEnabled: boolean;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
+  readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
 };
 
@@ -72,10 +71,11 @@ export function CardsScreen({
   autocompleteEnabled,
   isActive,
   isDarkMode,
+  onDeriveKey,
   onSelectTool,
 }: Props) {
-  const [activeSheet, setActiveSheet] = useState<SheetName>(null);
   const [activeView, setActiveView] = useState<CardView>('setup');
+  const [deriveError, setDeriveError] = useState<string | null>(null);
   const [passphrase, setPassphrase] = useState('');
   const passphraseOptions = useBip39PassphraseOptions(passphrase, autocompleteEnabled);
   const [selectedRank, setSelectedRank] = useState<CardRank | null>(null);
@@ -104,6 +104,7 @@ export function CardsScreen({
   } = useCards({
     passphrase,
     onInputChange: change => {
+      setDeriveError(null);
       entropySync.publish({
         selectedFinalWord: '',
         source: cardEntropySyncSource(change.method, change.matchesIanColeman),
@@ -156,8 +157,22 @@ export function CardsScreen({
     if (!canDeriveWithPassphrase) {
       return;
     }
-    derivePhrase();
-    setActiveSheet('result');
+    const derivedResult = derivePhrase();
+    if (!derivedResult) {
+      return;
+    }
+    if (typeof derivedResult.error === 'string') {
+      setDeriveError(derivedResult.error);
+      return;
+    }
+    setDeriveError(null);
+    onDeriveKey({
+      entropy: derivedResult.entropy,
+      kind: 'bip39',
+      masterSeed: derivedResult.masterSeed,
+      mnemonic: derivedResult.mnemonic,
+      passphrase,
+    });
   }
 
   function openPassphrase() {
@@ -269,7 +284,7 @@ export function CardsScreen({
 
   return (
     <SafeAreaView
-      edges={['top']}
+      edges={[]}
       importantForAccessibility={isActive ? 'auto' : 'no-hide-descendants'}
       pointerEvents={isActive ? 'auto' : 'none'}
       style={[
@@ -478,6 +493,11 @@ export function CardsScreen({
               {copy.deriveAction}
             </Text>
           </Pressable>
+          {deriveError ? (
+            <Text style={[styles.error, { color: colors.error }]} testID="card-error">
+              {deriveError}
+            </Text>
+          ) : null}
         </View>
       ) : (
         <Bip39PassphraseView
@@ -493,20 +513,6 @@ export function CardsScreen({
         />
       )}
 
-      <NativeSheet
-        colors={colors}
-        onDismiss={() => setActiveSheet(null)}
-        testID="card-result-sheet"
-        title={copy.deriveAction}
-        visible={activeSheet === 'result' && Boolean(result)}
-      >
-        <CardResultPanel
-          colors={colors}
-          entropyLabel={copy.resultEntropy}
-          masterSeedLabel={copy.resultMasterSeed}
-          result={result}
-        />
-      </NativeSheet>
     </SafeAreaView>
   );
 }
@@ -630,56 +636,6 @@ function DirectCardPicker({ activeMax, colors, disabled, onSelect }: DirectCardP
           );
         })}
       </View>
-    </View>
-  );
-}
-
-type CardResultPanelProps = {
-  readonly colors: ReturnType<typeof diceColors>;
-  readonly entropyLabel: string;
-  readonly masterSeedLabel: string;
-  readonly result: CardResult | null;
-};
-
-function CardResultPanel({
-  colors,
-  entropyLabel,
-  masterSeedLabel,
-  result,
-}: CardResultPanelProps) {
-  if (!result) {
-    return null;
-  }
-
-  return (
-    <View style={styles.result}>
-      {result.error ? (
-        <Text style={[styles.error, { color: colors.error }]} testID="card-error">
-          {result.error}
-        </Text>
-      ) : (
-        <>
-          <Text style={[styles.label, { color: colors.muted }]} testID="card-result-entropy-label">
-            {entropyLabel}
-          </Text>
-          <Text selectable style={[styles.entropy, { color: colors.text }]} testID="card-entropy-output">
-            {result.entropy}
-          </Text>
-          <Text
-            style={[styles.label, styles.masterSeedLabel, { color: colors.muted }]}
-            testID="card-master-seed-label"
-          >
-            {masterSeedLabel}
-          </Text>
-          <Text
-            selectable
-            style={[styles.entropy, { color: colors.text }]}
-            testID="card-master-seed-output"
-          >
-            {result.masterSeed}
-          </Text>
-        </>
-      )}
     </View>
   );
 }
