@@ -82,6 +82,14 @@ describe('Seed Phrase / Words', () => {
     expect(
       app!.root.findAllByProps({ testID: 'seed-phrase-master-fingerprint-passphrase-value' }),
     ).toHaveLength(0);
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-base-row' }).props
+        .accessibilityState,
+    ).toEqual({ disabled: true });
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-passphrase-row' }).props
+        .accessibilityState,
+    ).toEqual({ disabled: true });
     expect(app!.root.findByProps({ testID: 'seed-phrase-input' }).props.showSoftInputOnFocus).toBe(
       false,
     );
@@ -107,6 +115,14 @@ describe('Seed Phrase / Words', () => {
     expect(
       app!.root.findAllByProps({ testID: 'seed-phrase-master-fingerprint-passphrase-value' }),
     ).toHaveLength(0);
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-base-row' }).props
+        .accessibilityState,
+    ).toEqual({ disabled: false });
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-passphrase-row' }).props
+        .accessibilityState,
+    ).toEqual({ disabled: true });
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.onPress();
@@ -280,6 +296,18 @@ describe('Seed Phrase / Words', () => {
       }),
     ).toHaveLength(0);
     expect(
+      app!
+        .root.findByProps({
+          testID: 'seed-phrase-passphrase-view-master-fingerprint-base-row',
+        }).props.accessibilityState,
+    ).toEqual({ disabled: false });
+    expect(
+      app!
+        .root.findByProps({
+          testID: 'seed-phrase-passphrase-view-master-fingerprint-passphrase-row',
+        }).props.accessibilityState,
+    ).toEqual({ disabled: true });
+    expect(
       app!.root.findByProps({ testID: 'seed-phrase-passphrase-input' }).props.accessibilityLabel,
     ).toBe(UPSTREAM_TEXT.passphrase.label);
     expect(
@@ -296,6 +324,12 @@ describe('Seed Phrase / Words', () => {
         .root.findByProps({ testID: 'seed-phrase-passphrase-view-master-fingerprint-passphrase-value' })
         .props.children,
     ).toBe('b4e3f5ed');
+    expect(
+      app!
+        .root.findByProps({
+          testID: 'seed-phrase-passphrase-view-master-fingerprint-passphrase-row',
+        }).props.accessibilityState,
+    ).toEqual({ disabled: false });
     await ReactTestRenderer.act(async () => {
       app!
         .root.findByProps({ testID: 'close-seed-phrase-passphrase' }).props.onPress();

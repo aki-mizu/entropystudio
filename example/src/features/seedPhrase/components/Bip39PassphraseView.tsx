@@ -154,7 +154,14 @@ export function MasterFingerprintHeader({
       >
         {UPSTREAM_TEXT.fingerprint.master}
       </Text>
-      <View style={styles.masterFingerprintRow}>
+      <View
+        accessibilityState={{ disabled: !baseFingerprint }}
+        style={[
+          styles.masterFingerprintRow,
+          !baseFingerprint && styles.masterFingerprintRowUnavailable,
+        ]}
+        testID={`${testID}-base-row`}
+      >
         <Text
           adjustsFontSizeToFit
           minimumFontScale={0.7}
@@ -176,7 +183,14 @@ export function MasterFingerprintHeader({
           </Text>
         ) : null}
       </View>
-      <View style={styles.masterFingerprintRow}>
+      <View
+        accessibilityState={{ disabled: !passphraseFingerprint }}
+        style={[
+          styles.masterFingerprintRow,
+          !passphraseFingerprint && styles.masterFingerprintRowUnavailable,
+        ]}
+        testID={`${testID}-passphrase-row`}
+      >
         <Text
           adjustsFontSizeToFit
           minimumFontScale={0.7}
@@ -512,6 +526,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     minWidth: 0,
+  },
+  masterFingerprintRowUnavailable: {
+    opacity: 0.58,
   },
   masterFingerprintRowLabel: {
     flexShrink: 1,
