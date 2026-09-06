@@ -57,9 +57,12 @@ test('opens Base 4 calculations from the number-base key-input screen', async ()
     setup.findByProps({ testID: 'open-number-bases-entry' }).props.onPress();
   });
 
-  expect(app!.root.findByProps({ testID: 'open-number-base-calculations' }).props.children.props.children).toBe(
+  expect(app!.root.findByProps({ testID: 'number-base-calculations-label' }).props.children).toBe(
     UPSTREAM_TEXT.calculations.show,
   );
+  expect(
+    app!.root.findByProps({ testID: 'number-base-calculations-note' }).props.children,
+  ).toBe(UPSTREAM_TEXT.calculations.numberBaseNote);
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'open-number-base-calculations' }).props.onPress();
   });

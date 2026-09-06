@@ -51,9 +51,12 @@ test('opens BitBox direct-word calculations from the dice key-input screen', asy
 
   await selectDiceMethod(app!, 'dice-method-bitbox');
   await openDiceEntry(app!);
-  expect(app!.root.findByProps({ testID: 'open-direct-dice-calculations' }).props.children.props.children).toBe(
+  expect(app!.root.findByProps({ testID: 'direct-dice-calculations-label' }).props.children).toBe(
     UPSTREAM_TEXT.calculations.show,
   );
+  expect(
+    app!.root.findByProps({ testID: 'direct-dice-calculations-note' }).props.children,
+  ).toBe(UPSTREAM_TEXT.calculations.directDiceNote);
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'open-direct-dice-calculations' }).props.onPress();

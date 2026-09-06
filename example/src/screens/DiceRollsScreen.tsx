@@ -401,13 +401,25 @@ export function DiceRollsScreen({
                 ]}
                 testID="open-direct-dice-calculations"
               >
-                <Text
-                  adjustsFontSizeToFit
-                  numberOfLines={2}
-                  style={[styles.calculationButtonText, { color: colors.accent }]}
-                >
-                  {UPSTREAM_TEXT.calculations.show}
-                </Text>
+                <View style={styles.calculationButtonContent}>
+                  <Text
+                    adjustsFontSizeToFit
+                    numberOfLines={1}
+                    style={[styles.calculationButtonText, { color: colors.accent }]}
+                    testID="direct-dice-calculations-label"
+                  >
+                    {UPSTREAM_TEXT.calculations.show}
+                  </Text>
+                  <Text
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                    numberOfLines={2}
+                    style={[styles.calculationButtonNote, { color: colors.muted }]}
+                    testID="direct-dice-calculations-note"
+                  >
+                    {UPSTREAM_TEXT.calculations.directDiceNote}
+                  </Text>
+                </View>
               </Pressable>
             ) : null}
             {renderDeriveButton()}
@@ -501,6 +513,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 50,
     paddingHorizontal: 8,
+    paddingVertical: 7,
+  },
+  calculationButtonContent: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  calculationButtonNote: {
+    fontSize: 9,
+    lineHeight: 12,
+    marginTop: 2,
+    textAlign: 'center',
   },
   calculationButtonText: {
     fontSize: 14,
