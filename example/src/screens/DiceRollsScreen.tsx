@@ -32,8 +32,13 @@ import {
   useEntropySync,
   useRegisterCurrentEntropySyncRequest,
 } from '../features/entropySync';
+import { DirectDiceStep } from '../native/entropyStudio';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
-import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_UI_LABELS } from '../features/upstreamUiCopy';
+import {
+  UPSTREAM_TEXT,
+  UPSTREAM_UI_FALLBACK_COPY,
+  UPSTREAM_UI_LABELS,
+} from '../features/upstreamUiCopy';
 import { useDiceRolls } from '../features/dice/useDiceRolls';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
@@ -111,6 +116,8 @@ export function DiceRollsScreen({
   const canChooseFinalWord =
     method === 'bitbox' && Boolean(directState && directCopy && directState.candidates.length > 0);
   const canDeriveWithPassphrase = canDerive && passphraseOptions.canDerive;
+  const isBitboxCoinTurn =
+    method === 'bitbox' && directState?.step === DirectDiceStep.BitboxCoin;
 
   useRegisterCurrentEntropySyncRequest(isActive, {
     selectedFinalWord,
@@ -352,6 +359,16 @@ export function DiceRollsScreen({
 
           <View style={styles.rollArea}>
             <DiceGrid
+              coinFlipLabels={
+                isBitboxCoinTurn
+                  ? {
+                      heads: UPSTREAM_TEXT.dice.bitbox.heads,
+                      headsRange: UPSTREAM_TEXT.dice.bitbox.headsRange,
+                      tails: UPSTREAM_TEXT.dice.bitbox.tails,
+                      tailsRange: UPSTREAM_TEXT.dice.bitbox.tailsRange,
+                    }
+                  : undefined
+              }
               columns={method === 'd8d16' ? 8 : 6}
               colors={colors}
               enabledFaces={enabledFaces}

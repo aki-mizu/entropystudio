@@ -6,7 +6,15 @@ import type { DiceColors } from '../diceTheme';
 const CONTENT_HORIZONTAL_PADDING = 24;
 const DICE_GRID_GAP = 6;
 
+type CoinFlipLabels = {
+  readonly heads: string;
+  readonly headsRange: string;
+  readonly tails: string;
+  readonly tailsRange: string;
+};
+
 type Props = {
+  readonly coinFlipLabels?: CoinFlipLabels;
   readonly columns?: number;
   readonly colors: DiceColors;
   readonly enabledFaces?: readonly DiceInputFace[];
@@ -16,6 +24,7 @@ type Props = {
 };
 
 export function DiceGrid({
+  coinFlipLabels,
   columns = 6,
   colors,
   enabledFaces,
@@ -32,17 +41,26 @@ export function DiceGrid({
     Math.floor(availableGridWidth / columns),
   );
   const diceFaceFontSize = Math.max(16, Math.min(22, Math.floor(diceTileSize * 0.52)));
+  const coinLabelFontSize = Math.max(14, Math.min(18, Math.floor(diceTileSize * 0.36)));
+  const coinRangeFontSize = Math.max(10, Math.min(13, Math.floor(diceTileSize * 0.24)));
   const gridWidth = diceTileSize * columns + DICE_GRID_GAP * (columns - 1);
+  const displayedFaces = coinFlipLabels ? faces.filter(face => face === '1' || face === '4') : faces;
 
   return (
     <View style={[styles.grid, { width: gridWidth }]}>
-      {faces.map(face => {
+      {displayedFaces.map(face => {
         const disabled = !activeFaces.includes(face);
+        const coinKey =
+          coinFlipLabels && (face === '1' || face === '4')
+            ? face === '1'
+              ? { label: coinFlipLabels.heads, range: coinFlipLabels.headsRange }
+              : { label: coinFlipLabels.tails, range: coinFlipLabels.tailsRange }
+            : null;
 
         return (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={String(face)}
+            accessibilityLabel={coinKey ? `${coinKey.label} ${coinKey.range}` : String(face)}
             disabled={disabled}
             key={face}
             onPress={() => onSelect(face)}
@@ -53,23 +71,33 @@ export function DiceGrid({
                 borderColor: colors.diceBorder,
                 height: diceTileSize,
                 opacity: disabled ? 0.38 : pressed ? 0.78 : 1,
-                width: diceTileSize,
+                width: coinKey ? diceTileSize * 3 + DICE_GRID_GAP * 2 : diceTileSize,
               },
             ]}
             testID={`dice-face-${face}`}
           >
             <Text
               style={[
-                styles.diceFaceText,
+                coinKey ? styles.diceCoinLabel : styles.diceFaceText,
                 {
                   color: colors.diceText,
-                  fontSize: diceFaceFontSize,
-                  lineHeight: diceFaceFontSize + 4,
+                  fontSize: coinKey ? coinLabelFontSize : diceFaceFontSize,
+                  lineHeight: (coinKey ? coinLabelFontSize : diceFaceFontSize) + 4,
                 },
               ]}
             >
-              {face}
+              {coinKey?.label ?? face}
             </Text>
+            {coinKey ? (
+              <Text
+                style={[
+                  styles.diceCoinRange,
+                  { color: colors.diceText, fontSize: coinRangeFontSize, lineHeight: coinRangeFontSize + 3 },
+                ]}
+              >
+                {coinKey.range}
+              </Text>
+            ) : null}
           </Pressable>
         );
       })}
@@ -78,6 +106,19 @@ export function DiceGrid({
 }
 
 const styles = StyleSheet.create({
+  diceCoinLabel: {
+    fontWeight: '700',
+    includeFontPadding: false,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+  },
+  diceCoinRange: {
+    fontWeight: '600',
+    includeFontPadding: false,
+    marginTop: 1,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+  },
   diceFace: {
     alignItems: 'center',
     borderRadius: 6,

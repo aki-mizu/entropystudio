@@ -60,7 +60,11 @@ export const UPSTREAM_TEXT = {
       coin: 'Word {word} of {partial} · 6th die (interpreted as a coin flip)',
       desc: 'Use five dice showing 1–4, then a coin (or 6th die: 1–3 heads, 4–6 tails). Build {partialWords} lookup-table words, then choose 1 of {candidates} valid final checksum words.',
       die: 'Word {word} of {partial} · die {die} of 5 (faces 1–4)',
+      heads: 'Heads',
+      headsRange: '1 – 3',
       lastWord: '{n} words · choose the final checksum word',
+      tails: 'Tails',
+      tailsRange: '4 – 6',
       title: 'BitBox diceware / Direct word selection',
     },
     coldcard: {

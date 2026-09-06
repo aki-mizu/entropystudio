@@ -182,7 +182,7 @@ test('inserts BitBox keypad faces at the transcript cursor', async () => {
   expect(mockDirectDiceState).toHaveBeenLastCalledWith('1111112242222333333', 0, 24);
 });
 
-test('enables only BitBox faces valid for the current direct-dice step', async () => {
+test('shows BitBox Heads and Tails controls for the coin turn', async () => {
   const directState = {
     activeRoll: 1,
     activeWord: 1,
@@ -225,7 +225,22 @@ test('enables only BitBox faces valid for the current direct-dice step', async (
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('11111');
   });
-  expectEnabledDiceFaces(app!, ['1', '2', '3', '4', '5', '6'], ['1', '2', '3', '4', '5', '6']);
+  expectEnabledDiceFaces(app!, ['1', '4'], ['1', '4']);
+  expect(app!.root.findByProps({ testID: 'dice-face-1' }).props.accessibilityLabel).toBe(
+    `${UPSTREAM_TEXT.dice.bitbox.heads} ${UPSTREAM_TEXT.dice.bitbox.headsRange}`,
+  );
+  expect(app!.root.findByProps({ testID: 'dice-face-4' }).props.accessibilityLabel).toBe(
+    `${UPSTREAM_TEXT.dice.bitbox.tails} ${UPSTREAM_TEXT.dice.bitbox.tailsRange}`,
+  );
+  expect(app!.root.findAllByProps({ testID: 'dice-face-2' })).toHaveLength(0);
+  expect(app!.root.findAllByProps({ testID: 'dice-face-3' })).toHaveLength(0);
+  expect(app!.root.findAllByProps({ testID: 'dice-face-5' })).toHaveLength(0);
+  expect(app!.root.findAllByProps({ testID: 'dice-face-6' })).toHaveLength(0);
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-face-4' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('111114');
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('complete');
