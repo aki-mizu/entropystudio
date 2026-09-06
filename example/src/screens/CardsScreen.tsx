@@ -401,7 +401,7 @@ export function CardsScreen({
               autoCorrect={false}
               importantForAutofill="no"
               multiline
-              numberOfLines={3}
+              numberOfLines={1}
               onChangeText={updateTranscript}
               onKeyPress={event => {
                 if (!isCardKeyAllowed(event.nativeEvent.key, method, directState?.activeMax)) {
@@ -799,7 +799,8 @@ const styles = StyleSheet.create({
   inputSurface: {
     borderRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
   },
   instruction: {
     fontSize: 13,
@@ -936,8 +937,8 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     fontSize: 16,
     lineHeight: 22,
-    maxHeight: 112,
-    minHeight: 66,
+    maxHeight: 44,
+    minHeight: 22,
     padding: 0,
     textAlignVertical: 'top',
   },
