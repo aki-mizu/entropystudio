@@ -255,6 +255,31 @@ describe('Seed Phrase / Words', () => {
       app!.root.findAllByProps({ testID: 'derive-seed-phrase-with-passphrase' }),
     ).toHaveLength(0);
     expect(
+      app!
+        .root.findByProps({ testID: 'seed-phrase-passphrase-view-master-fingerprint-label' })
+        .props.children,
+    ).toBe(UPSTREAM_TEXT.fingerprint.master);
+    expect(
+      app!
+        .root.findByProps({ testID: 'seed-phrase-passphrase-view-master-fingerprint-base-label' })
+        .props.children,
+    ).toBe(UPSTREAM_TEXT.fingerprint.baseSeed);
+    expect(
+      app!
+        .root.findByProps({ testID: 'seed-phrase-passphrase-view-master-fingerprint-base-value' })
+        .props.children,
+    ).toBe('73c5da0a');
+    expect(
+      app!
+        .root.findByProps({ testID: 'seed-phrase-passphrase-view-master-fingerprint-passphrase-label' })
+        .props.children,
+    ).toBe(UPSTREAM_TEXT.fingerprint.withPassphrase);
+    expect(
+      app!.root.findAllByProps({
+        testID: 'seed-phrase-passphrase-view-master-fingerprint-passphrase-value',
+      }),
+    ).toHaveLength(0);
+    expect(
       app!.root.findByProps({ testID: 'seed-phrase-passphrase-input' }).props.accessibilityLabel,
     ).toBe(UPSTREAM_TEXT.passphrase.label);
     expect(
@@ -266,6 +291,11 @@ describe('Seed Phrase / Words', () => {
         .root.findByProps({ testID: 'seed-phrase-passphrase-input' })
         .props.onChangeText('TREZOR');
     });
+    expect(
+      app!
+        .root.findByProps({ testID: 'seed-phrase-passphrase-view-master-fingerprint-passphrase-value' })
+        .props.children,
+    ).toBe('b4e3f5ed');
     await ReactTestRenderer.act(async () => {
       app!
         .root.findByProps({ testID: 'close-seed-phrase-passphrase' }).props.onPress();

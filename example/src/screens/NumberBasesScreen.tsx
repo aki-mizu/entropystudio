@@ -680,6 +680,7 @@ export function NumberBasesScreen({
           backTestID="close-number-bases-passphrase"
           colors={colors}
           inputTestID="number-bases-passphrase-input"
+          mnemonic={mnemonic}
           onBack={() => setActiveView('entry')}
           onChangePassphrase={setPassphrase}
           options={passphraseOptions}
@@ -777,7 +778,9 @@ const styles = StyleSheet.create({
   },
   entryHeaderCopy: {
     flex: 1,
+    gap: 2,
     minWidth: 0,
+    paddingHorizontal: 12,
   },
   formatDescription: {
     fontSize: 12,

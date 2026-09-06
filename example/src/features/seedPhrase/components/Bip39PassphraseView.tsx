@@ -32,6 +32,7 @@ type ViewProps = {
   readonly backTestID: string;
   readonly colors: DiceColors;
   readonly inputTestID: string;
+  readonly mnemonic: string;
   readonly onBack: () => void;
   readonly onChangePassphrase: (value: string) => void;
   readonly options: Bip39PassphraseOptions;
@@ -205,6 +206,7 @@ export function Bip39PassphraseView({
   backTestID,
   colors,
   inputTestID,
+  mnemonic,
   onBack,
   onChangePassphrase,
   options,
@@ -280,9 +282,12 @@ export function Bip39PassphraseView({
           </Text>
         </Pressable>
         <View style={styles.headerCopy}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            {UPSTREAM_TEXT.passphrase.label}
-          </Text>
+          <MasterFingerprintHeader
+            colors={colors}
+            mnemonic={mnemonic}
+            passphrase={value}
+            testID={`${screenTestID}-master-fingerprint`}
+          />
         </View>
       </View>
 
@@ -461,7 +466,9 @@ const styles = StyleSheet.create({
   },
   headerCopy: {
     flex: 1,
+    gap: 2,
     minWidth: 0,
+    paddingHorizontal: 12,
   },
   input: {
     flex: 1,
@@ -520,10 +527,5 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     marginLeft: 4,
     minWidth: 0,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    lineHeight: 26,
   },
 });

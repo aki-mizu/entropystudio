@@ -484,6 +484,7 @@ export function CardsScreen({
           backTestID="close-cards-passphrase"
           colors={colors}
           inputTestID="cards-passphrase-input"
+          mnemonic={directState?.mnemonic || result?.mnemonic || ''}
           onBack={() => setActiveView('entry')}
           onChangePassphrase={setPassphrase}
           options={passphraseOptions}
@@ -754,7 +755,9 @@ const styles = StyleSheet.create({
   },
   entryHeaderCopy: {
     flex: 1,
+    gap: 2,
     minWidth: 0,
+    paddingHorizontal: 12,
   },
   disabledChoice: {
     opacity: 0.38,

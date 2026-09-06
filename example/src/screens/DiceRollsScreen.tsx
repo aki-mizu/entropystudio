@@ -437,6 +437,7 @@ export function DiceRollsScreen({
           backTestID="close-dice-passphrase"
           colors={colors}
           inputTestID="dice-passphrase-input"
+          mnemonic={directState?.mnemonic || result?.mnemonic || ''}
           onBack={() => setActiveView('entry')}
           onChangePassphrase={setPassphrase}
           options={passphraseOptions}
@@ -548,7 +549,9 @@ const styles = StyleSheet.create({
   },
   entryHeaderCopy: {
     flex: 1,
+    gap: 2,
     minWidth: 0,
+    paddingHorizontal: 12,
   },
   finalWordButton: {
     justifyContent: 'center',

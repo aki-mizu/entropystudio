@@ -561,6 +561,7 @@ export function SeedPhraseScreen({
           backTestID="close-seed-phrase-passphrase"
           colors={colors}
           inputTestID="seed-phrase-passphrase-input"
+          mnemonic={analysis.canDerive ? activePhrase : ''}
           onBack={() => setActiveView('entry')}
           onChangePassphrase={setPassphrase}
           options={passphraseOptions}
