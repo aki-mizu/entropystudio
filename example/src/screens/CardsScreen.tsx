@@ -344,14 +344,7 @@ export function CardsScreen({
                 {UPSTREAM_UI_FALLBACK_COPY.common.back}
               </Text>
             </Pressable>
-            <View style={styles.entryHeaderCopy}>
-              <Text style={[styles.entryTitle, { color: colors.text }]}>
-                {UPSTREAM_TEXT.mode.seed}
-              </Text>
-              <Text style={[styles.entrySubtitle, { color: colors.muted }]}>
-                {copy.seedLengthValue}
-              </Text>
-            </View>
+            <View style={styles.entryHeaderCopy} testID="cards-entry-header-copy" />
             <Bip39PassphraseButton
               compact
               colors={colors}
@@ -754,15 +747,6 @@ const styles = StyleSheet.create({
   entryHeaderCopy: {
     flex: 1,
     minWidth: 0,
-  },
-  entrySubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  entryTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    lineHeight: 26,
   },
   disabledChoice: {
     opacity: 0.38,

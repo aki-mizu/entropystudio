@@ -74,6 +74,9 @@ describe('Hashed cards', () => {
     );
     await openCardsEntry(app!);
     expect(app!.root.findByProps({ testID: 'cards-entry-view' })).toBeDefined();
+    expect(
+      app!.root.findByProps({ testID: 'cards-entry-header-copy' }).props.children,
+    ).toBeUndefined();
     expect(app!.root.findByProps({ testID: 'card-input-label' }).props.children).toBe(
       UPSTREAM_TEXT.cards.transcript,
     );

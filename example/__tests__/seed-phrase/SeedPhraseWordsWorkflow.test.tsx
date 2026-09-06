@@ -63,6 +63,9 @@ describe('Seed Phrase / Words', () => {
     });
 
     expect(app!.root.findByProps({ testID: 'seed-phrase-entry-view' })).toBeDefined();
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-entry-header-copy' }).props.children,
+    ).toBeUndefined();
     expect(app!.root.findByProps({ testID: 'seed-phrase-input' }).props.showSoftInputOnFocus).toBe(
       false,
     );
