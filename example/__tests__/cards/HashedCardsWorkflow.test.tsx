@@ -108,9 +108,7 @@ describe('Hashed cards', () => {
       app!.root.findByProps({ testID: 'derive-card-phrase' }).props.onPress();
     });
 
-    expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.children.props.children).toBe(
-      '73c5da0a',
-    );
+    expect(app!.root.findByProps({ testID: 'key-station-tab-1-label' }).props.children).toBe('73c5da0a');
     expect(app!.root.findByProps({ testID: 'key-station-result-screen' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'entropy-output' }).props.children).toBe(
       '00000000000000000000000000000000',

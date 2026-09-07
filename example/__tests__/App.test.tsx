@@ -387,9 +387,10 @@ test('keeps derived keys in removable Key Station tabs', async () => {
     app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
   });
 
-  expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.children.props.children).toBe(
-    '73c5da0a',
-  );
+  expect(app!.root.findByProps({ testID: 'key-station-tab-1-label' }).props.children).toBe('73c5da0a');
+  expect(app!.root.findByProps({ testID: 'key-station-tab-1-lifehash' }).props.source).toEqual({
+    uri: 'data:image/png;base64,lifehash',
+  });
   expect(app!.root.findByProps({ testID: 'key-station-master-fingerprint-value' }).props.children).toBe(
     '73c5da0a',
   );

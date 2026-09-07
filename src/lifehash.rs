@@ -1,6 +1,3 @@
-// LifeHash rendering is provided by bc-lifehash, the first-party Blockchain
-// Commons Rust implementation licensed under BSD-2-Clause-Patent.
-
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use png::{BitDepth, ColorType, Encoder};
 

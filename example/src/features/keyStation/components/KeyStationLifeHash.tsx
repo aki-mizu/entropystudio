@@ -4,11 +4,12 @@ import { Image, StyleSheet } from 'react-native';
 import { lifehashFromFingerprint } from '../../../native/entropyStudio';
 
 type Props = {
+  readonly compact?: boolean;
   readonly fingerprint: string;
   readonly imageTestID: string;
 };
 
-export function KeyStationLifeHash({ fingerprint, imageTestID }: Props) {
+export function KeyStationLifeHash({ compact = false, fingerprint, imageTestID }: Props) {
   const [uri, setUri] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export function KeyStationLifeHash({ fingerprint, imageTestID }: Props) {
       accessible={false}
       resizeMode="cover"
       source={{ uri }}
-      style={styles.image}
+      style={[styles.image, compact && styles.compactImage]}
       testID={imageTestID}
     />
   );
@@ -45,5 +46,12 @@ const styles = StyleSheet.create({
     height: 48,
     marginLeft: 8,
     width: 48,
+  },
+  compactImage: {
+    borderRadius: 4,
+    height: 22,
+    marginLeft: 0,
+    marginRight: 8,
+    width: 22,
   },
 });

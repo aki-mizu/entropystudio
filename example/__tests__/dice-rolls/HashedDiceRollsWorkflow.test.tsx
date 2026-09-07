@@ -161,9 +161,7 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
       app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
     });
 
-    expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.children.props.children).toBe(
-      '73c5da0a',
-    );
+    expect(app!.root.findByProps({ testID: 'key-station-tab-1-label' }).props.children).toBe('73c5da0a');
     expect(app!.root.findByProps({ testID: 'key-station-result-screen' })).toBeDefined();
     expect(app!.root.findAllByProps({ testID: 'mnemonic-output' })).toHaveLength(0);
     expect(app!.root.findAllByProps({ testID: 'result-phrase-label' })).toHaveLength(0);

@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { DiceColors } from '../features/dice/diceTheme';
+import { KeyStationLifeHash } from '../features/keyStation/components/KeyStationLifeHash';
 import type { KeyStationTab } from '../features/keyStation/keyStation';
 import { UPSTREAM_TEXT } from '../features/upstreamUiCopy';
 
@@ -71,11 +72,17 @@ export function KeyStationTabs({
               ]}
               testID={`key-station-tab-${tab.id}`}
             >
+              <KeyStationLifeHash
+                compact
+                fingerprint={tab.masterFingerprint}
+                imageTestID={`key-station-tab-${tab.id}-lifehash`}
+              />
               <Text
                 adjustsFontSizeToFit
                 minimumFontScale={0.75}
                 numberOfLines={1}
                 style={[styles.tabLabel, { color: selected ? colors.text : colors.muted }]}
+                testID={`key-station-tab-${tab.id}-label`}
               >
                 {tab.name}
               </Text>
@@ -151,6 +158,7 @@ const styles = StyleSheet.create({
   tab: {
     alignItems: 'center',
     borderBottomWidth: 2,
+    flexDirection: 'row',
     justifyContent: 'center',
     maxWidth: 148,
     minHeight: 48,

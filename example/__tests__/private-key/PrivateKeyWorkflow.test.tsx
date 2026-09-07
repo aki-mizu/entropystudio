@@ -449,9 +449,7 @@ describe('Private Key', () => {
       app!.root.findByProps({ testID: 'derive-private-key' }).props.onPress();
     });
     expect(mockEntropyToMnemonic).not.toHaveBeenCalled();
-    expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.children.props.children).toBe(
-      'Key 1',
-    );
+    expect(app!.root.findByProps({ testID: 'key-station-tab-1-label' }).props.children).toBe('Key 1');
     expect(app!.root.findByProps({ testID: 'key-station-private-key-title' }).props.children).toBe(
       'Key 1',
     );
@@ -480,9 +478,7 @@ describe('Private Key', () => {
     });
 
     expect(mockEntropyToMnemonic).toHaveBeenLastCalledWith(expect.any(ArrayBuffer));
-    expect(app!.root.findByProps({ testID: 'key-station-tab-2' }).props.children.props.children).toBe(
-      'd34db33f',
-    );
+    expect(app!.root.findByProps({ testID: 'key-station-tab-2-label' }).props.children).toBe('d34db33f');
     expect(app!.root.findByProps({ testID: 'key-station-master-fingerprint-value' }).props.children).toBe(
       'd34db33f',
     );
