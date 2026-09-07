@@ -5,12 +5,14 @@
 import {
   activeMethodList,
   App,
+  mockCardTranscriptToEntropy,
   mockDiceRollsToEntropy,
   mockEntropyToMnemonic,
   React,
   ReactTestRenderer,
   ScrollView,
   openDiceEntry,
+  openCardsEntry,
   selectDiceMethod,
   selectEntropyTool,
   selectSeedPhraseLength,
@@ -162,6 +164,162 @@ test('opens key derivation settings from Dice and Cards entry screens', async ()
   expect(app!.root.findByProps({ testID: 'cards-entry-view' })).toBeDefined();
 });
 
+test('Edit input returns to the originating Dice input screen', async () => {
+  const entropy = new Uint8Array(16).buffer;
+  const mnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  mockDiceRollsToEntropy.mockReturnValue(entropy);
+  mockEntropyToMnemonic.mockReturnValue(mnemonic);
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await openDiceEntry(app!);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1');
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'close-dice-entry' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'dice-setup-view' })).toBeDefined();
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-tab-1' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
+  });
+
+  expect(app!.root.findByProps({ testID: 'dice-entry-header-copy' })).toBeDefined();
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('1');
+});
+
+test('Edit input follows the selected tab method', async () => {
+  const entropy = new Uint8Array(16).buffer;
+  const mnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  mockDiceRollsToEntropy.mockReturnValue(entropy);
+  mockCardTranscriptToEntropy.mockReturnValue(entropy);
+  mockEntropyToMnemonic.mockReturnValue(mnemonic);
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await openDiceEntry(app!);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1');
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.onPress();
+    app!.root.findByProps({ testID: 'close-dice-entry' }).props.onPress();
+  });
+
+  await selectEntropyTool(app!, 'cards');
+  await openCardsEntry(app!);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'card-transcript-input' }).props.onChangeText('4H 3H');
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'derive-card-phrase' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-tab-1' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'dice-entry-header-copy' })).toBeDefined();
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('1');
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'close-dice-entry' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-tab-2' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'cards-entry-view' })).toBeDefined();
+  expect(app!.root.findByProps({ testID: 'card-transcript-input' }).props.value).toBe('4h 3h');
+});
+
+test('Edit input restores the selected Dice tab input', async () => {
+  const entropy = new Uint8Array(16).buffer;
+  const mnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  mockDiceRollsToEntropy.mockReturnValue(entropy);
+  mockEntropyToMnemonic.mockReturnValue(mnemonic);
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await openDiceEntry(app!);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1');
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'close-dice-entry' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-entry' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('6');
+  });
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('6');
+  expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(false);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-tab-1' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('1');
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'close-dice-entry' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-tab-2' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('6');
+});
+
 test('keeps native workflow trees mounted while changing methods', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
@@ -241,6 +399,9 @@ test('keeps derived keys in removable Key Station tabs', async () => {
   );
   expect(app!.root.findByProps({ testID: 'key-station-path-value' }).props.children).toBe(
     "m/84'/0'/0'/0/0",
+  );
+  expect(app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.accessibilityLabel).toBe(
+    UPSTREAM_TEXT.keys.editInput,
   );
   expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.accessibilityState).toEqual({
     selected: true,

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import type { DiceColors } from '../features/dice/diceTheme';
@@ -15,11 +15,12 @@ const CONTENT_HORIZONTAL_PADDING = 24;
 type Props = {
   readonly colors: DiceColors;
   readonly isActive: boolean;
+  readonly onEditInput: () => void;
   readonly onReturnToStation: () => void;
   readonly tab: KeyStationTab | null;
 };
 
-export function KeyStationResultScreen({ colors, isActive, onReturnToStation, tab }: Props) {
+export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturnToStation, tab }: Props) {
   useEffect(() => {
     if (!isActive) {
       return undefined;
@@ -54,9 +55,25 @@ export function KeyStationResultScreen({ colors, isActive, onReturnToStation, ta
         {derivation.kind === 'bip39' ? (
           <>
             <View style={styles.summary} testID="key-station-summary">
-              <Text style={[styles.fingerprint, { color: colors.text }]} testID="key-station-master-fingerprint-value">
-                {tab.masterFingerprint}
-              </Text>
+              <View style={styles.summaryHeader}>
+                <Text style={[styles.fingerprint, { color: colors.text }]} testID="key-station-master-fingerprint-value">
+                  {tab.masterFingerprint}
+                </Text>
+                <Pressable
+                  accessibilityLabel={UPSTREAM_TEXT.keys.editInput}
+                  accessibilityRole="button"
+                  onPress={onEditInput}
+                  style={({ pressed }) => [
+                    styles.editButton,
+                    { borderColor: colors.border, opacity: pressed ? 0.72 : 1 },
+                  ]}
+                  testID="key-station-edit-inputs"
+                >
+                  <Text style={[styles.editButtonText, { color: colors.accent }]}>
+                    {UPSTREAM_TEXT.keys.editInput}
+                  </Text>
+                </Pressable>
+              </View>
               <Text style={[styles.meta, { color: colors.muted }]} testID="key-station-method-value">
                 {UPSTREAM_UI_LABELS.keyMode[tab.method]}
               </Text>
@@ -92,6 +109,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
     paddingTop: 22,
   },
+  editButton: {
+    alignItems: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    justifyContent: 'center',
+    marginLeft: 12,
+    minHeight: 38,
+    paddingHorizontal: 10,
+  },
+  editButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
   fingerprint: {
     fontFamily: 'monospace',
     fontSize: 18,
@@ -119,5 +149,9 @@ const styles = StyleSheet.create({
   },
   summary: {
     marginBottom: 18,
+  },
+  summaryHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
   },
 });

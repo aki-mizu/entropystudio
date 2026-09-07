@@ -32,6 +32,13 @@ type UseDiceRollsOptions = {
   readonly targetWords?: WordCount;
 };
 
+type RestoredDiceInput = {
+  readonly method: DiceMethod;
+  readonly rolls: string;
+  readonly selectedFinalWord: string;
+  readonly wordCount: WordCount;
+};
+
 export function useDiceRolls(options: UseDiceRollsOptions = {}) {
   const {
     onInputChange,
@@ -147,6 +154,20 @@ export function useDiceRolls(options: UseDiceRollsOptions = {}) {
     setSelectedFinalWord('');
   }
 
+  function restoreInput(input: RestoredDiceInput) {
+    setMethod(input.method);
+    setWordCount(input.wordCount);
+    if (isHashedDiceMethod(input.method)) {
+      setHashedRolls(input.rolls);
+    } else if (input.method === 'bitbox') {
+      setBitboxRolls(input.rolls);
+    } else {
+      setD8D16Rolls(input.rolls);
+    }
+    setSelectedFinalWord(input.selectedFinalWord);
+    setResult(null);
+  }
+
   function selectFinalWord(value: string) {
     setSelectedFinalWord(value);
     setResult(null);
@@ -193,6 +214,7 @@ export function useDiceRolls(options: UseDiceRollsOptions = {}) {
     result: isHashedDiceMethod(method) ? hashedResult : result,
     rollCount: hashedState?.rollCount ?? 0,
     rolls,
+    restoreInput,
     selectedFinalWord,
     selectFinalWord,
     selectMethod,

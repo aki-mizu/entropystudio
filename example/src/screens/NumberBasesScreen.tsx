@@ -39,7 +39,11 @@ import {
   numberBaseFormatConfig,
 } from '../features/numberBases/numberBases';
 import type { NumberBaseFormat } from '../features/numberBases/numberBases';
-import type { KeyStationDerivation } from '../features/keyStation/keyStation';
+import type {
+  KeyStationDerivation,
+  KeyStationInput,
+  KeyStationTab,
+} from '../features/keyStation/keyStation';
 import {
   formatCopy,
   UPSTREAM_UI_FALLBACK_COPY,
@@ -56,9 +60,10 @@ type InputSelection = { readonly end: number; readonly start: number };
 type Props = {
   readonly activeTool: EntropyTool;
   readonly autocompleteEnabled: boolean;
+  readonly editInputRequest: KeyStationTab | null;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
-  readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
+  readonly onDeriveKey: (derivation: KeyStationDerivation, input: KeyStationInput) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
 };
 
@@ -205,6 +210,7 @@ function replaceInputSelection(value: string, selection: InputSelection, inserte
 export function NumberBasesScreen({
   activeTool,
   autocompleteEnabled,
+  editInputRequest,
   isActive,
   isDarkMode,
   onDeriveKey,
@@ -290,6 +296,22 @@ export function NumberBasesScreen({
     return () => subscription.remove();
   }, [activeView, isActive]);
 
+  useEffect(() => {
+    if (!isActive || !editInputRequest || editInputRequest.method !== 'hex') {
+      return;
+    }
+    if (editInputRequest.input.kind !== 'number-bases') {
+      return;
+    }
+
+    setActiveView('entry');
+    setFormat(editInputRequest.input.format);
+    setInputSelection(null);
+    setInputValues(editInputRequest.input.inputValues);
+    setPassphrase(editInputRequest.input.passphrase);
+    setWordCount(editInputRequest.input.wordCount);
+  }, [editInputRequest, isActive]);
+
   function updateInput(value: string) {
     setDeriveError(null);
     setInputValues(previous => ({ ...previous, [format]: value }));
@@ -360,6 +382,12 @@ export function NumberBasesScreen({
         masterSeed: entropyHex(masterSeed),
         mnemonic: derivedMnemonic,
         passphrase,
+      }, {
+        format,
+        inputValues,
+        kind: 'number-bases',
+        passphrase,
+        wordCount,
       });
     } catch {
       setDeriveError(UPSTREAM_TEXT.error.generic);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
   Pressable,
@@ -49,7 +49,9 @@ import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
 import type {
   KeyStationDerivation,
+  KeyStationInput,
   KeyStationScriptType,
+  KeyStationTab,
 } from '../features/keyStation/keyStation';
 import { keyStationDerivationPathState } from '../features/keyStation/keyStation';
 
@@ -67,9 +69,10 @@ type Props = {
   readonly activeTool: EntropyTool;
   readonly autocompleteEnabled: boolean;
   readonly derivationPath: string;
+  readonly editInputRequest: KeyStationTab | null;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
-  readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
+  readonly onDeriveKey: (derivation: KeyStationDerivation, input: KeyStationInput) => void;
   readonly onSetDerivationPath: (path: string) => void;
   readonly onSetScriptType: (scriptType: KeyStationScriptType) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
@@ -80,6 +83,7 @@ export function CardsScreen({
   activeTool,
   autocompleteEnabled,
   derivationPath,
+  editInputRequest,
   isActive,
   isDarkMode,
   onDeriveKey,
@@ -109,6 +113,7 @@ export function CardsScreen({
     progress,
     progressText,
     result,
+    restoreInput,
     selectIanColemanMatch,
     selectMethod,
     transcript,
@@ -148,6 +153,7 @@ export function CardsScreen({
   const derivationPathValid = keyStationDerivationPathState(derivationPath).valid;
   const canDeriveWithPassphrase =
     canDerive && passphraseOptions.canDerive && derivationPathValid;
+  const handledEditInputRequest = useRef<number | null>(null);
 
   useRegisterCurrentEntropySyncRequest(isActive, {
     selectedFinalWord: '',
@@ -171,6 +177,23 @@ export function CardsScreen({
     return () => subscription.remove();
   }, [activeView, isActive]);
 
+  useEffect(() => {
+    if (
+      !isActive ||
+      !editInputRequest ||
+      editInputRequest.method !== 'cards' ||
+      handledEditInputRequest.current === editInputRequest.id ||
+      editInputRequest.input.kind !== 'cards'
+    ) {
+      return;
+    }
+
+    handledEditInputRequest.current = editInputRequest.id;
+    restoreInput(editInputRequest.input);
+    setPassphrase(editInputRequest.input.passphrase);
+    setActiveView('entry');
+  }, [editInputRequest, isActive, restoreInput]);
+
   function showResult() {
     if (!canDeriveWithPassphrase) {
       return;
@@ -190,6 +213,13 @@ export function CardsScreen({
       masterSeed: derivedResult.masterSeed,
       mnemonic: derivedResult.mnemonic,
       passphrase,
+    }, {
+      kind: 'cards',
+      matchesIanColeman,
+      method,
+      passphrase,
+      transcript,
+      wordCount,
     });
   }
 

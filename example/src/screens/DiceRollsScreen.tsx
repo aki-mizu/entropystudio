@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BackHandler,
   Pressable,
@@ -48,7 +48,9 @@ import {
 import { useDiceRolls } from '../features/dice/useDiceRolls';
 import type {
   KeyStationDerivation,
+  KeyStationInput,
   KeyStationScriptType,
+  KeyStationTab,
 } from '../features/keyStation/keyStation';
 import { keyStationDerivationPathState } from '../features/keyStation/keyStation';
 
@@ -60,9 +62,10 @@ type Props = {
   readonly activeTool: EntropyTool;
   readonly autocompleteEnabled: boolean;
   readonly derivationPath: string;
+  readonly editInputRequest: KeyStationTab | null;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
-  readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
+  readonly onDeriveKey: (derivation: KeyStationDerivation, input: KeyStationInput) => void;
   readonly onSetDerivationPath: (path: string) => void;
   readonly onSetScriptType: (scriptType: KeyStationScriptType) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
@@ -73,6 +76,7 @@ export function DiceRollsScreen({
   activeTool,
   autocompleteEnabled,
   derivationPath,
+  editInputRequest,
   isActive,
   isDarkMode,
   onDeriveKey,
@@ -107,6 +111,7 @@ export function DiceRollsScreen({
     progress,
     progressText,
     result,
+    restoreInput,
     rolls,
     selectedFinalWord,
     selectFinalWord,
@@ -147,6 +152,7 @@ export function DiceRollsScreen({
     () => (isDirectDiceMethod(method) ? getDirectDiceCalculations(rolls, method, wordCount) : []),
     [method, rolls, wordCount],
   );
+  const handledEditInputRequest = useRef<number | null>(null);
 
   useRegisterCurrentEntropySyncRequest(isActive, {
     selectedFinalWord,
@@ -172,6 +178,23 @@ export function DiceRollsScreen({
     return () => subscription.remove();
   }, [activeView, isActive]);
 
+  useEffect(() => {
+    if (
+      !isActive ||
+      !editInputRequest ||
+      editInputRequest.method !== 'dice' ||
+      handledEditInputRequest.current === editInputRequest.id ||
+      editInputRequest.input.kind !== 'dice'
+    ) {
+      return;
+    }
+
+    handledEditInputRequest.current = editInputRequest.id;
+    restoreInput(editInputRequest.input);
+    setPassphrase(editInputRequest.input.passphrase);
+    setActiveView('entry');
+  }, [editInputRequest, isActive, restoreInput]);
+
   function showResult() {
     if (!canDeriveWithPassphrase) {
       return;
@@ -191,6 +214,13 @@ export function DiceRollsScreen({
       masterSeed: derivedResult.masterSeed,
       mnemonic: derivedResult.mnemonic,
       passphrase,
+    }, {
+      kind: 'dice',
+      method,
+      passphrase,
+      rolls,
+      selectedFinalWord,
+      wordCount,
     });
   }
 

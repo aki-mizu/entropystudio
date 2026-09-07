@@ -1,4 +1,9 @@
 import { mnemonicToMasterFingerprint } from '../../native/entropyStudio';
+import type { CardMethod } from '../cards/cards';
+import type { DiceMethod, WordCount } from '../dice/dice';
+import type { NumberBaseFormat } from '../numberBases/numberBases';
+import type { BrainWalletOutput, PrivateKeyInputFormat } from '../privateKey/privateKey';
+import type { SeedPhraseEntryMethod } from '../seedPhrase/components/SeedPhraseKeypad';
 import { formatCopy, UPSTREAM_TEXT } from '../upstreamUiCopy';
 
 export const KEY_STATION_SCRIPT_TYPES = [
@@ -10,6 +15,47 @@ export const KEY_STATION_SCRIPT_TYPES = [
 
 export type KeyStationScriptType = (typeof KEY_STATION_SCRIPT_TYPES)[number]['id'];
 export type KeyStationMethod = 'cards' | 'dice' | 'hex' | 'key' | 'seed';
+
+export type KeyStationInput =
+  | {
+      readonly kind: 'dice';
+      readonly method: DiceMethod;
+      readonly passphrase: string;
+      readonly rolls: string;
+      readonly selectedFinalWord: string;
+      readonly wordCount: WordCount;
+    }
+  | {
+      readonly kind: 'cards';
+      readonly matchesIanColeman: boolean;
+      readonly method: CardMethod;
+      readonly passphrase: string;
+      readonly transcript: string;
+      readonly wordCount: WordCount;
+    }
+  | {
+      readonly kind: 'number-bases';
+      readonly format: NumberBaseFormat;
+      readonly inputValues: Record<NumberBaseFormat, string>;
+      readonly passphrase: string;
+      readonly wordCount: WordCount;
+    }
+  | {
+      readonly brainWalletOutput: BrainWalletOutput;
+      readonly brainWalletTrim: boolean;
+      readonly format: PrivateKeyInputFormat;
+      readonly inputValues: Record<PrivateKeyInputFormat, string>;
+      readonly kind: 'private-key';
+    }
+  | {
+      readonly kind: 'seed-phrase';
+      readonly method: SeedPhraseEntryMethod;
+      readonly numberInput: string;
+      readonly passphrase: string;
+      readonly wordCount: WordCount;
+      readonly wordInput: string;
+      readonly zeroIndexed: boolean;
+    };
 
 export const DEFAULT_KEY_STATION_SCRIPT_TYPE: KeyStationScriptType = 'bip84';
 export const DEFAULT_KEY_STATION_DERIVATION_PATH = "m/84'/0'/0'/0/0";
@@ -74,6 +120,7 @@ export type KeyStationDerivation =
 export type KeyStationTab = {
   readonly derivation: KeyStationDerivation;
   readonly id: number;
+  readonly input: KeyStationInput;
   readonly masterFingerprint: string;
   readonly method: KeyStationMethod;
   readonly name: string;
@@ -88,9 +135,10 @@ export function createKeyStationTab(
   number: number,
   settings: {
     readonly derivationPath?: string;
+    readonly input: KeyStationInput;
     readonly method?: KeyStationMethod;
     readonly scriptType?: KeyStationScriptType;
-  } = {},
+  },
 ): KeyStationTab {
   let masterFingerprint = '';
 
@@ -105,6 +153,7 @@ export function createKeyStationTab(
   return {
     derivation,
     id,
+    input: settings.input,
     masterFingerprint,
     method: settings.method ?? 'key',
     name:

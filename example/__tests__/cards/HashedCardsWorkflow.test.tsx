@@ -122,6 +122,11 @@ describe('Hashed cards', () => {
     expect(app!.root.findByProps({ testID: 'master-seed-output' }).props.children).toBe(
       '0'.repeat(128),
     );
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'cards-entry-view' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'card-transcript-input' }).props.value).toBe('4h 3h');
   });
 
   test('opens an optional BIP39 passphrase screen from card seed input', async () => {

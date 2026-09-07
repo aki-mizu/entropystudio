@@ -22,7 +22,11 @@ import { PrivateKeyKeypad } from '../features/privateKey/components/PrivateKeyKe
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
 import { entropyToMnemonic, mnemonicToSeed } from '../native/entropyStudio';
-import type { KeyStationDerivation } from '../features/keyStation/keyStation';
+import type {
+  KeyStationDerivation,
+  KeyStationInput,
+  KeyStationTab,
+} from '../features/keyStation/keyStation';
 import {
   BRAIN_WALLET_OUTPUTS,
   BRAIN_WALLET_WARNING_COPY,
@@ -50,9 +54,10 @@ type PrivateKeyInputValues = Record<PrivateKeyInputFormat, string>;
 
 type Props = {
   readonly activeTool: EntropyTool;
+  readonly editInputRequest: KeyStationTab | null;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
-  readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
+  readonly onDeriveKey: (derivation: KeyStationDerivation, input: KeyStationInput) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
 };
 
@@ -82,6 +87,7 @@ function replaceInputSelection(value: string, selection: InputSelection, inserte
 
 export function PrivateKeyScreen({
   activeTool,
+  editInputRequest,
   isActive,
   isDarkMode,
   onDeriveKey,
@@ -170,6 +176,24 @@ export function PrivateKeyScreen({
     });
     return () => subscription.remove();
   }, [activeView, isActive]);
+
+  useEffect(() => {
+    if (!isActive || !editInputRequest || editInputRequest.method !== 'key') {
+      return;
+    }
+    if (editInputRequest.input.kind !== 'private-key') {
+      return;
+    }
+
+    setActiveView('entry');
+    setBrainWalletOutput(editInputRequest.input.brainWalletOutput);
+    setBrainWalletTrim(editInputRequest.input.brainWalletTrim);
+    setBrainWalletWarningVisible(false);
+    setDeriveError(null);
+    setFormat(editInputRequest.input.format);
+    setInputSelection(null);
+    setInputValues(editInputRequest.input.inputValues);
+  }, [editInputRequest, isActive]);
 
   useEffect(() => {
     if (selectionRequestId === appliedSelectionRequestId.current) {
@@ -354,11 +378,23 @@ export function PrivateKeyScreen({
           masterSeed: entropyHex(masterSeed),
           mnemonic,
           passphrase: '',
+        }, {
+          brainWalletOutput,
+          brainWalletTrim,
+          format,
+          inputValues,
+          kind: 'private-key',
         });
       } else {
         setDeriveError(null);
         onDeriveKey({
           entropy: entropyHex(entropy),
+          kind: 'private-key',
+        }, {
+          brainWalletOutput,
+          brainWalletTrim,
+          format,
+          inputValues,
           kind: 'private-key',
         });
       }

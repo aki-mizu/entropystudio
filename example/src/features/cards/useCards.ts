@@ -33,6 +33,13 @@ type UseCardsOptions = {
   readonly targetWords?: WordCount;
 };
 
+type RestoredCardsInput = {
+  readonly matchesIanColeman: boolean;
+  readonly method: CardMethod;
+  readonly transcript: string;
+  readonly wordCount: WordCount;
+};
+
 export function useCards(options: UseCardsOptions = {}) {
   const {
     onInputChange,
@@ -166,6 +173,18 @@ export function useCards(options: UseCardsOptions = {}) {
     setResult(null);
   }
 
+  function restoreInput(input: RestoredCardsInput) {
+    setMethod(input.method);
+    setMatchesIanColeman(input.matchesIanColeman);
+    setWordCount(input.wordCount);
+    if (input.method === 'direct') {
+      setDirectTranscript(input.transcript);
+    } else {
+      setHashedTranscript(input.transcript);
+    }
+    setResult(null);
+  }
+
   function selectIanColemanMatch(value: boolean) {
     const nextTranscript = formatCardTranscript(hashedTranscript, value);
     setMatchesIanColeman(value);
@@ -213,6 +232,7 @@ export function useCards(options: UseCardsOptions = {}) {
     progress,
     progressText,
     result: isHashedCardMethod(method) ? hashedResult : result,
+    restoreInput,
     selectIanColemanMatch,
     selectMethod,
     transcript,

@@ -15,6 +15,7 @@ import {
 } from './features/keyStation/keyStation';
 import type {
   KeyStationDerivation,
+  KeyStationInput,
   KeyStationMethod,
   KeyStationScriptType,
   KeyStationTab,
@@ -33,6 +34,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<AppTab>('method');
   const [activeKeyStationTabId, setActiveKeyStationTabId] = useState<number | null>(null);
   const [keyStationTabs, setKeyStationTabs] = useState<readonly KeyStationTab[]>([]);
+  const [editInputRequest, setEditInputRequest] = useState<KeyStationTab | null>(null);
   const [seedPhraseAutocompleteEnabled, setSeedPhraseAutocompleteEnabled] = useState(true);
   const [keyStationScriptType, setKeyStationScriptType] = useState<KeyStationScriptType>(
     DEFAULT_KEY_STATION_SCRIPT_TYPE,
@@ -53,13 +55,14 @@ function App() {
     );
   }
 
-  function addKeyStationTab(derivation: KeyStationDerivation) {
+  function addKeyStationTab(derivation: KeyStationDerivation, input: KeyStationInput) {
     const tab = createKeyStationTab(
       derivation,
       nextKeyStationTabId.current++,
       nextKeyStationTabNumber.current++,
       {
         derivationPath: keyStationDerivationPath,
+        input,
         method: activeTool as KeyStationMethod,
         scriptType: keyStationScriptType,
       },
@@ -82,6 +85,15 @@ function App() {
     const remainingTabs = keyStationTabs.filter(tab => tab.id !== activeKeyStationTabId);
     setKeyStationTabs(remainingTabs);
     setActiveKeyStationTabId(remainingTabs[Math.min(deletedIndex, remainingTabs.length - 1)]?.id ?? null);
+  }
+
+  function editKeyStationInput(tab: KeyStationTab) {
+    setActiveTab('method');
+    setActiveTool(tab.method);
+    setKeyStationScriptType(tab.scriptType);
+    setKeyStationDerivationPath(tab.derivationPath);
+    setEditInputRequest(tab);
+    setActiveKeyStationTabId(null);
   }
 
   return (
@@ -109,6 +121,7 @@ function App() {
                 activeTool={activeTool}
                 autocompleteEnabled={seedPhraseAutocompleteEnabled}
                 derivationPath={keyStationDerivationPath}
+                editInputRequest={editInputRequest}
                 isActive={activeTool === 'dice' && isKeyStationActive}
                 isDarkMode={isDarkMode}
                 onDeriveKey={addKeyStationTab}
@@ -121,6 +134,7 @@ function App() {
                 activeTool={activeTool}
                 autocompleteEnabled={seedPhraseAutocompleteEnabled}
                 derivationPath={keyStationDerivationPath}
+                editInputRequest={editInputRequest}
                 isActive={activeTool === 'cards' && isKeyStationActive}
                 isDarkMode={isDarkMode}
                 onDeriveKey={addKeyStationTab}
@@ -132,6 +146,7 @@ function App() {
               <NumberBasesScreen
                 activeTool={activeTool}
                 autocompleteEnabled={seedPhraseAutocompleteEnabled}
+                editInputRequest={editInputRequest}
                 isActive={activeTool === 'hex' && isKeyStationActive}
                 isDarkMode={isDarkMode}
                 onDeriveKey={addKeyStationTab}
@@ -141,6 +156,7 @@ function App() {
                 activeTool={activeTool}
                 autocompleteEnabled={seedPhraseAutocompleteEnabled}
                 derivationPath={keyStationDerivationPath}
+                editInputRequest={editInputRequest}
                 isActive={activeTool === 'seed' && isKeyStationActive}
                 isDarkMode={isDarkMode}
                 onDeriveKey={addKeyStationTab}
@@ -151,6 +167,7 @@ function App() {
               />
               <PrivateKeyScreen
                 activeTool={activeTool}
+                editInputRequest={editInputRequest}
                 isActive={activeTool === 'key' && isKeyStationActive}
                 isDarkMode={isDarkMode}
                 onDeriveKey={addKeyStationTab}
@@ -159,6 +176,7 @@ function App() {
               <KeyStationResultScreen
                 colors={colors}
                 isActive={activeTab === 'method' && activeKeyStationTab !== null}
+                onEditInput={() => (activeKeyStationTab ? editKeyStationInput(activeKeyStationTab) : undefined)}
                 onReturnToStation={() => setActiveKeyStationTabId(null)}
                 tab={activeKeyStationTab}
               />

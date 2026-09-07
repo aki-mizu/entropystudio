@@ -212,6 +212,7 @@ export const UPSTREAM_TEXT = {
     },
     derivationPathHelp: 'Exact BIP32 address path · edit directly to use a custom path',
     delete: 'Delete current key',
+    editInput: 'Edit input',
     methodLabel: 'Method',
     scriptType: 'Script type',
     scriptTypes: {

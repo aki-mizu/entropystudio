@@ -24,7 +24,9 @@ import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import type { KeyStationDerivation } from '../features/keyStation/keyStation';
 import {
   keyStationDerivationPathState,
+  type KeyStationInput,
   type KeyStationScriptType,
+  type KeyStationTab,
 } from '../features/keyStation/keyStation';
 import { KeyDerivationSettingsButton } from '../features/keyStation/components/KeyDerivationSettingsButton';
 import { KeyDerivationSettingsView } from '../features/keyStation/components/KeyDerivationSettingsView';
@@ -63,9 +65,10 @@ type Props = {
   readonly activeTool: EntropyTool;
   readonly autocompleteEnabled: boolean;
   readonly derivationPath: string;
+  readonly editInputRequest: KeyStationTab | null;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
-  readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
+  readonly onDeriveKey: (derivation: KeyStationDerivation, input: KeyStationInput) => void;
   readonly onSetDerivationPath: (path: string) => void;
   readonly onSetScriptType: (scriptType: KeyStationScriptType) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
@@ -117,6 +120,7 @@ export function SeedPhraseScreen({
   activeTool,
   autocompleteEnabled,
   derivationPath,
+  editInputRequest,
   isActive,
   isDarkMode,
   onDeriveKey,
@@ -204,6 +208,26 @@ export function SeedPhraseScreen({
     });
     return () => subscription.remove();
   }, [activeView, isActive]);
+
+  useEffect(() => {
+    if (
+      !isActive ||
+      !editInputRequest ||
+      editInputRequest.method !== 'seed' ||
+      editInputRequest.input.kind !== 'seed-phrase'
+    ) {
+      return;
+    }
+
+    setActiveView('entry');
+    setInputSelection(null);
+    setNumberInput(editInputRequest.input.numberInput);
+    setPassphrase(editInputRequest.input.passphrase);
+    setSeedMethod(editInputRequest.input.method);
+    setWordCount(editInputRequest.input.wordCount);
+    setWordInput(editInputRequest.input.wordInput);
+    setZeroIndexed(editInputRequest.input.zeroIndexed);
+  }, [editInputRequest, isActive]);
 
   function updateInput(value: string): string {
     const normalized = analyzeSeedPhrase(
@@ -317,6 +341,14 @@ export function SeedPhraseScreen({
       masterSeed: entropyHex(mnemonicToSeed(activePhrase, passphrase)),
       mnemonic: activePhrase,
       passphrase,
+    }, {
+      kind: 'seed-phrase',
+      method: seedMethod,
+      numberInput,
+      passphrase,
+      wordCount,
+      wordInput,
+      zeroIndexed,
     });
   }
 

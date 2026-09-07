@@ -241,6 +241,11 @@ describe('Seed Phrase / Words', () => {
     expect(app!.root.findByProps({ testID: 'master-seed-output' }).props.children).toBe(
       '0'.repeat(128),
     );
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'seed-phrase-entry-view' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'seed-phrase-input' }).props.value).toBe(mnemonic);
   });
 
   test('validates and autocompletes Seed Phrase keyboard prefixes', async () => {
