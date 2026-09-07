@@ -22,7 +22,10 @@ import {
 } from '../features/entropySync';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import type { KeyStationDerivation } from '../features/keyStation/keyStation';
-import type { KeyStationScriptType } from '../features/keyStation/keyStation';
+import {
+  keyStationDerivationPathState,
+  type KeyStationScriptType,
+} from '../features/keyStation/keyStation';
 import { KeyDerivationSettingsButton } from '../features/keyStation/components/KeyDerivationSettingsButton';
 import { KeyDerivationSettingsView } from '../features/keyStation/components/KeyDerivationSettingsView';
 import { SeedPhraseKeypad } from '../features/seedPhrase/components/SeedPhraseKeypad';
@@ -156,6 +159,7 @@ export function SeedPhraseScreen({
     wordCount,
     zeroIndexed,
   );
+  const derivationPathValid = keyStationDerivationPathState(derivationPath).valid;
   let entropy: ArrayBuffer | null = null;
 
   if (analysis.canDerive) {
@@ -165,7 +169,8 @@ export function SeedPhraseScreen({
       entropy = null;
     }
   }
-  const canDeriveWithPassphrase = Boolean(entropy) && passphraseOptions.canDerive;
+  const canDeriveWithPassphrase =
+    Boolean(entropy) && passphraseOptions.canDerive && derivationPathValid;
 
   useRegisterCurrentEntropySyncRequest(isActive, {
     selectedFinalWord: '',
@@ -302,7 +307,7 @@ export function SeedPhraseScreen({
   }
 
   function showResult() {
-    if (!entropy || !passphraseOptions.canDerive) {
+    if (!entropy || !passphraseOptions.canDerive || !derivationPathValid) {
       return;
     }
 

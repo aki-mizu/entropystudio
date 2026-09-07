@@ -50,6 +50,7 @@ import type {
   KeyStationDerivation,
   KeyStationScriptType,
 } from '../features/keyStation/keyStation';
+import { keyStationDerivationPathState } from '../features/keyStation/keyStation';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 type DiceView = 'calculations' | 'entry' | 'key-settings' | 'passphrase' | 'setup';
@@ -137,7 +138,9 @@ export function DiceRollsScreen({
       : [];
   const canChooseFinalWord =
     method === 'bitbox' && Boolean(directState && directCopy && directState.candidates.length > 0);
-  const canDeriveWithPassphrase = canDerive && passphraseOptions.canDerive;
+  const derivationPathValid = keyStationDerivationPathState(derivationPath).valid;
+  const canDeriveWithPassphrase =
+    canDerive && passphraseOptions.canDerive && derivationPathValid;
   const isBitboxCoinTurn =
     method === 'bitbox' && directState?.step === DirectDiceStep.BitboxCoin;
   const directCalculations = useMemo(

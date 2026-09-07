@@ -51,6 +51,7 @@ import type {
   KeyStationDerivation,
   KeyStationScriptType,
 } from '../features/keyStation/keyStation';
+import { keyStationDerivationPathState } from '../features/keyStation/keyStation';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 type CardView = 'entry' | 'key-settings' | 'passphrase' | 'setup';
@@ -144,7 +145,9 @@ export function CardsScreen({
     : result?.mnemonic
       ? result.mnemonic.split(' ')
       : [];
-  const canDeriveWithPassphrase = canDerive && passphraseOptions.canDerive;
+  const derivationPathValid = keyStationDerivationPathState(derivationPath).valid;
+  const canDeriveWithPassphrase =
+    canDerive && passphraseOptions.canDerive && derivationPathValid;
 
   useRegisterCurrentEntropySyncRequest(isActive, {
     selectedFinalWord: '',

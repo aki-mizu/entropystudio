@@ -109,7 +109,7 @@ describe('Seed Phrase / Words', () => {
     ).toBe(UPSTREAM_TEXT.keys.derivationPathErrors.index);
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText(
-        "m/84'/0'/0'/0/0",
+        "m/44'/1'/2'/0/7",
       );
     });
     await ReactTestRenderer.act(async () => {
@@ -171,6 +171,28 @@ describe('Seed Phrase / Words', () => {
     expect(app!.root.findByProps({ testID: 'seed-phrase-status' }).props.children).toBe(
       '12 of 12 BIP39 words entered · checksum valid · ready to derive',
     );
+    expect(app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.disabled).toBe(false);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-seed-phrase-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText('not-a-path');
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-seed-phrase-key-settings' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.disabled).toBe(true);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-seed-phrase-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText(
+        "m/44'/1'/2'/0/7",
+      );
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-seed-phrase-key-settings' }).props.onPress();
+    });
     expect(app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.disabled).toBe(false);
     expect(mockMnemonicToEntropy).toHaveBeenLastCalledWith(mnemonic);
     expect(mockMnemonicToMasterFingerprint).toHaveBeenLastCalledWith(mnemonic, '');
