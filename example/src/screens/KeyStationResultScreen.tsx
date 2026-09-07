@@ -3,6 +3,7 @@ import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'reac
 
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import type { DiceColors } from '../features/dice/diceTheme';
+import { KeyStationLifeHash } from '../features/keyStation/components/KeyStationLifeHash';
 import type { KeyStationTab } from '../features/keyStation/keyStation';
 import {
   UPSTREAM_TEXT,
@@ -59,6 +60,10 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
                 <Text style={[styles.fingerprint, { color: colors.text }]} testID="key-station-master-fingerprint-value">
                   {tab.masterFingerprint}
                 </Text>
+                <KeyStationLifeHash
+                  fingerprint={tab.masterFingerprint}
+                  imageTestID="key-station-master-fingerprint-lifehash"
+                />
                 <Pressable
                   accessibilityLabel={UPSTREAM_TEXT.keys.editInput}
                   accessibilityRole="button"
@@ -123,9 +128,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   fingerprint: {
+    flexShrink: 1,
     fontFamily: 'monospace',
     fontSize: 18,
     fontWeight: '700',
+    minWidth: 0,
   },
   hidden: {
     display: 'none',

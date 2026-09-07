@@ -8,6 +8,7 @@ import {
   mockCardTranscriptToEntropy,
   mockDiceRollsToEntropy,
   mockEntropyToMnemonic,
+  mockLifehashFromFingerprint,
   React,
   ReactTestRenderer,
   ScrollView,
@@ -363,6 +364,7 @@ test('keeps derived keys in removable Key Station tabs', async () => {
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
   mockDiceRollsToEntropy.mockReturnValue(entropy);
   mockEntropyToMnemonic.mockReturnValue(mnemonic);
+    mockLifehashFromFingerprint.mockReturnValue('data:image/png;base64,lifehash');
 
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
@@ -403,6 +405,11 @@ test('keeps derived keys in removable Key Station tabs', async () => {
   expect(app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.accessibilityLabel).toBe(
     UPSTREAM_TEXT.keys.editInput,
   );
+  expect(
+    app!.root.findByProps({ testID: 'key-station-master-fingerprint-lifehash' }).props.source,
+  ).toEqual({ uri: 'data:image/png;base64,lifehash' });
+  mockLifehashFromFingerprint.mockReset();
+  mockLifehashFromFingerprint.mockReturnValue('');
   expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.accessibilityState).toEqual({
     selected: true,
   });

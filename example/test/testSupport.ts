@@ -43,6 +43,7 @@ export const mockCardKeyAllowed = jest.fn<boolean, [string, number, number]>();
 export const mockDirectCardState = jest.fn();
 export const mockEntropyToMnemonic = jest.fn<string, [ArrayBuffer]>();
 export const mockHashedCardState = jest.fn<HashedCardState, [string, number]>();
+export const mockLifehashFromFingerprint = jest.fn<string, [string]>(() => '');
 export const mockMnemonicToEntropy = jest.fn<ArrayBuffer, [string]>();
 const MASTER_SEED_FIXTURE = new Uint8Array(64).buffer;
 const BIP39_MNEMONIC_FIXTURE =
@@ -229,6 +230,7 @@ jest.mock('entropystudio', () => ({
   formatDiceTranscript: mockFormatDiceTranscript,
   hashedCardState: mockHashedCardState,
   hashedDiceState: mockHashedDiceState,
+  lifehashFromFingerprint: mockLifehashFromFingerprint,
   mnemonicToEntropy: mockMnemonicToEntropy,
   mnemonicToMasterFingerprint: mockMnemonicToMasterFingerprint,
   mnemonicToSeed: mockMnemonicToSeed,

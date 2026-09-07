@@ -6,6 +6,7 @@ mod entropy_sync;
 mod error;
 mod hash;
 mod hashed_dice;
+mod lifehash;
 mod number_bases;
 mod private_key;
 mod seed_phrase;
@@ -31,6 +32,7 @@ pub use entropy_sync::{synchronize_entropy, EntropySyncSnapshot, EntropySyncSour
 pub use error::EntropyStudioError;
 pub use hash::sha256;
 pub use hashed_dice::{dice_rolls_to_entropy, hashed_dice_state, DiceRollMethod, HashedDiceState};
+pub use lifehash::lifehash_from_fingerprint;
 pub use number_bases::{
 	analyze_number_base_input, number_base_calculations, number_base_entropy,
 	NumberBaseAnalysis, NumberBaseCalculationRow, NumberBaseCalculationTerm,
