@@ -179,6 +179,39 @@ test('opens key derivation settings from Dice and Cards entry screens', async ()
   expect(app!.root.findByProps({ testID: 'cards-entry-view' })).toBeDefined();
 });
 
+test('opens Advanced entry controls and updates the derivation path', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await openDiceEntry(app!);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+  });
+
+  const advancedEntry = app!.root.findByProps({ testID: 'dice-advanced-entry' });
+  expect(advancedEntry.props.accessibilityState).toEqual({ expanded: false });
+  expect(app!.root.findAllByProps({ testID: 'dice-advanced-fields' })).toHaveLength(0);
+
+  await ReactTestRenderer.act(async () => {
+    advancedEntry.props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.accessibilityState).toEqual({
+    expanded: true,
+  });
+  expect(app!.root.findByProps({ testID: 'dice-advanced-fields' })).toBeDefined();
+  expect(app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.value).toBe('1');
+  expect(app!.root.findByProps({ testID: 'dice-advanced-address-range' }).props.value).toBe('1');
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-advanced-purpose' }).props.onChangeText('45');
+  });
+  expect(app!.root.findByProps({ testID: 'dice-derivation-path' }).props.value).toBe(
+    "m/45'/0'/0'/0/0",
+  );
+});
+
 test('Edit input returns to the originating Dice input screen', async () => {
   const entropy = new Uint8Array(16).buffer;
   const mnemonic =

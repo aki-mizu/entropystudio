@@ -200,6 +200,10 @@ export const UPSTREAM_TEXT = {
   },
   keys: {
     add: 'Open Key Station to derive another key',
+    advancedEntry: 'Advanced entry',
+    addressBranchRange: 'Address branch range',
+    addressRange: 'Address range',
+    account: 'Account',
     defaultTab: 'Key {n}',
     derivationPath: 'Derivation path',
     derivationPathErrors: {
@@ -213,7 +217,10 @@ export const UPSTREAM_TEXT = {
     derivationPathHelp: 'Exact BIP32 address path · edit directly to use a custom path',
     delete: 'Delete current key',
     editInput: 'Edit input',
+    harden: 'Harden',
     methodLabel: 'Method',
+    network: 'Network',
+    purpose: 'Purpose',
     scriptType: 'Script type',
     scriptTypes: {
       bip44: 'Legacy',
@@ -221,6 +228,8 @@ export const UPSTREAM_TEXT = {
       bip84: 'Native SegWit',
       bip86: 'Taproot',
     },
+    startingAddressBranch: 'Starting address branch',
+    startingAddressIndex: 'Starting address index',
     station: 'Key Station',
     tabLabel: 'Keys',
   },
