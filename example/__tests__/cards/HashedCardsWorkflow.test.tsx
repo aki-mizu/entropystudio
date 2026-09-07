@@ -120,6 +120,12 @@ describe('Hashed cards', () => {
     expect(app!.root.findByProps({ testID: 'master-seed-output' }).props.children).toBe(
       '0'.repeat(128),
     );
+    expect(app!.root.findByProps({ testID: 'root-xprv-label' }).props.children).toBe(
+      formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xprv' }),
+    );
+    expect(app!.root.findByProps({ testID: 'root-xprv-output' }).props.children).toBe(
+      'xprv9s21ZrQH143K3GJpoapnV8SFfukcVBSfeCficPSGfubmSFDxo1kuHnLisriDvSnRRuL2Qrg5ggqHKNVpxR86QEC8w35uxmGoggxtQTPvfUu',
+    );
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
     });

@@ -59,6 +59,20 @@ fn mnemonic_to_master_fingerprint_matches_entropylab_bip32() {
 }
 
 #[test]
+fn mnemonic_to_master_xprv_matches_entropylab_bip32() {
+    let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+    assert_eq!(
+        mnemonic_to_master_xprv(phrase.to_owned(), String::new()).unwrap(),
+        "xprv9s21ZrQH143K3GJpoapnV8SFfukcVBSfeCficPSGfubmSFDxo1kuHnLisriDvSnRRuL2Qrg5ggqHKNVpxR86QEC8w35uxmGoggxtQTPvfUu"
+    );
+    assert_eq!(
+        mnemonic_to_master_xprv(phrase.to_owned(), "TREZOR".to_owned()).unwrap(),
+        "xprv9s21ZrQH143K3h3fDYiay8mocZ3afhfULfb5GX8kCBdno77K4HiA15Tg23wpbeF1pLfs1c5SPmYHrEpTuuRhxMwvKDwqdKiGJS9XFKzUsAF"
+    );
+}
+
+#[test]
 fn mnemonic_to_seed_nfkd_normalizes_the_passphrase() {
     let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let composed = mnemonic_to_seed(phrase.to_owned(), "\u{00e9}".to_owned());

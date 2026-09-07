@@ -274,6 +274,7 @@ export const UPSTREAM_TEXT = {
   result: {
     entropyHex: 'BIP39 entropy hex',
     privateKey: 'Private key material',
+    rootXprv: 'Root {name}',
   },
   seed: {
     count: '{entered} of {words} BIP39 words entered',

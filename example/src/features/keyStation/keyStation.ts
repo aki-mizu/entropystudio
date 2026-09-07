@@ -1,4 +1,4 @@
-import { mnemonicToMasterFingerprint } from '../../native/entropyStudio';
+import { mnemonicToMasterFingerprint, mnemonicToMasterXprv } from '../../native/entropyStudio';
 import type { CardMethod } from '../cards/cards';
 import type { DiceMethod, WordCount } from '../dice/dice';
 import type { NumberBaseFormat } from '../numberBases/numberBases';
@@ -122,6 +122,7 @@ export type KeyStationTab = {
   readonly id: number;
   readonly input: KeyStationInput;
   readonly masterFingerprint: string;
+  readonly rootXprv: string;
   readonly method: KeyStationMethod;
   readonly name: string;
   readonly number: number;
@@ -141,12 +142,15 @@ export function createKeyStationTab(
   },
 ): KeyStationTab {
   let masterFingerprint = '';
+  let rootXprv = '';
 
   if (derivation.kind === 'bip39') {
     try {
       masterFingerprint = mnemonicToMasterFingerprint(derivation.mnemonic, derivation.passphrase);
+      rootXprv = mnemonicToMasterXprv(derivation.mnemonic, derivation.passphrase);
     } catch {
       masterFingerprint = '';
+      rootXprv = '';
     }
   }
 
@@ -155,6 +159,7 @@ export function createKeyStationTab(
     id,
     input: settings.input,
     masterFingerprint,
+    rootXprv,
     method: settings.method ?? 'key',
     name:
       masterFingerprint || formatCopy(UPSTREAM_TEXT.keys.defaultTab, { n: number }),

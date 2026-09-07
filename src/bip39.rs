@@ -70,6 +70,47 @@ pub fn mnemonic_to_master_fingerprint(
     result
 }
 
+#[uniffi::export]
+pub fn mnemonic_to_master_xprv(
+    phrase: String,
+    passphrase: String,
+) -> Result<String, EntropyStudioError> {
+    let mut seed = mnemonic_to_seed(phrase, passphrase);
+    let mut master = [0u8; 78];
+    let mut encoded = [0u8; 112];
+    let master_length = unsafe {
+        entropylab_wasm::el_hd_master(seed.as_ptr(), seed.len(), master.as_mut_ptr())
+    };
+    wipe_bytes(&mut seed);
+
+    if master_length != 78 {
+        wipe_bytes(&mut master);
+        wipe_bytes(&mut encoded);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+
+    let encoded_length = unsafe {
+        entropylab_wasm::el_b58check_encode(
+            master.as_ptr(),
+            master_length as usize,
+            encoded.as_mut_ptr(),
+            encoded.len(),
+        )
+    };
+    wipe_bytes(&mut master);
+
+    if encoded_length < 0 || encoded_length as usize > encoded.len() {
+        wipe_bytes(&mut encoded);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+
+    let result = std::str::from_utf8(&encoded[..encoded_length as usize])
+        .map(str::to_owned)
+        .map_err(|_| EntropyStudioError::InvalidMasterKey);
+    wipe_bytes(&mut encoded);
+    result
+}
+
 fn master_fingerprint_from_seed(seed: &[u8]) -> Result<String, EntropyStudioError> {
     let mut master = [0u8; 78];
     let mut child = [0u8; 78];

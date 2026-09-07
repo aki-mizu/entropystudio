@@ -2,13 +2,24 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { DiceColors } from '../diceTheme';
 
 export type EntropyResult =
-  | { readonly entropy: string; readonly masterSeed?: string; readonly error?: never }
-  | { readonly entropy?: never; readonly masterSeed?: never; readonly error: string };
+  | {
+      readonly entropy: string;
+      readonly masterSeed?: string;
+      readonly rootXprv?: string;
+      readonly error?: never;
+    }
+  | {
+      readonly entropy?: never;
+      readonly masterSeed?: never;
+      readonly rootXprv?: never;
+      readonly error: string;
+    };
 
 type Props = {
   readonly colors: DiceColors;
   readonly entropyLabel: string;
   readonly masterSeedLabel?: string;
+  readonly rootXprvLabel?: string;
   readonly result: EntropyResult | null;
 };
 
@@ -16,6 +27,7 @@ export function DiceResultPanel({
   colors,
   entropyLabel,
   masterSeedLabel,
+  rootXprvLabel,
   result,
 }: Props) {
   if (!result) {
@@ -63,6 +75,23 @@ export function DiceResultPanel({
               </Text>
             </>
           ) : null}
+          {rootXprvLabel && result.rootXprv ? (
+            <>
+              <Text
+                style={[styles.label, styles.rootXprvLabel, { color: colors.muted }]}
+                testID="root-xprv-label"
+              >
+                {rootXprvLabel}
+              </Text>
+              <Text
+                selectable
+                style={[styles.entropy, { color: colors.text }]}
+                testID="root-xprv-output"
+              >
+                {result.rootXprv}
+              </Text>
+            </>
+          ) : null}
         </>
       )}
     </View>
@@ -85,5 +114,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   masterSeedLabel: { marginTop: 16 },
+  rootXprvLabel: { marginTop: 16 },
   result: { paddingBottom: 4 },
 });

@@ -6,6 +6,7 @@ import type { DiceColors } from '../features/dice/diceTheme';
 import { KeyStationLifeHash } from '../features/keyStation/components/KeyStationLifeHash';
 import type { KeyStationTab } from '../features/keyStation/keyStation';
 import {
+  formatCopy,
   UPSTREAM_TEXT,
   UPSTREAM_UI_FALLBACK_COPY,
   UPSTREAM_UI_LABELS,
@@ -95,7 +96,12 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
               colors={colors}
               entropyLabel={UPSTREAM_TEXT.result.entropyHex}
               masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
-              result={{ entropy: derivation.entropy, masterSeed: derivation.masterSeed }}
+              result={{
+                entropy: derivation.entropy,
+                masterSeed: derivation.masterSeed,
+                rootXprv: tab.rootXprv,
+              }}
+              rootXprvLabel={formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xprv' })}
             />
           </>
         ) : (

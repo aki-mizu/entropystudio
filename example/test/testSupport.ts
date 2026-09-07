@@ -48,6 +48,12 @@ export const mockMnemonicToEntropy = jest.fn<ArrayBuffer, [string]>();
 const MASTER_SEED_FIXTURE = new Uint8Array(64).buffer;
 const BIP39_MNEMONIC_FIXTURE =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+const MASTER_XPRV_FIXTURES: Record<string, string> = {
+  [`${BIP39_MNEMONIC_FIXTURE}\u0000`]:
+    'xprv9s21ZrQH143K3GJpoapnV8SFfukcVBSfeCficPSGfubmSFDxo1kuHnLisriDvSnRRuL2Qrg5ggqHKNVpxR86QEC8w35uxmGoggxtQTPvfUu',
+  [`${BIP39_MNEMONIC_FIXTURE}\u0000TREZOR`]:
+    'xprv9s21ZrQH143K3h3fDYiay8mocZ3afhfULfb5GX8kCBdno77K4HiA15Tg23wpbeF1pLfs1c5SPmYHrEpTuuRhxMwvKDwqdKiGJS9XFKzUsAF',
+};
 const MASTER_FINGERPRINT_FIXTURES: Record<string, string> = {
   [`${BIP39_MNEMONIC_FIXTURE}\u0000`]: '73c5da0a',
   [`${BIP39_MNEMONIC_FIXTURE}\u0000TREZOR`]: 'b4e3f5ed',
@@ -57,6 +63,9 @@ export const mockMnemonicToSeed = jest.fn<ArrayBuffer, [string, string]>(
 );
 export const mockMnemonicToMasterFingerprint = jest.fn<string, [string, string]>(
   (phrase, passphrase) => MASTER_FINGERPRINT_FIXTURES[`${phrase}\u0000${passphrase}`] ?? '',
+);
+export const mockMnemonicToMasterXprv = jest.fn<string, [string, string]>(
+  (phrase, passphrase) => MASTER_XPRV_FIXTURES[`${phrase}\u0000${passphrase}`] ?? '',
 );
 export const mockNormalizeCardToken = jest.fn<string, [string]>();
 export const mockNormalizeDirectCardTranscript = jest.fn<string, [string]>();
@@ -233,6 +242,7 @@ jest.mock('entropystudio', () => ({
   lifehashFromFingerprint: mockLifehashFromFingerprint,
   mnemonicToEntropy: mockMnemonicToEntropy,
   mnemonicToMasterFingerprint: mockMnemonicToMasterFingerprint,
+  mnemonicToMasterXprv: mockMnemonicToMasterXprv,
   mnemonicToSeed: mockMnemonicToSeed,
   normalizeCardToken: mockNormalizeCardToken,
   normalizeDirectCardTranscript: mockNormalizeDirectCardTranscript,
