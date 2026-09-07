@@ -50,6 +50,26 @@ function expectStartAction(app: ReactTestRenderer.ReactTestRenderer, testID: str
   expect(button.props.children.props.children).toBe(STUDIO_UI_TEXT.actions.start);
 }
 
+test('uses the native method picker for switching workflows', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  const methodList = activeMethodList(app!);
+  const picker = methodList.findByProps({ testID: 'key-method-picker' });
+
+  expect(picker.props.mode).toBe('dropdown');
+  expect(picker.props.selectedValue).toBe('dice');
+
+  await ReactTestRenderer.act(async () => {
+    picker.props.onValueChange('key', 4);
+  });
+
+  expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.selectedValue).toBe('key');
+  expect(app!.root.findByProps({ testID: 'private-key-setup-view' })).toBeDefined();
+});
+
 test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on the shared setup screen', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
@@ -69,21 +89,7 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
     UPSTREAM_TEXT.keys.methodLabel,
   );
   expect(diceMethodList).toBeDefined();
-  expect(diceMethodList.findByProps({ testID: 'key-method-dice' }).props.accessibilityState).toEqual({
-    selected: true,
-  });
-  expect(diceMethodList.findByProps({ testID: 'key-method-cards' }).props.accessibilityState).toEqual({
-    selected: false,
-  });
-  expect(diceMethodList.findByProps({ testID: 'key-method-hex' }).props.accessibilityState).toEqual({
-    selected: false,
-  });
-  expect(diceMethodList.findByProps({ testID: 'key-method-seed' }).props.accessibilityState).toEqual({
-    selected: false,
-  });
-  expect(diceMethodList.findByProps({ testID: 'key-method-key' }).props.accessibilityState).toEqual({
-    selected: false,
-  });
+  expect(diceMethodList.findByProps({ testID: 'key-method-picker' }).props.selectedValue).toBe('dice');
 
   await selectDiceMethod(app!, 'dice-method-coleman');
   await selectEntropyTool(app!, 'cards');
@@ -92,10 +98,8 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
   expectStartAction(app!, 'open-cards-entry');
   expect(app!.root.findAllByProps({ testID: 'cards-entry-view' })).toHaveLength(0);
   expect(
-    activeMethodList(app!).findByProps({ testID: 'key-method-cards' }).props.accessibilityState,
-  ).toEqual({
-    selected: true,
-  });
+    activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.selectedValue,
+  ).toBe('cards');
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'card-method-direct' }).props.onPress();
   });

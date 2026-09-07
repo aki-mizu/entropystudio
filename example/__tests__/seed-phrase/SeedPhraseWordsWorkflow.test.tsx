@@ -50,9 +50,9 @@ describe('Seed Phrase / Words', () => {
     expect(app!.root.findByProps({ testID: 'seed-phrase-screen-title' }).props.children).toBe(
       UPSTREAM_TEXT.mode.seed,
     );
-    expect(
-      activeMethodList(app!).findByProps({ testID: 'key-method-seed' }).props.accessibilityState,
-    ).toEqual({ selected: true });
+    expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.selectedValue).toBe(
+      'seed',
+    );
 
     await selectSeedPhraseLength(app!, 12);
     expect(app!.root.findByProps({ testID: 'seed-phrase-method-requirement' }).props.children).toBe(

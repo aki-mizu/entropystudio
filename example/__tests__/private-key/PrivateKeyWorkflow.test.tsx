@@ -35,9 +35,9 @@ describe('Private Key', () => {
     expect(app!.root.findByProps({ testID: 'private-key-screen-title' }).props.children).toBe(
       UPSTREAM_TEXT.mode.key,
     );
-    expect(
-      activeMethodList(app!).findByProps({ testID: 'key-method-key' }).props.accessibilityState,
-    ).toEqual({ selected: true });
+    expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.selectedValue).toBe(
+      'key',
+    );
     expect(app!.root.findByProps({ testID: 'private-key-format-wif' }).props.accessibilityState).toEqual({
       selected: true,
     });

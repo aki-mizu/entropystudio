@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { StyleSheet, Text, View } from 'react-native';
 
 import type { DiceColors } from '../features/dice/diceTheme';
 import { UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '../features/upstreamUiCopy';
@@ -38,28 +39,25 @@ export function EntropyMethodList({
         {UPSTREAM_TEXT.keys.methodLabel}
       </Text>
       <View
-        style={[styles.options, { backgroundColor: colors.segment, borderColor: colors.border }]}
+        style={[
+          styles.pickerShell,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
       >
-        {ENTROPY_TOOLS.map(tool => {
-          const selected = tool === activeTool;
-          return (
-            <Pressable
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}
-              key={tool}
-              onPress={() => onSelect(tool)}
-              style={[
-                styles.option,
-                selected && { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-              testID={`key-method-${tool}`}
-            >
-              <Text style={[styles.optionLabel, { color: selected ? colors.text : colors.muted }]}>
-                {ENTROPY_TOOL_LABELS[tool]}
-              </Text>
-            </Pressable>
-          );
-        })}
+        <Picker
+          accessibilityLabel={UPSTREAM_TEXT.keys.methodLabel}
+          dropdownIconColor={colors.muted}
+          enabled={isActive}
+          mode="dropdown"
+          onValueChange={value => onSelect(value as EntropyTool)}
+          selectedValue={activeTool}
+          style={[styles.picker, { color: colors.text }]}
+          testID="key-method-picker"
+        >
+          {ENTROPY_TOOLS.map(tool => (
+            <Picker.Item key={tool} label={ENTROPY_TOOL_LABELS[tool]} value={tool} />
+          ))}
+        </Picker>
       </View>
     </View>
   );
@@ -74,24 +72,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 10,
   },
-  option: {
-    alignItems: 'center',
-    borderColor: 'transparent',
-    borderRadius: 5,
-    borderWidth: 1,
-    justifyContent: 'center',
-    minHeight: 42,
-    paddingHorizontal: 12,
+  picker: {
+    minHeight: 48,
+    width: '100%',
   },
-  optionLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-  options: {
-    borderRadius: 7,
+  pickerShell: {
+    borderRadius: 6,
     borderWidth: 1,
-    gap: 3,
-    padding: 3,
+    overflow: 'hidden',
   },
 });

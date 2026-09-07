@@ -33,9 +33,9 @@ describe('Number Bases / Hexadecimal', () => {
     expect(app!.root.findByProps({ testID: 'number-bases-screen-title' }).props.children).toBe(
       UPSTREAM_TEXT.mode.hex,
     );
-    expect(
-      activeMethodList(app!).findByProps({ testID: 'key-method-hex' }).props.accessibilityState,
-    ).toEqual({ selected: true });
+    expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.selectedValue).toBe(
+      'hex',
+    );
 
     await ReactTestRenderer.act(async () => {
       app!

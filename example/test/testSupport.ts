@@ -353,7 +353,7 @@ export async function selectEntropyTool(
   tool: 'cards' | 'dice' | 'hex' | 'key' | 'seed',
 ) {
   await ReactTestRenderer.act(async () => {
-    activeMethodList(app).findByProps({ testID: `key-method-${tool}` }).props.onPress();
+    activeMethodList(app).findByProps({ testID: 'key-method-picker' }).props.onValueChange(tool, 0);
   });
 }
 
