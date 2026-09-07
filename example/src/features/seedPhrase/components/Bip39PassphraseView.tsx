@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SoftKeyboard } from '../../../components/SoftKeyboard';
 import type { DiceColors } from '../../dice/diceTheme';
+import { KeyStationLifeHash } from '../../keyStation/components/KeyStationLifeHash';
 import {
   analyzeBip39Passphrase,
   bip39PassphraseAutocomplete,
@@ -182,11 +183,18 @@ export function MasterFingerprintHeader({
             {baseFingerprint}
           </Text>
         ) : null}
+        <KeyStationLifeHash
+          compact
+          fingerprint={baseFingerprint}
+          imageTestID={`${testID}-base-lifehash`}
+          trailing
+        />
       </View>
       <View
         accessibilityState={{ disabled: !passphraseFingerprint }}
         style={[
           styles.masterFingerprintRow,
+          styles.masterFingerprintPassphraseRow,
           !passphraseFingerprint && styles.masterFingerprintRowUnavailable,
         ]}
         testID={`${testID}-passphrase-row`}
@@ -194,7 +202,7 @@ export function MasterFingerprintHeader({
         <Text
           adjustsFontSizeToFit
           minimumFontScale={0.7}
-          numberOfLines={1}
+          numberOfLines={2}
           style={[styles.masterFingerprintRowLabel, { color: colors.muted }]}
           testID={`${testID}-passphrase-label`}
         >
@@ -211,6 +219,12 @@ export function MasterFingerprintHeader({
             {passphraseFingerprint}
           </Text>
         ) : null}
+        <KeyStationLifeHash
+          compact
+          fingerprint={passphraseFingerprint}
+          imageTestID={`${testID}-passphrase-lifehash`}
+          trailing
+        />
       </View>
     </View>
   );
@@ -544,5 +558,8 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     marginLeft: 4,
     minWidth: 0,
+  },
+  masterFingerprintPassphraseRow: {
+    marginTop: 3,
   },
 });

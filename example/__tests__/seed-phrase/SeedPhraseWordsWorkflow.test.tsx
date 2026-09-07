@@ -6,6 +6,7 @@ import {
   activeMethodList,
   App,
   mockEntropyToMnemonic,
+  mockLifehashFromFingerprint,
   mockMnemonicToEntropy,
   mockMnemonicToMasterFingerprint,
   mockMnemonicToSeed,
@@ -22,6 +23,11 @@ import {
 import { SeedPhraseScreen } from '../../src/screens/SeedPhraseScreen';
 
 describe('Seed Phrase / Words', () => {
+  afterEach(() => {
+    mockLifehashFromFingerprint.mockReset();
+    mockLifehashFromFingerprint.mockReturnValue('');
+  });
+
   test('validates a typed Seed Phrase through the native BIP39 binding', async () => {
     const mnemonic =
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
@@ -343,6 +349,9 @@ describe('Seed Phrase / Words', () => {
     const mnemonic =
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
     const entropy = new Uint8Array(16).buffer;
+    mockLifehashFromFingerprint.mockImplementation(
+      fingerprint => `data:image/png;base64,${fingerprint}`,
+    );
     mockMnemonicToMasterFingerprint.mockClear();
     mockMnemonicToEntropy.mockImplementation(phrase => {
       if (phrase !== mnemonic) {
@@ -393,6 +402,11 @@ describe('Seed Phrase / Words', () => {
         .props.children,
     ).toBe('73c5da0a');
     expect(
+      app!.root.findByProps({
+        testID: 'seed-phrase-passphrase-view-master-fingerprint-base-lifehash',
+      }).props.source,
+    ).toEqual({ uri: 'data:image/png;base64,73c5da0a' });
+    expect(
       app!
         .root.findByProps({ testID: 'seed-phrase-passphrase-view-master-fingerprint-passphrase-label' })
         .props.children,
@@ -437,6 +451,11 @@ describe('Seed Phrase / Words', () => {
           testID: 'seed-phrase-passphrase-view-master-fingerprint-passphrase-row',
         }).props.accessibilityState,
     ).toEqual({ disabled: false });
+    expect(
+      app!.root.findByProps({
+        testID: 'seed-phrase-passphrase-view-master-fingerprint-passphrase-lifehash',
+      }).props.source,
+    ).toEqual({ uri: 'data:image/png;base64,b4e3f5ed' });
     await ReactTestRenderer.act(async () => {
       app!
         .root.findByProps({ testID: 'close-seed-phrase-passphrase' }).props.onPress();

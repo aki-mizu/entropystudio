@@ -7,9 +7,15 @@ type Props = {
   readonly compact?: boolean;
   readonly fingerprint: string;
   readonly imageTestID: string;
+  readonly trailing?: boolean;
 };
 
-export function KeyStationLifeHash({ compact = false, fingerprint, imageTestID }: Props) {
+export function KeyStationLifeHash({
+  compact = false,
+  fingerprint,
+  imageTestID,
+  trailing = false,
+}: Props) {
   const [uri, setUri] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,7 +40,7 @@ export function KeyStationLifeHash({ compact = false, fingerprint, imageTestID }
       accessible={false}
       resizeMode="cover"
       source={{ uri }}
-      style={[styles.image, compact && styles.compactImage]}
+      style={[styles.image, compact && styles.compactImage, compact && trailing && styles.trailingImage]}
       testID={imageTestID}
     />
   );
@@ -53,5 +59,9 @@ const styles = StyleSheet.create({
     marginLeft: 0,
     marginRight: 8,
     width: 22,
+  },
+  trailingImage: {
+    marginLeft: 8,
+    marginRight: 0,
   },
 });
