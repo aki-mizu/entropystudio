@@ -201,8 +201,25 @@ export const UPSTREAM_TEXT = {
   keys: {
     add: 'Open Key Station to derive another key',
     defaultTab: 'Key {n}',
+    derivationPath: 'Derivation path',
+    derivationPathErrors: {
+      index:
+        "Each derivation path index must be a whole number from 0 to 2,147,483,647, optionally followed by h or '.",
+      missingComponents:
+        'Derivation path must include purpose, network, and account plus every address component shown.',
+      missingAccount: 'Derivation path must include purpose, network, and account indexes.',
+      root: 'Derivation path must start with m and contain slash-separated BIP32 indexes.',
+    },
+    derivationPathHelp: 'Exact BIP32 address path · edit directly to use a custom path',
     delete: 'Delete current key',
     methodLabel: 'Method',
+    scriptType: 'Script type',
+    scriptTypes: {
+      bip44: 'Legacy',
+      bip49: 'Nested SegWit',
+      bip84: 'Native SegWit',
+      bip86: 'Taproot',
+    },
     station: 'Key Station',
     tabLabel: 'Keys',
   },

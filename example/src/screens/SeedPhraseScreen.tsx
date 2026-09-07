@@ -22,6 +22,9 @@ import {
 } from '../features/entropySync';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import type { KeyStationDerivation } from '../features/keyStation/keyStation';
+import type { KeyStationScriptType } from '../features/keyStation/keyStation';
+import { KeyDerivationSettingsButton } from '../features/keyStation/components/KeyDerivationSettingsButton';
+import { KeyDerivationSettingsView } from '../features/keyStation/components/KeyDerivationSettingsView';
 import { SeedPhraseKeypad } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import type { SeedPhraseEntryMethod } from '../features/seedPhrase/components/SeedPhraseKeypad';
 import {
@@ -50,16 +53,20 @@ import { mnemonicToEntropy, mnemonicToSeed } from '../native/entropyStudio';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
-type SeedPhraseView = 'entry' | 'passphrase' | 'setup';
+type SeedPhraseView = 'entry' | 'key-settings' | 'passphrase' | 'setup';
 type InputSelection = { readonly end: number; readonly start: number };
 
 type Props = {
   readonly activeTool: EntropyTool;
   readonly autocompleteEnabled: boolean;
+  readonly derivationPath: string;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
+  readonly onSetDerivationPath: (path: string) => void;
+  readonly onSetScriptType: (scriptType: KeyStationScriptType) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
+  readonly scriptType: KeyStationScriptType;
 };
 
 const SEED_METHOD_COPY = {
@@ -106,10 +113,14 @@ function replaceInputSelection(value: string, selection: InputSelection, inserte
 export function SeedPhraseScreen({
   activeTool,
   autocompleteEnabled,
+  derivationPath,
   isActive,
   isDarkMode,
   onDeriveKey,
+  onSetDerivationPath,
+  onSetScriptType,
   onSelectTool,
+  scriptType,
 }: Props) {
   const [activeView, setActiveView] = useState<SeedPhraseView>('setup');
   const [inputSelection, setInputSelection] = useState<InputSelection | null>(null);
@@ -183,7 +194,7 @@ export function SeedPhraseScreen({
     }
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      setActiveView(view => (view === 'passphrase' ? 'entry' : 'setup'));
+      setActiveView(view => (view === 'passphrase' || view === 'key-settings' ? 'entry' : 'setup'));
       return true;
     });
     return () => subscription.remove();
@@ -284,6 +295,10 @@ export function SeedPhraseScreen({
 
   function openPassphrase() {
     setActiveView('passphrase');
+  }
+
+  function openKeySettings() {
+    setActiveView('key-settings');
   }
 
   function showResult() {
@@ -417,6 +432,13 @@ export function SeedPhraseScreen({
               onPress={openPassphrase}
               testID="open-seed-phrase-passphrase"
             />
+            <KeyDerivationSettingsButton
+              compact
+              colors={colors}
+              onPress={openKeySettings}
+              scriptType={scriptType}
+              testID="open-seed-phrase-key-settings"
+            />
           </View>
 
           {seedMethod === 'numbers' && (
@@ -533,24 +555,37 @@ export function SeedPhraseScreen({
             onInsert={insertInputCharacter}
           />
 
-          <Pressable
-            accessibilityRole="button"
-            disabled={!canDeriveWithPassphrase}
-            onPress={showResult}
-            style={({ pressed }) => [
-              styles.button,
-              {
-                backgroundColor: colors.accent,
-                opacity: !canDeriveWithPassphrase ? 0.45 : pressed ? 0.82 : 1,
-              },
-            ]}
-            testID="derive-seed-phrase"
-          >
-            <Text style={[styles.buttonText, { color: colors.onAccent }]}>
-              {UPSTREAM_TEXT.action.derive}
-            </Text>
-          </Pressable>
+          <View style={styles.entryActions}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!canDeriveWithPassphrase}
+              onPress={showResult}
+              style={({ pressed }) => [
+                styles.button,
+                styles.deriveButton,
+                {
+                  backgroundColor: colors.accent,
+                  opacity: !canDeriveWithPassphrase ? 0.45 : pressed ? 0.82 : 1,
+                },
+              ]}
+              testID="derive-seed-phrase"
+            >
+              <Text style={[styles.buttonText, { color: colors.onAccent }]}>
+                {UPSTREAM_TEXT.action.derive}
+              </Text>
+            </Pressable>
+          </View>
         </View>
+      ) : activeView === 'key-settings' ? (
+        <KeyDerivationSettingsView
+          colors={colors}
+          derivationPath={derivationPath}
+          onBack={() => setActiveView('entry')}
+          onSetDerivationPath={onSetDerivationPath}
+          onSetScriptType={onSetScriptType}
+          scriptType={scriptType}
+          testIDPrefix="seed-phrase"
+        />
       ) : (
         <Bip39PassphraseView
           backTestID="close-seed-phrase-passphrase"
@@ -590,6 +625,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  deriveButton: {
+    flex: 1,
+    marginTop: 0,
+  },
+  entryActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
   entryContent: {
     flex: 1,
     paddingBottom: 12,
@@ -604,6 +648,7 @@ const styles = StyleSheet.create({
   entryHeaderCopy: {
     flex: 1,
     gap: 2,
+    minWidth: 72,
     paddingHorizontal: 12,
   },
   header: {

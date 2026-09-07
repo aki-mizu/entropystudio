@@ -483,7 +483,9 @@ describe('Private Key', () => {
     expect(app!.root.findByProps({ testID: 'key-station-tab-2' }).props.children.props.children).toBe(
       'd34db33f',
     );
-    expect(app!.root.findAllByProps({ testID: 'key-station-master-fingerprint-value' })).toHaveLength(0);
+    expect(app!.root.findByProps({ testID: 'key-station-master-fingerprint-value' }).props.children).toBe(
+      'd34db33f',
+    );
     expect(app!.root.findAllByProps({ testID: 'key-station-seed-words' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
       UPSTREAM_TEXT.result.entropyHex,

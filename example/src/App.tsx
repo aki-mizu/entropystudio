@@ -7,8 +7,18 @@ import type { EntropyTool } from './components/EntropyMethodList';
 import { KeyStationTabs } from './components/KeyStationTabs';
 import { diceColors } from './features/dice/diceTheme';
 import { EntropySyncProvider } from './features/entropySync';
-import { createKeyStationTab } from './features/keyStation/keyStation';
-import type { KeyStationDerivation, KeyStationTab } from './features/keyStation/keyStation';
+import {
+  createKeyStationTab,
+  DEFAULT_KEY_STATION_DERIVATION_PATH,
+  DEFAULT_KEY_STATION_SCRIPT_TYPE,
+  keyStationDerivationPathForScriptType,
+} from './features/keyStation/keyStation';
+import type {
+  KeyStationDerivation,
+  KeyStationMethod,
+  KeyStationScriptType,
+  KeyStationTab,
+} from './features/keyStation/keyStation';
 import { CardsScreen } from './screens/CardsScreen';
 import { DiceRollsScreen } from './screens/DiceRollsScreen';
 import { NumberBasesScreen } from './screens/NumberBasesScreen';
@@ -24,17 +34,35 @@ function App() {
   const [activeKeyStationTabId, setActiveKeyStationTabId] = useState<number | null>(null);
   const [keyStationTabs, setKeyStationTabs] = useState<readonly KeyStationTab[]>([]);
   const [seedPhraseAutocompleteEnabled, setSeedPhraseAutocompleteEnabled] = useState(true);
+  const [keyStationScriptType, setKeyStationScriptType] = useState<KeyStationScriptType>(
+    DEFAULT_KEY_STATION_SCRIPT_TYPE,
+  );
+  const [keyStationDerivationPath, setKeyStationDerivationPath] = useState(
+    DEFAULT_KEY_STATION_DERIVATION_PATH,
+  );
   const nextKeyStationTabId = useRef(1);
   const nextKeyStationTabNumber = useRef(1);
   const colors = diceColors(isDarkMode);
   const activeKeyStationTab = keyStationTabs.find(tab => tab.id === activeKeyStationTabId) ?? null;
   const isKeyStationActive = activeTab === 'method' && activeKeyStationTabId === null;
 
+  function selectKeyStationScriptType(scriptType: KeyStationScriptType) {
+    setKeyStationScriptType(scriptType);
+    setKeyStationDerivationPath(currentPath =>
+      keyStationDerivationPathForScriptType(scriptType, currentPath),
+    );
+  }
+
   function addKeyStationTab(derivation: KeyStationDerivation) {
     const tab = createKeyStationTab(
       derivation,
       nextKeyStationTabId.current++,
       nextKeyStationTabNumber.current++,
+      {
+        derivationPath: keyStationDerivationPath,
+        method: activeTool as KeyStationMethod,
+        scriptType: keyStationScriptType,
+      },
     );
     setKeyStationTabs(tabs => [...tabs, tab]);
     setActiveKeyStationTabId(tab.id);
@@ -80,18 +108,26 @@ function App() {
               <DiceRollsScreen
                 activeTool={activeTool}
                 autocompleteEnabled={seedPhraseAutocompleteEnabled}
+                derivationPath={keyStationDerivationPath}
                 isActive={activeTool === 'dice' && isKeyStationActive}
                 isDarkMode={isDarkMode}
                 onDeriveKey={addKeyStationTab}
+                onSetDerivationPath={setKeyStationDerivationPath}
+                onSetScriptType={selectKeyStationScriptType}
                 onSelectTool={setActiveTool}
+                scriptType={keyStationScriptType}
               />
               <CardsScreen
                 activeTool={activeTool}
                 autocompleteEnabled={seedPhraseAutocompleteEnabled}
+                derivationPath={keyStationDerivationPath}
                 isActive={activeTool === 'cards' && isKeyStationActive}
                 isDarkMode={isDarkMode}
                 onDeriveKey={addKeyStationTab}
+                onSetDerivationPath={setKeyStationDerivationPath}
+                onSetScriptType={selectKeyStationScriptType}
                 onSelectTool={setActiveTool}
+                scriptType={keyStationScriptType}
               />
               <NumberBasesScreen
                 activeTool={activeTool}
@@ -104,10 +140,14 @@ function App() {
               <SeedPhraseScreen
                 activeTool={activeTool}
                 autocompleteEnabled={seedPhraseAutocompleteEnabled}
+                derivationPath={keyStationDerivationPath}
                 isActive={activeTool === 'seed' && isKeyStationActive}
                 isDarkMode={isDarkMode}
                 onDeriveKey={addKeyStationTab}
+                onSetDerivationPath={setKeyStationDerivationPath}
+                onSetScriptType={selectKeyStationScriptType}
                 onSelectTool={setActiveTool}
+                scriptType={keyStationScriptType}
               />
               <PrivateKeyScreen
                 activeTool={activeTool}

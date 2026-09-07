@@ -37,6 +37,8 @@ import {
   useEntropySync,
   useRegisterCurrentEntropySyncRequest,
 } from '../features/entropySync';
+import { KeyDerivationSettingsButton } from '../features/keyStation/components/KeyDerivationSettingsButton';
+import { KeyDerivationSettingsView } from '../features/keyStation/components/KeyDerivationSettingsView';
 import {
   Bip39PassphraseButton,
   Bip39PassphraseView,
@@ -45,10 +47,13 @@ import {
 } from '../features/seedPhrase/bip39Passphrase';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
-import type { KeyStationDerivation } from '../features/keyStation/keyStation';
+import type {
+  KeyStationDerivation,
+  KeyStationScriptType,
+} from '../features/keyStation/keyStation';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
-type CardView = 'entry' | 'passphrase' | 'setup';
+type CardView = 'entry' | 'key-settings' | 'passphrase' | 'setup';
 
 const EMPTY_CARD_SELECTION: CardSelectionState = {
   availableRanks: [],
@@ -60,19 +65,27 @@ const EMPTY_CARD_SELECTION: CardSelectionState = {
 type Props = {
   readonly activeTool: EntropyTool;
   readonly autocompleteEnabled: boolean;
+  readonly derivationPath: string;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
+  readonly onSetDerivationPath: (path: string) => void;
+  readonly onSetScriptType: (scriptType: KeyStationScriptType) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
+  readonly scriptType: KeyStationScriptType;
 };
 
 export function CardsScreen({
   activeTool,
   autocompleteEnabled,
+  derivationPath,
   isActive,
   isDarkMode,
   onDeriveKey,
+  onSetDerivationPath,
+  onSetScriptType,
   onSelectTool,
+  scriptType,
 }: Props) {
   const [activeView, setActiveView] = useState<CardView>('setup');
   const [deriveError, setDeriveError] = useState<string | null>(null);
@@ -147,7 +160,9 @@ export function CardsScreen({
     }
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      setActiveView(view => (view === 'passphrase' ? 'entry' : 'setup'));
+      setActiveView(view =>
+        view === 'passphrase' || view === 'key-settings' ? 'entry' : 'setup',
+      );
       return true;
     });
     return () => subscription.remove();
@@ -177,6 +192,10 @@ export function CardsScreen({
 
   function openPassphrase() {
     setActiveView('passphrase');
+  }
+
+  function openKeySettings() {
+    setActiveView('key-settings');
   }
 
   function changeMethod(value: CardMethod) {
@@ -374,6 +393,13 @@ export function CardsScreen({
               onPress={openPassphrase}
               testID="open-cards-passphrase"
             />
+            <KeyDerivationSettingsButton
+              compact
+              colors={colors}
+              onPress={openKeySettings}
+              scriptType={scriptType}
+              testID="open-cards-key-settings"
+            />
           </View>
 
           <View style={styles.seedPreviewArea}>
@@ -476,29 +502,42 @@ export function CardsScreen({
             )}
           </View>
 
-          <Pressable
-            accessibilityRole="button"
-            disabled={!canDeriveWithPassphrase}
-            onPress={showResult}
-            style={({ pressed }) => [
-              styles.button,
-              {
-                backgroundColor: colors.accent,
-                opacity: !canDeriveWithPassphrase ? 0.45 : pressed ? 0.82 : 1,
-              },
-            ]}
-            testID="derive-card-phrase"
-          >
-            <Text style={[styles.buttonText, { color: colors.onAccent }]} testID="derive-card-phrase-label">
-              {copy.deriveAction}
-            </Text>
-          </Pressable>
+          <View style={styles.actionBar}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!canDeriveWithPassphrase}
+              onPress={showResult}
+              style={({ pressed }) => [
+                styles.button,
+                styles.deriveButton,
+                {
+                  backgroundColor: colors.accent,
+                  opacity: !canDeriveWithPassphrase ? 0.45 : pressed ? 0.82 : 1,
+                },
+              ]}
+              testID="derive-card-phrase"
+            >
+              <Text style={[styles.buttonText, { color: colors.onAccent }]} testID="derive-card-phrase-label">
+                {copy.deriveAction}
+              </Text>
+            </Pressable>
+          </View>
           {deriveError ? (
             <Text style={[styles.error, { color: colors.error }]} testID="card-error">
               {deriveError}
             </Text>
           ) : null}
         </View>
+      ) : activeView === 'key-settings' ? (
+        <KeyDerivationSettingsView
+          colors={colors}
+          derivationPath={derivationPath}
+          onBack={() => setActiveView('entry')}
+          onSetDerivationPath={onSetDerivationPath}
+          onSetScriptType={onSetScriptType}
+          scriptType={scriptType}
+          testIDPrefix="cards"
+        />
       ) : (
         <Bip39PassphraseView
           backTestID="close-cards-passphrase"
@@ -657,9 +696,18 @@ const styles = StyleSheet.create({
     marginTop: 16,
     minHeight: 50,
   },
+  actionBar: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  deriveButton: {
+    flex: 1,
+    marginTop: 0,
   },
   cardArea: {
     marginTop: 12,
@@ -712,7 +760,7 @@ const styles = StyleSheet.create({
   entryHeaderCopy: {
     flex: 1,
     gap: 2,
-    minWidth: 0,
+    minWidth: 72,
     paddingHorizontal: 12,
   },
   disabledChoice: {

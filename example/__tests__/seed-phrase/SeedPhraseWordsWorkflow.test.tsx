@@ -66,6 +66,71 @@ describe('Seed Phrase / Words', () => {
 
     expect(app!.root.findByProps({ testID: 'seed-phrase-entry-view' })).toBeDefined();
     expect(
+      app!.root.findByProps({ testID: 'open-seed-phrase-key-settings-label' }).props.children,
+    ).toBe(UPSTREAM_TEXT.keys.scriptTypes.bip84);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-seed-phrase-key-settings' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'seed-phrase-key-settings-view' })).toBeDefined();
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker' }).props.accessibilityLabel,
+    ).toBe(UPSTREAM_TEXT.keys.scriptType);
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.value,
+    ).toBe("m/84'/0'/0'/0/0");
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-derivation-path-help' }).props.children,
+    ).toBe(UPSTREAM_TEXT.keys.derivationPathHelp);
+    expect(app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props['aria-invalid']).toBe(
+      false,
+    );
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText('not-a-path');
+    });
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-derivation-path-help' }).props.children,
+    ).toBe(UPSTREAM_TEXT.keys.derivationPathErrors.root);
+    expect(app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props['aria-invalid']).toBe(
+      true,
+    );
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText("m/84'/0'");
+    });
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-derivation-path-help' }).props.children,
+    ).toBe(UPSTREAM_TEXT.keys.derivationPathErrors.missingComponents);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText(
+        "m/84'/0'/999999999999999999999/0/0",
+      );
+    });
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-derivation-path-help' }).props.children,
+    ).toBe(UPSTREAM_TEXT.keys.derivationPathErrors.index);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText(
+        "m/84'/0'/0'/0/0",
+      );
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker' }).props.onValueChange('bip86', 3);
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText(
+        "m/84'/1'/2'/0/7",
+      );
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker' }).props.onValueChange('bip44', 0);
+    });
+    expect(app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.value).toBe(
+      "m/44'/1'/2'/0/7",
+    );
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-seed-phrase-key-settings' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'seed-phrase-entry-view' })).toBeDefined();
+    expect(
       app!.root.findByProps({ testID: 'seed-phrase-master-fingerprint-label' }).props.children,
     ).toBe(UPSTREAM_TEXT.fingerprint.master);
     expect(
@@ -135,7 +200,15 @@ describe('Seed Phrase / Words', () => {
       '73c5da0a',
     );
     expect(app!.root.findByProps({ testID: 'key-station-result-screen' })).toBeDefined();
-    expect(app!.root.findAllByProps({ testID: 'key-station-master-fingerprint-value' })).toHaveLength(0);
+    expect(app!.root.findByProps({ testID: 'key-station-master-fingerprint-value' }).props.children).toBe(
+      '73c5da0a',
+    );
+    expect(app!.root.findByProps({ testID: 'key-station-script-value' }).props.children).toBe(
+      UPSTREAM_TEXT.keys.scriptTypes.bip44,
+    );
+    expect(app!.root.findByProps({ testID: 'key-station-path-value' }).props.children).toBe(
+      "m/44'/1'/2'/0/7",
+    );
     expect(app!.root.findAllByProps({ testID: 'key-station-seed-words' })).toHaveLength(0);
     expect(app!.root.findAllByProps({ testID: 'seed-phrase-result-sheet' })).toHaveLength(0);
     expect(app!.root.findAllByProps({ testID: 'seed-phrase-passphrase-view' })).toHaveLength(0);

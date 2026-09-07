@@ -4,7 +4,11 @@ import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import type { DiceColors } from '../features/dice/diceTheme';
 import type { KeyStationTab } from '../features/keyStation/keyStation';
-import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../features/upstreamUiCopy';
+import {
+  UPSTREAM_TEXT,
+  UPSTREAM_UI_FALLBACK_COPY,
+  UPSTREAM_UI_LABELS,
+} from '../features/upstreamUiCopy';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
@@ -48,12 +52,28 @@ export function KeyStationResultScreen({ colors, isActive, onReturnToStation, ta
           </Text>
         ) : null}
         {derivation.kind === 'bip39' ? (
-          <DiceResultPanel
-            colors={colors}
-            entropyLabel={UPSTREAM_TEXT.result.entropyHex}
-            masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
-            result={{ entropy: derivation.entropy, masterSeed: derivation.masterSeed }}
-          />
+          <>
+            <View style={styles.summary} testID="key-station-summary">
+              <Text style={[styles.fingerprint, { color: colors.text }]} testID="key-station-master-fingerprint-value">
+                {tab.masterFingerprint}
+              </Text>
+              <Text style={[styles.meta, { color: colors.muted }]} testID="key-station-method-value">
+                {UPSTREAM_UI_LABELS.keyMode[tab.method]}
+              </Text>
+              <Text style={[styles.meta, { color: colors.muted }]} testID="key-station-script-value">
+                {UPSTREAM_TEXT.keys.scriptTypes[tab.scriptType]}
+              </Text>
+              <Text style={[styles.meta, styles.path, { color: colors.muted }]} testID="key-station-path-value">
+                {tab.derivationPath}
+              </Text>
+            </View>
+            <DiceResultPanel
+              colors={colors}
+              entropyLabel={UPSTREAM_TEXT.result.entropyHex}
+              masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
+              result={{ entropy: derivation.entropy, masterSeed: derivation.masterSeed }}
+            />
+          </>
         ) : (
           <DiceResultPanel
             colors={colors}
@@ -72,8 +92,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
     paddingTop: 22,
   },
+  fingerprint: {
+    fontFamily: 'monospace',
+    fontSize: 18,
+    fontWeight: '700',
+  },
   hidden: {
     display: 'none',
+  },
+  meta: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  path: {
+    fontFamily: 'monospace',
   },
   privateKeyTitle: {
     fontSize: 20,
@@ -83,5 +116,8 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
+  },
+  summary: {
+    marginBottom: 18,
   },
 });

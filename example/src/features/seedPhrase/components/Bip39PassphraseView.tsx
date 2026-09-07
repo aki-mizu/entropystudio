@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
     minHeight: 44,
     paddingHorizontal: 8,
-    width: 140,
+    width: 110,
   },
   compactButtonText: {
     fontSize: 12,

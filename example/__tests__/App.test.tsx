@@ -20,7 +20,7 @@ import { EntropySyncSource } from '../src/native/entropyStudio';
 import type { EntropySyncSnapshot } from '../src/native/entropyStudio';
 import { diceColors } from '../src/features/dice/diceTheme';
 import { STUDIO_UI_TEXT } from '../src/features/studioUiCopy';
-import { formatCopy, UPSTREAM_TEXT } from '../src/features/upstreamUiCopy';
+import { formatCopy, UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '../src/features/upstreamUiCopy';
 
 const SYNCED_ZERO_ENTROPY_SNAPSHOT: EntropySyncSnapshot = {
   base4: '',
@@ -127,6 +127,41 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
   });
 });
 
+test('opens key derivation settings from Dice and Cards entry screens', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await openDiceEntry(app!);
+  expect(app!.root.findByProps({ testID: 'open-dice-key-settings' })).toBeDefined();
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'dice-key-settings-view' })).toBeDefined();
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'close-dice-key-settings' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'dice-entry-header-copy' })).toBeDefined();
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'close-dice-entry' }).props.onPress();
+  });
+
+  await selectEntropyTool(app!, 'cards');
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-cards-entry' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'open-cards-key-settings' })).toBeDefined();
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-cards-key-settings' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'cards-key-settings-view' })).toBeDefined();
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'close-cards-key-settings' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'cards-entry-view' })).toBeDefined();
+});
+
 test('keeps native workflow trees mounted while changing methods', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
@@ -194,6 +229,18 @@ test('keeps derived keys in removable Key Station tabs', async () => {
 
   expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.children.props.children).toBe(
     '73c5da0a',
+  );
+  expect(app!.root.findByProps({ testID: 'key-station-master-fingerprint-value' }).props.children).toBe(
+    '73c5da0a',
+  );
+  expect(app!.root.findByProps({ testID: 'key-station-method-value' }).props.children).toBe(
+    UPSTREAM_UI_LABELS.keyMode.dice,
+  );
+  expect(app!.root.findByProps({ testID: 'key-station-script-value' }).props.children).toBe(
+    UPSTREAM_TEXT.keys.scriptTypes.bip84,
+  );
+  expect(app!.root.findByProps({ testID: 'key-station-path-value' }).props.children).toBe(
+    "m/84'/0'/0'/0/0",
   );
   expect(app!.root.findByProps({ testID: 'key-station-tab-1' }).props.accessibilityState).toEqual({
     selected: true,

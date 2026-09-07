@@ -37,6 +37,8 @@ import {
   useEntropySync,
   useRegisterCurrentEntropySyncRequest,
 } from '../features/entropySync';
+import { KeyDerivationSettingsButton } from '../features/keyStation/components/KeyDerivationSettingsButton';
+import { KeyDerivationSettingsView } from '../features/keyStation/components/KeyDerivationSettingsView';
 import { DirectDiceStep } from '../native/entropyStudio';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import {
@@ -44,28 +46,39 @@ import {
   UPSTREAM_UI_FALLBACK_COPY,
 } from '../features/upstreamUiCopy';
 import { useDiceRolls } from '../features/dice/useDiceRolls';
-import type { KeyStationDerivation } from '../features/keyStation/keyStation';
+import type {
+  KeyStationDerivation,
+  KeyStationScriptType,
+} from '../features/keyStation/keyStation';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
-type DiceView = 'calculations' | 'entry' | 'passphrase' | 'setup';
+type DiceView = 'calculations' | 'entry' | 'key-settings' | 'passphrase' | 'setup';
 type SheetName = 'final-word' | null;
 
 type Props = {
   readonly activeTool: EntropyTool;
   readonly autocompleteEnabled: boolean;
+  readonly derivationPath: string;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onDeriveKey: (derivation: KeyStationDerivation) => void;
+  readonly onSetDerivationPath: (path: string) => void;
+  readonly onSetScriptType: (scriptType: KeyStationScriptType) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
+  readonly scriptType: KeyStationScriptType;
 };
 
 export function DiceRollsScreen({
   activeTool,
   autocompleteEnabled,
+  derivationPath,
   isActive,
   isDarkMode,
   onDeriveKey,
+  onSetDerivationPath,
+  onSetScriptType,
   onSelectTool,
+  scriptType,
 }: Props) {
   const { height: windowHeight } = useWindowDimensions();
   const [activeSheet, setActiveSheet] = useState<SheetName>(null);
@@ -146,7 +159,11 @@ export function DiceRollsScreen({
     }
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      setActiveView(view => (view === 'passphrase' || view === 'calculations' ? 'entry' : 'setup'));
+      setActiveView(view =>
+        view === 'passphrase' || view === 'calculations' || view === 'key-settings'
+          ? 'entry'
+          : 'setup',
+      );
       return true;
     });
     return () => subscription.remove();
@@ -176,6 +193,10 @@ export function DiceRollsScreen({
 
   function openPassphrase() {
     setActiveView('passphrase');
+  }
+
+  function openKeySettings() {
+    setActiveView('key-settings');
   }
 
   function chooseFinalWord(word: string) {
@@ -329,6 +350,13 @@ export function DiceRollsScreen({
               onPress={openPassphrase}
               testID="open-dice-passphrase"
             />
+            <KeyDerivationSettingsButton
+              compact
+              colors={colors}
+              onPress={openKeySettings}
+              scriptType={scriptType}
+              testID="open-dice-key-settings"
+            />
           </View>
 
           <View style={styles.seedPreviewArea}>
@@ -456,6 +484,16 @@ export function DiceRollsScreen({
           onBack={() => setActiveView('entry')}
           rows={directCalculations}
         />
+      ) : activeView === 'key-settings' ? (
+        <KeyDerivationSettingsView
+          colors={colors}
+          derivationPath={derivationPath}
+          onBack={() => setActiveView('entry')}
+          onSetDerivationPath={onSetDerivationPath}
+          onSetScriptType={onSetScriptType}
+          scriptType={scriptType}
+          testIDPrefix="dice"
+        />
       ) : (
         <Bip39PassphraseView
           backTestID="close-dice-passphrase"
@@ -565,7 +603,7 @@ const styles = StyleSheet.create({
   entryHeaderCopy: {
     flex: 1,
     gap: 2,
-    minWidth: 0,
+    minWidth: 72,
     paddingHorizontal: 12,
   },
   finalWordButton: {
