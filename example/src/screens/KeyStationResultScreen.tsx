@@ -57,13 +57,24 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
           <>
             <View style={styles.summary} testID="key-station-summary">
               <View style={styles.summaryHeader}>
-                <Text style={[styles.fingerprint, { color: colors.text }]} testID="key-station-master-fingerprint-value">
-                  {tab.masterFingerprint}
-                </Text>
                 <KeyStationLifeHash
                   fingerprint={tab.masterFingerprint}
                   imageTestID="key-station-master-fingerprint-lifehash"
                 />
+                <View style={styles.summaryDetails}>
+                  <Text style={[styles.fingerprint, { color: colors.text }]} testID="key-station-master-fingerprint-value">
+                    {tab.masterFingerprint}
+                  </Text>
+                  <Text style={[styles.meta, { color: colors.muted }]} testID="key-station-method-value">
+                    {UPSTREAM_UI_LABELS.keyMode[tab.method]}
+                  </Text>
+                  <Text style={[styles.meta, { color: colors.muted }]} testID="key-station-script-value">
+                    {UPSTREAM_TEXT.keys.scriptTypes[tab.scriptType]}
+                  </Text>
+                  <Text style={[styles.meta, styles.path, { color: colors.muted }]} testID="key-station-path-value">
+                    {tab.derivationPath}
+                  </Text>
+                </View>
                 <Pressable
                   accessibilityLabel={UPSTREAM_TEXT.keys.editInput}
                   accessibilityRole="button"
@@ -79,15 +90,6 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
                   </Text>
                 </Pressable>
               </View>
-              <Text style={[styles.meta, { color: colors.muted }]} testID="key-station-method-value">
-                {UPSTREAM_UI_LABELS.keyMode[tab.method]}
-              </Text>
-              <Text style={[styles.meta, { color: colors.muted }]} testID="key-station-script-value">
-                {UPSTREAM_TEXT.keys.scriptTypes[tab.scriptType]}
-              </Text>
-              <Text style={[styles.meta, styles.path, { color: colors.muted }]} testID="key-station-path-value">
-                {tab.derivationPath}
-              </Text>
             </View>
             <DiceResultPanel
               colors={colors}
@@ -160,5 +162,9 @@ const styles = StyleSheet.create({
   summaryHeader: {
     alignItems: 'center',
     flexDirection: 'row',
+  },
+  summaryDetails: {
+    flex: 1,
+    minWidth: 0,
   },
 });

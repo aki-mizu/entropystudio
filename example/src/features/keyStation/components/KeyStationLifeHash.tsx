@@ -51,6 +51,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     height: 48,
     marginLeft: 8,
+    marginRight: 8,
     width: 48,
   },
   compactImage: {
