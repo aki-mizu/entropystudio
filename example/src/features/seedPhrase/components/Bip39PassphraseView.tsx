@@ -19,6 +19,7 @@ type ButtonProps = {
   readonly compact?: boolean;
   readonly colors: DiceColors;
   readonly onPress: () => void;
+  readonly stacked?: boolean;
   readonly testID: string;
 };
 
@@ -89,6 +90,7 @@ export function Bip39PassphraseButton({
   compact = false,
   colors,
   onPress,
+  stacked = false,
   testID,
 }: ButtonProps) {
   return (
@@ -99,6 +101,7 @@ export function Bip39PassphraseButton({
       style={({ pressed }) => [
         styles.button,
         compact && styles.compactButton,
+        compact && stacked && styles.stackedCompactButton,
         {
           borderColor: colors.border,
           opacity: pressed ? 0.72 : 1,
@@ -108,8 +111,13 @@ export function Bip39PassphraseButton({
     >
       <Text
         adjustsFontSizeToFit={compact}
-        numberOfLines={compact ? 2 : 1}
-        style={[styles.buttonText, compact && styles.compactButtonText, { color: colors.accent }]}
+        numberOfLines={stacked ? 1 : compact ? 2 : 1}
+        style={[
+          styles.buttonText,
+          compact && styles.compactButtonText,
+          compact && stacked && styles.stackedCompactButtonText,
+          { color: colors.accent },
+        ]}
       >
         {UPSTREAM_TEXT.passphrase.label}
       </Text>
@@ -475,6 +483,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 15,
     textAlign: 'center',
+  },
+  stackedCompactButton: {
+    height: 26,
+    minHeight: 26,
+    paddingHorizontal: 4,
+  },
+  stackedCompactButtonText: {
+    fontSize: 10,
+    lineHeight: 12,
   },
   content: {
     flex: 1,

@@ -463,19 +463,23 @@ export function SeedPhraseScreen({
                 testID="seed-phrase-master-fingerprint"
               />
             </View>
-            <Bip39PassphraseButton
-              compact
-              colors={colors}
-              onPress={openPassphrase}
-              testID="open-seed-phrase-passphrase"
-            />
-            <KeyDerivationSettingsButton
-              compact
-              colors={colors}
-              onPress={openKeySettings}
-              scriptType={scriptType}
-              testID="open-seed-phrase-key-settings"
-            />
+            <View style={styles.entryHeaderActions} testID="seed-phrase-entry-header-actions">
+              <Bip39PassphraseButton
+                compact
+                colors={colors}
+                onPress={openPassphrase}
+                stacked
+                testID="open-seed-phrase-passphrase"
+              />
+              <KeyDerivationSettingsButton
+                compact
+                colors={colors}
+                onPress={openKeySettings}
+                scriptType={scriptType}
+                stacked
+                testID="open-seed-phrase-key-settings"
+              />
+            </View>
           </View>
 
           {seedMethod === 'numbers' && (
@@ -681,6 +685,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     minHeight: 58,
+  },
+  entryHeaderActions: {
+    alignItems: 'flex-end',
+    flexDirection: 'column',
+    gap: 4,
   },
   entryHeaderCopy: {
     flex: 1,

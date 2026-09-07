@@ -137,6 +137,13 @@ test('opens key derivation settings from Dice and Cards entry screens', async ()
   });
 
   await openDiceEntry(app!);
+  expect(
+    app!.root.findByProps({ testID: 'dice-entry-header-actions' }).props.style,
+  ).toMatchObject({
+    alignItems: 'flex-end',
+    flexDirection: 'column',
+    gap: 4,
+  });
   expect(app!.root.findByProps({ testID: 'open-dice-key-settings' })).toBeDefined();
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
@@ -153,6 +160,13 @@ test('opens key derivation settings from Dice and Cards entry screens', async ()
   await selectEntropyTool(app!, 'cards');
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'open-cards-entry' }).props.onPress();
+  });
+  expect(
+    app!.root.findByProps({ testID: 'cards-entry-header-actions' }).props.style,
+  ).toMatchObject({
+    alignItems: 'flex-end',
+    flexDirection: 'column',
+    gap: 4,
   });
   expect(app!.root.findByProps({ testID: 'open-cards-key-settings' })).toBeDefined();
   await ReactTestRenderer.act(async () => {

@@ -9,6 +9,7 @@ type Props = {
   readonly colors: DiceColors;
   readonly onPress: () => void;
   readonly scriptType: KeyStationScriptType;
+  readonly stacked?: boolean;
   readonly testID: string;
 };
 
@@ -17,6 +18,7 @@ export function KeyDerivationSettingsButton({
   colors,
   onPress,
   scriptType,
+  stacked = false,
   testID,
 }: Props) {
   return (
@@ -27,12 +29,18 @@ export function KeyDerivationSettingsButton({
       style={({ pressed }) => [
         styles.button,
         compact && styles.compactButton,
+        compact && stacked && styles.stackedCompactButton,
         { borderColor: colors.border, opacity: pressed ? 0.72 : 1 },
       ]}
       testID={testID}
     >
       <Text
-        style={[styles.text, compact && styles.compactText, { color: colors.text }]}
+        style={[
+          styles.text,
+          compact && styles.compactText,
+          compact && stacked && styles.stackedCompactText,
+          { color: colors.text },
+        ]}
         testID={`${testID}-label`}
       >
         {UPSTREAM_TEXT.keys.scriptTypes[scriptType]}
@@ -53,7 +61,7 @@ const styles = StyleSheet.create({
   },
   compactButton: {
     flexShrink: 0,
-    marginLeft: 8,
+    marginLeft: 0,
     minHeight: 44,
     minWidth: 92,
     paddingHorizontal: 5,
@@ -63,6 +71,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     textAlign: 'center',
+  },
+  stackedCompactButton: {
+    height: 26,
+    minHeight: 26,
+    paddingHorizontal: 4,
+  },
+  stackedCompactText: {
+    lineHeight: 12,
   },
   text: {
     fontSize: 13,
