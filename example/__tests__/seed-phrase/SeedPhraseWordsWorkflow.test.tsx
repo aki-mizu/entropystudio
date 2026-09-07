@@ -407,6 +407,12 @@ describe('Seed Phrase / Words', () => {
       }).props.source,
     ).toEqual({ uri: 'data:image/png;base64,73c5da0a' });
     expect(
+      app!.root.findAllByProps({
+        testID: 'seed-phrase-passphrase-view-master-fingerprint-arrow',
+      }),
+    ).toHaveLength(0);
+
+    expect(
       app!
         .root.findByProps({ testID: 'seed-phrase-passphrase-view-master-fingerprint-passphrase-label' })
         .props.children,
@@ -456,6 +462,11 @@ describe('Seed Phrase / Words', () => {
         testID: 'seed-phrase-passphrase-view-master-fingerprint-passphrase-lifehash',
       }).props.source,
     ).toEqual({ uri: 'data:image/png;base64,b4e3f5ed' });
+    expect(
+      app!.root.findByProps({
+        testID: 'seed-phrase-passphrase-view-master-fingerprint-arrow',
+      }).props.children,
+    ).toBe(UPSTREAM_TEXT.calculations.conversionArrow);
     await ReactTestRenderer.act(async () => {
       app!
         .root.findByProps({ testID: 'close-seed-phrase-passphrase' }).props.onPress();

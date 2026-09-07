@@ -14,6 +14,7 @@ import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
 import { mnemonicToMasterFingerprint } from '../../../native/entropyStudio';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
+const MASTER_FINGERPRINT_LABEL_COLUMN_WIDTH = 80;
 
 type ButtonProps = {
   readonly compact?: boolean;
@@ -198,6 +199,16 @@ export function MasterFingerprintHeader({
           trailing
         />
       </View>
+      {passphraseFingerprint ? (
+        <Text
+          accessibilityElementsHidden
+          accessible={false}
+          style={[styles.masterFingerprintArrow, { color: colors.accent }]}
+          testID={`${testID}-arrow`}
+        >
+          {UPSTREAM_TEXT.calculations.conversionArrow}
+        </Text>
+      ) : null}
       <View
         accessibilityState={{ disabled: !passphraseFingerprint }}
         style={[
@@ -547,6 +558,18 @@ const styles = StyleSheet.create({
   },
   masterFingerprint: {
     minWidth: 0,
+    position: 'relative',
+  },
+  masterFingerprintArrow: {
+    fontSize: 18,
+    lineHeight: 18,
+    position: 'absolute',
+    left: 0,
+    textAlign: 'center',
+    top: 33,
+    transform: [{ rotate: '90deg' }],
+    width: MASTER_FINGERPRINT_LABEL_COLUMN_WIDTH,
+    zIndex: 1,
   },
   masterFingerprintLabel: {
     fontSize: 13,
