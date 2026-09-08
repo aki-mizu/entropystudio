@@ -777,15 +777,30 @@ export function KeyDerivationSettingsView({
         </View>
         <View style={[styles.advancedEntry, { borderTopColor: colors.border }]}>
           <Pressable
+            accessibilityLabel={UPSTREAM_TEXT.keys.advancedEntry}
             accessibilityRole="button"
             accessibilityState={{ expanded: advancedEntryOpen }}
             onPress={() => setAdvancedEntryOpen(open => !open)}
             style={styles.advancedSummary}
             testID={`${testIDPrefix}-advanced-entry`}
           >
-            <Text style={[styles.advancedSummaryText, { color: advancedEntryOpen ? colors.text : colors.muted }]}>
-              {UPSTREAM_TEXT.keys.advancedEntry}
-            </Text>
+            <View style={styles.advancedSummaryContent}>
+              <Text
+                accessibilityElementsHidden
+                style={[styles.advancedDisclosure, { color: advancedEntryOpen ? colors.text : colors.muted }]}
+                testID={`${testIDPrefix}-advanced-entry-indicator`}
+              >
+                {advancedEntryOpen ? '▼' : '▶'}
+              </Text>
+              <Text
+                style={[
+                  styles.advancedSummaryText,
+                  { color: advancedEntryOpen ? colors.text : colors.muted },
+                ]}
+              >
+                {UPSTREAM_TEXT.keys.advancedEntry}
+              </Text>
+            </View>
           </Pressable>
           {advancedEntryOpen ? (
             <View style={styles.advancedFields} testID={`${testIDPrefix}-advanced-fields`}>
@@ -880,6 +895,16 @@ const styles = StyleSheet.create({
   advancedSummary: {
     minHeight: 36,
     justifyContent: 'center',
+  },
+  advancedSummaryContent: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7,
+  },
+  advancedDisclosure: {
+    fontSize: 16,
+    lineHeight: 20,
+    width: 18,
   },
   advancedSummaryText: {
     fontSize: 14,

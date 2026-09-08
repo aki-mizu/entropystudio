@@ -252,7 +252,11 @@ test('opens Advanced entry controls and updates the derivation path', async () =
   expect(keySettingsScroll.props.keyboardShouldPersistTaps).toBe('handled');
 
   const advancedEntry = app!.root.findByProps({ testID: 'dice-advanced-entry' });
+  expect(advancedEntry.props.accessibilityLabel).toBe(UPSTREAM_TEXT.keys.advancedEntry);
   expect(advancedEntry.props.accessibilityState).toEqual({ expanded: false });
+  expect(
+    advancedEntry.findByProps({ testID: 'dice-advanced-entry-indicator' }).props.children,
+  ).toBe('▶');
   expect(app!.root.findAllByProps({ testID: 'dice-advanced-fields' })).toHaveLength(0);
 
   await ReactTestRenderer.act(async () => {
@@ -261,6 +265,9 @@ test('opens Advanced entry controls and updates the derivation path', async () =
   expect(app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.accessibilityState).toEqual({
     expanded: true,
   });
+  expect(
+    app!.root.findByProps({ testID: 'dice-advanced-entry-indicator' }).props.children,
+  ).toBe('▼');
   expect(app!.root.findByProps({ testID: 'dice-advanced-fields' })).toBeDefined();
   expect(app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.value).toBe('1');
   expect(app!.root.findByProps({ testID: 'dice-advanced-address-range' }).props.value).toBe('1');
