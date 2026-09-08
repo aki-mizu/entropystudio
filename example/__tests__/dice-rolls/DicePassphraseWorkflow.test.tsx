@@ -173,6 +173,27 @@ describe('Dice Rolls / BIP39 passphrase', () => {
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
     });
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-0' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.passphrase,
+    );
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-1' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.dice.insufficient
+        .replace('{bits}', '2.6')
+        .replace('{have}', '1')
+        .replace('{need}', '99')
+        .replace('{words}', '24'),
+    );
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-2' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.passphraseInUse,
+    );
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-3' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.dice.count.replace('{bits}', '2.6').replace('{n}', '1'),
+    );
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-4' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.dice.methodColdcard
+        .replace('{bits}', '256')
+        .replace('{words}', '24'),
+    );
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.onPress();
     });

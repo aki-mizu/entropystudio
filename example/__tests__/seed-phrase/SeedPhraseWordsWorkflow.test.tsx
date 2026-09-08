@@ -623,6 +623,18 @@ describe('Seed Phrase / Words', () => {
     expect(app!.root.findByProps({ testID: 'seed-phrase-passphrase-input' }).props.value).toBe(
       'TREZOR',
     );
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-seed-phrase-passphrase' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'derive-seed-phrase' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-0' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.passphrase,
+    );
   });
 
   test('uses EntropyLab alphabetical Seed Phrase keyboard rows', async () => {

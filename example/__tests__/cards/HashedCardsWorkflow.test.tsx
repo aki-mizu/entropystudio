@@ -118,10 +118,14 @@ describe('Hashed cards', () => {
     expect(app!.root.findByProps({ testID: 'wallet-data-title' }).props.children).toBe(
       UPSTREAM_TEXT.result.walletRecoveryDetails,
     );
+    expect(app!.root.findByProps({ testID: 'wallet-data-intro' }).props.children).toBe(
+      UPSTREAM_TEXT.result.walletDataIntro,
+    );
     expect(
       app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.accessibilityState,
     ).toEqual({ expanded: false });
     expect(app!.root.findAllByProps({ testID: 'entropy-output' })).toHaveLength(0);
+    expect(app!.root.findAllByProps({ testID: 'private-recovery-material-safety' })).toHaveLength(0);
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.onPress();
     });
@@ -132,6 +136,9 @@ describe('Hashed cards', () => {
       app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.children.props.children,
     ).toBe(
       UPSTREAM_TEXT.result.privateRecoveryMaterial,
+    );
+    expect(app!.root.findByProps({ testID: 'private-recovery-material-safety' }).props.children).toBe(
+      UPSTREAM_TEXT.result.privateRecoveryMaterialSafety,
     );
     expect(app!.root.findAllByProps({ testID: 'key-station-master-fingerprint-value' })).toHaveLength(0);
     expect(app!.root.findAllByProps({ testID: 'key-station-edit-inputs' })).toHaveLength(0);

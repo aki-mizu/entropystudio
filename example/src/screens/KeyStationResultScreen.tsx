@@ -4,7 +4,8 @@ import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'reac
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import type { DiceColors } from '../features/dice/diceTheme';
 import { KeyStationLifeHash } from '../features/keyStation/components/KeyStationLifeHash';
-import type { KeyStationTab } from '../features/keyStation/keyStation';
+import { keyStationSafetyNotes } from '../features/keyStation/keyStation';
+import type { KeyStationSafetyNote, KeyStationTab } from '../features/keyStation/keyStation';
 import {
   formatCopy,
   UPSTREAM_TEXT,
@@ -21,6 +22,78 @@ type Props = {
   readonly onReturnToStation: () => void;
   readonly tab: KeyStationTab | null;
 };
+
+type SafetyNotesProps = {
+  readonly colors: DiceColors;
+  readonly notes: readonly KeyStationSafetyNote[];
+  readonly testIDPrefix: string;
+};
+
+function SafetyNote({
+  colors,
+  note,
+  noteTestID,
+}: {
+  readonly colors: DiceColors;
+  readonly note: KeyStationSafetyNote;
+  readonly noteTestID: string;
+}) {
+  const color = note.kind === 'warning' ? colors.error : colors.muted;
+  const arrow = UPSTREAM_TEXT.calculations.conversionArrow;
+  const arrowIndex = note.centeredArrow ? note.text.indexOf(arrow) : -1;
+
+  if (arrowIndex < 0) {
+    return (
+      <Text style={[styles.safetyNotesCopy, { color }]} testID={noteTestID}>
+        {note.text}
+      </Text>
+    );
+  }
+
+  const beforeArrow = note.text.slice(0, arrowIndex);
+  const afterArrow = note.text.slice(arrowIndex + arrow.length);
+
+  return (
+    <View
+      accessible
+      accessibilityLabel={note.text}
+      style={styles.safetyNotesCenteredArrowLine}
+      testID={noteTestID}
+    >
+      <Text accessible={false} style={[styles.safetyNotesCenteredArrowCopy, { color }]}>
+        {beforeArrow}
+      </Text>
+      <View accessible={false} style={styles.safetyNotesCenteredArrowGroup}>
+        <Text style={[styles.safetyNotesCenteredArrow, { color }]} testID={`${noteTestID}-arrow`}>
+          {arrow}
+        </Text>
+        <Text style={[styles.safetyNotesCenteredArrowCopy, { color }]}>{afterArrow}</Text>
+      </View>
+    </View>
+  );
+}
+
+function SafetyNotes({ colors, notes, testIDPrefix }: SafetyNotesProps) {
+  if (!notes.length) {
+    return null;
+  }
+
+  return (
+    <View style={[styles.safetyNotes, { borderColor: colors.border }]} testID={`${testIDPrefix}-notes`}>
+      <Text style={[styles.safetyNotesTitle, { color: colors.text }]}>
+        {UPSTREAM_TEXT.result.safetyNotes}
+      </Text>
+      {notes.map((note, index) => (
+        <SafetyNote
+          colors={colors}
+          key={note.text}
+          note={note}
+          noteTestID={`${testIDPrefix}-note-${index}`}
+        />
+      ))}
+    </View>
+  );
+}
 
 export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturnToStation, tab }: Props) {
   const [showingPrivateRecoveryMaterial, setShowingPrivateRecoveryMaterial] = useState(false);
@@ -56,6 +129,7 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
   }
 
   const { derivation } = tab;
+  const safetyNotes = keyStationSafetyNotes(tab);
 
   return (
     <View
@@ -84,6 +158,10 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
             <Text style={[styles.walletDataTitle, { color: colors.text }]} testID="wallet-data-title">
               {UPSTREAM_TEXT.result.walletRecoveryDetails}
             </Text>
+            <Text style={[styles.walletDataIntro, { color: colors.muted }]} testID="wallet-data-intro">
+              {UPSTREAM_TEXT.result.walletDataIntro}
+            </Text>
+            <SafetyNotes colors={colors} notes={safetyNotes} testIDPrefix="wallet-data-safety" />
             <Pressable
               accessibilityLabel={UPSTREAM_TEXT.result.privateRecoveryMaterial}
               accessibilityRole="button"
@@ -100,23 +178,34 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
               </Text>
             </Pressable>
             {showingPrivateRecoveryMaterial ? (
-              <DiceResultPanel
-                colors={colors}
-                entropyLabel={UPSTREAM_TEXT.result.entropyHex}
-                masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
-                result={{
-                  entropy: derivation.entropy,
-                  masterSeed: derivation.masterSeed,
-                  rootXprv: tab.rootXprv,
-                }}
-                rootXprvLabel={formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xprv' })}
-              />
+              <>
+                <Text
+                  style={[styles.privateRecoveryMaterialSafety, { color: colors.muted }]}
+                  testID="private-recovery-material-safety"
+                >
+                  {UPSTREAM_TEXT.result.privateRecoveryMaterialSafety}
+                </Text>
+                <DiceResultPanel
+                  colors={colors}
+                  entropyLabel={UPSTREAM_TEXT.result.entropyHex}
+                  masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
+                  result={{
+                    entropy: derivation.entropy,
+                    masterSeed: derivation.masterSeed,
+                    rootXprv: tab.rootXprv,
+                  }}
+                  rootXprvLabel={formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xprv' })}
+                />
+              </>
             ) : null}
           </View>
         ) : derivation.kind === 'private-key' ? (
-          <Text style={[styles.privateKeyTitle, { color: colors.text }]} testID="key-station-private-key-title">
-            {tab.name}
-          </Text>
+          <>
+            <Text style={[styles.privateKeyTitle, { color: colors.text }]} testID="key-station-private-key-title">
+              {tab.name}
+            </Text>
+            <SafetyNotes colors={colors} notes={safetyNotes} testIDPrefix="private-key-safety" />
+          </>
         ) : null}
         {derivation.kind === 'bip39' && !showingWalletData ? (
           <>
@@ -238,8 +327,47 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     marginBottom: 18,
   },
+  privateRecoveryMaterialSafety: {
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 16,
+  },
   screen: {
     flex: 1,
+  },
+  safetyNotes: {
+    borderLeftWidth: 3,
+    marginBottom: 20,
+    paddingLeft: 12,
+  },
+  safetyNotesCopy: {
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 6,
+  },
+  safetyNotesCenteredArrow: {
+    fontSize: 14,
+    lineHeight: 21,
+    transform: [{ translateY: -3 }],
+  },
+  safetyNotesCenteredArrowCopy: {
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  safetyNotesCenteredArrowGroup: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  safetyNotesCenteredArrowLine: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 6,
+  },
+  safetyNotesTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 22,
   },
   summary: {
     marginBottom: 18,
@@ -265,6 +393,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  walletDataIntro: {
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 20,
+  },
   walletDataSectionButton: {
     alignItems: 'flex-start',
     borderRadius: 6,
@@ -283,6 +416,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     lineHeight: 28,
-    marginBottom: 24,
+    marginBottom: 8,
   },
 });

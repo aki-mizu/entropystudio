@@ -177,6 +177,21 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
     });
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-notes' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-0' }).props.children).toBe(
+      formatCopy(UPSTREAM_TEXT.result.safety.dice.insufficient, {
+        bits: '2.6',
+        have: 1,
+        need: 99,
+        words: 24,
+      }),
+    );
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-1' }).props.children).toBe(
+      formatCopy(UPSTREAM_TEXT.result.safety.dice.count, { bits: '2.6', n: 1 }),
+    );
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-2' }).props.children).toBe(
+      formatCopy(UPSTREAM_TEXT.result.safety.dice.methodColdcard, { bits: 256, words: 24 }),
+    );
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.onPress();
     });

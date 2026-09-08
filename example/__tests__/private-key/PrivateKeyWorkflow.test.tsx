@@ -105,6 +105,9 @@ describe('Private Key', () => {
     expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
       UPSTREAM_TEXT.result.privateKey,
     );
+    expect(app!.root.findByProps({ testID: 'private-key-safety-note-0' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.privateKey.wifCompressed,
+    );
     expect(app!.root.findByProps({ testID: 'entropy-output' }).props.children).toBe('0'.repeat(64));
   });
 
@@ -460,6 +463,12 @@ describe('Private Key', () => {
     expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
       UPSTREAM_TEXT.result.privateKey,
     );
+    expect(app!.root.findByProps({ testID: 'private-key-safety-note-0' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.privateKey.brainWarning,
+    );
+    expect(app!.root.findByProps({ testID: 'private-key-safety-note-1' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.privateKey.brainRecoveryExact,
+    );
     expect(app!.root.findAllByProps({ testID: 'key-station-seed-words' })).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
@@ -487,6 +496,18 @@ describe('Private Key', () => {
       'd34db33f',
     );
     expect(app!.root.findAllByProps({ testID: 'key-station-seed-words' })).toHaveLength(0);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-0' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.privateKey.brainWarning,
+    );
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-1' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.privateKey.brainRecoveryExact,
+    );
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.onPress();
+    });
     expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
       UPSTREAM_TEXT.result.entropyHex,
     );

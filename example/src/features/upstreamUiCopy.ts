@@ -307,8 +307,64 @@ export const UPSTREAM_TEXT = {
     entropyHex: 'BIP39 entropy hex',
     privateKey: 'Private key material',
     privateRecoveryMaterial: 'Private recovery material',
+    privateRecoveryMaterialSafety:
+      'These values can recreate or spend from the wallet. Reveal them only while this file is running offline on an air-gapped computer.',
     rootXprv: 'Root {name}',
+    safetyNotes: 'Safety notes',
+    safety: {
+      cards: {
+        countMany: '{n} cards ≈ {bits} bits.',
+        countOne: '{n} card ≈ {bits} bits.',
+        extra: 'All {n} cards, including extras, are included in the hash.',
+        insufficient:
+          'Only {have} of {need} recommended cards were entered. The {words}-word phrase is deterministic, but its security cannot exceed the approximately {bits} bits supplied. Use only for testing until the recommendation is met.',
+        methodAscii:
+          'SHA-256 hashes the ASCII transcript (AS 2C TD), then the first {bits} bits become the selected {words}-word seed. One shuffled deck is about 225.6 bits.',
+        methodColeman:
+          "SHA-256 hashes Ian Coleman's suit-symbol transcript (A♠ 2♣ T♦), then the first {bits} bits become the selected {words}-word seed. One shuffled deck is about 225.6 bits.",
+      },
+      dice: {
+        count: '{n} rolls of a fair six-sided die ≈ {bits} bits.',
+        extra:
+          'All {n} rolls, including {extra} beyond the recommendation, are included in the hash.',
+        insufficient:
+          'Only {have} of {need} recommended fair-die rolls were entered. The {words}-word phrase is deterministic, but its security cannot exceed the approximately {bits} bits supplied. Use only for testing until the recommendation is met.',
+        methodColdcard:
+          'Hashed rolls / Base 10 [0-9]: SHA-256 hash the complete original dice digit string, then use the first {bits} bits for the selected {words}-word seed. This matches COLDCARD and SeedSigner.',
+        methodColeman:
+          'Hashed rolls / Dice [1-6]: convert every 6 to 0, SHA-256 hash the complete mapped digit string, then use the first {bits} bits for the selected {words}-word seed. This matches the method used by Keystone.',
+      },
+      numberBases: {
+        entropy: '{digits} {unit} = {bits} bits of {label} entropy.',
+        finalLength: 'BIP39 entropy length: {bits} bits → {words}-word seed.',
+        mixedRadixMany:
+          'The final character is mixed-radix: it contributes the remaining {n} entropy bits and must be one of {chars}.',
+        mixedRadixOne:
+          'The final character is mixed-radix: it contributes the remaining {n} entropy bit and must be one of {chars}.',
+        trailingCoinBits:
+          '{full} complete {label} characters are followed by {n} individual coin-flip entropy bits.',
+        trailingCoinBit:
+          '{full} complete {label} characters are followed by {n} individual coin-flip entropy bit.',
+      },
+      passphrase:
+        'A BIP39 passphrase is in use. It creates a different wallet, is not printed in the recovery sheet, and must be preserved separately to recover this wallet.',
+      passphraseInUse:
+        'A passphrase is in use. The same words without this passphrase are a different wallet. Do not store the passphrase with the words.',
+      privateKey: {
+        brainRecoveryExact: 'Brain wallet recovery: SHA-256 used the passphrase exactly as entered.',
+        brainRecoveryTrimmed:
+          'Brain wallet recovery: SHA-256 used the passphrase after trimming leading and trailing whitespace.',
+        brainWarning:
+          'Brain wallets are dangerous. Humans pick guessable phrases. Anyone who guesses the phrase takes the coins. Prefer dice or a hardware-verified seed.',
+        hex: 'Decoded a 32-byte hex private key.',
+        mini: 'Casascius mini private key decoded via SHA-256.',
+        wifCompressed: 'Decoded a compressed WIF private key (starts with K or L on mainnet).',
+        wifUncompressed: 'Decoded an uncompressed WIF private key (starts with 5 on mainnet).',
+      },
+    },
     walletData: 'Wallet data',
+    walletDataIntro:
+      'Review the root material derived from this seed. Private recovery data is grouped first; watch-only data appears below.',
     walletRecoveryDetails: 'Wallet recovery details',
   },
   seed: {

@@ -59,6 +59,12 @@ describe(UPSTREAM_TEXT.dice.coldcard.title, () => {
 
     expect(mockDiceRollsToEntropy).toHaveBeenCalledWith(rolls, 1, 24);
     expect(mockEntropyToMnemonic).toHaveBeenCalledWith(entropy);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.onPress();
+    });
     expect(app!.root.findByProps({ testID: 'entropy-output' }).props.children).toBe(
       '00000000000000000000000000000000',
     );

@@ -1,4 +1,12 @@
-import { mnemonicToMasterFingerprint, mnemonicToMasterXprv } from '../../native/entropyStudio';
+import { getHashedCardState, isHashedCardMethod } from '../cards/cards';
+import { getHashedDiceState, isHashedDiceMethod } from '../dice/dice';
+import { analyzeNumberBaseInput } from '../numberBases/numberBases';
+import { privateKeyInputState } from '../privateKey/privateKey';
+import {
+  bip39EntropyBits,
+  mnemonicToMasterFingerprint,
+  mnemonicToMasterXprv,
+} from '../../native/entropyStudio';
 import type { KeyDerivationAdvancedInput } from '../../native/entropyStudio';
 import type { CardMethod } from '../cards/cards';
 import type { DiceMethod, WordCount } from '../dice/dice';
@@ -155,6 +163,230 @@ export type KeyStationTab = {
   readonly derivationPath: string;
   readonly derivationSettings: KeyStationDerivationSettings;
 };
+
+export type KeyStationSafetyNote = {
+  readonly centeredArrow?: true;
+  readonly kind: 'note' | 'warning';
+  readonly text: string;
+};
+
+export function keyStationSafetyNotes(tab: KeyStationTab): readonly KeyStationSafetyNote[] {
+  const resultWarnings: KeyStationSafetyNote[] =
+    tab.derivation.kind === 'bip39' && tab.derivation.passphrase
+      ? [{ kind: 'warning', text: UPSTREAM_TEXT.result.safety.passphrase }]
+      : [];
+  const passphraseInputWarnings: KeyStationSafetyNote[] =
+    tab.derivation.kind === 'bip39' && tab.derivation.passphrase
+      ? [{ kind: 'warning', text: UPSTREAM_TEXT.result.safety.passphraseInUse }]
+      : [];
+  const combineSafetyNotes = (
+    sourceWarnings: readonly KeyStationSafetyNote[],
+    sourceNotes: readonly KeyStationSafetyNote[],
+  ): readonly KeyStationSafetyNote[] => [
+    ...resultWarnings,
+    ...sourceWarnings,
+    ...passphraseInputWarnings,
+    ...sourceNotes,
+  ];
+
+  if (tab.input.kind === 'dice' && isHashedDiceMethod(tab.input.method)) {
+    const state = getHashedDiceState(tab.input.rolls, tab.input.wordCount);
+    if (!state.hasRolls) {
+      return combineSafetyNotes([], []);
+    }
+
+    const bits = state.estimatedEntropyBits.toFixed(1);
+    const entropyBits = bip39EntropyBits(tab.input.wordCount);
+    const sourceWarnings: KeyStationSafetyNote[] = [];
+    const sourceNotes: KeyStationSafetyNote[] = [];
+
+    if (state.rollCount < state.recommendedRolls) {
+      sourceWarnings.push({
+        kind: 'warning',
+        text: formatCopy(UPSTREAM_TEXT.result.safety.dice.insufficient, {
+          bits,
+          have: state.rollCount,
+          need: state.recommendedRolls,
+          words: tab.input.wordCount,
+        }),
+      });
+    }
+    sourceNotes.push({
+      kind: 'note',
+      text: formatCopy(UPSTREAM_TEXT.result.safety.dice.count, { bits, n: state.rollCount }),
+    });
+    sourceNotes.push({
+      kind: 'note',
+      text: formatCopy(
+        tab.input.method === 'coldcard'
+          ? UPSTREAM_TEXT.result.safety.dice.methodColdcard
+          : UPSTREAM_TEXT.result.safety.dice.methodColeman,
+        { bits: entropyBits, words: tab.input.wordCount },
+      ),
+    });
+    if (state.rollCount > state.recommendedRolls) {
+      sourceNotes.push({
+        kind: 'note',
+        text: formatCopy(UPSTREAM_TEXT.result.safety.dice.extra, {
+          extra: state.rollCount - state.recommendedRolls,
+          n: state.rollCount,
+        }),
+      });
+    }
+    return combineSafetyNotes(sourceWarnings, sourceNotes);
+  }
+
+  if (tab.input.kind === 'cards' && isHashedCardMethod(tab.input.method)) {
+    const state = getHashedCardState(tab.input.transcript, tab.input.wordCount);
+    if (!state.hasInput) {
+      return combineSafetyNotes([], []);
+    }
+
+    const bits = state.entropyBits.toFixed(1);
+    const entropyBits = bip39EntropyBits(tab.input.wordCount);
+    const sourceWarnings: KeyStationSafetyNote[] = [];
+    const sourceNotes: KeyStationSafetyNote[] = [];
+
+    if (state.cardCount < state.requiredCards) {
+      sourceWarnings.push({
+        kind: 'warning',
+        text: formatCopy(UPSTREAM_TEXT.result.safety.cards.insufficient, {
+          bits,
+          have: state.cardCount,
+          need: state.requiredCards,
+          words: tab.input.wordCount,
+        }),
+      });
+    }
+    sourceNotes.push({
+      kind: 'note',
+      text: formatCopy(
+        state.cardCount === 1
+          ? UPSTREAM_TEXT.result.safety.cards.countOne
+          : UPSTREAM_TEXT.result.safety.cards.countMany,
+        { bits, n: state.cardCount },
+      ),
+    });
+    sourceNotes.push({
+      kind: 'note',
+      text: formatCopy(
+        tab.input.matchesIanColeman
+          ? UPSTREAM_TEXT.result.safety.cards.methodColeman
+          : UPSTREAM_TEXT.result.safety.cards.methodAscii,
+        { bits: entropyBits, words: tab.input.wordCount },
+      ),
+    });
+    if (state.cardCount > state.requiredCards) {
+      sourceNotes.push({
+        kind: 'note',
+        text: formatCopy(UPSTREAM_TEXT.result.safety.cards.extra, { n: state.cardCount }),
+      });
+    }
+    return combineSafetyNotes(sourceWarnings, sourceNotes);
+  }
+
+  if (tab.input.kind === 'number-bases') {
+    const value = tab.input.inputValues[tab.input.format];
+    const analysis = analyzeNumberBaseInput(value, tab.input.format, tab.input.wordCount);
+    if (!analysis.isReady) {
+      return combineSafetyNotes([], []);
+    }
+
+    const { config } = analysis;
+    const sourceNotes: KeyStationSafetyNote[] = [
+      {
+        kind: 'note',
+        text: formatCopy(UPSTREAM_TEXT.result.safety.numberBases.entropy, {
+          bits: config.bits,
+          digits: config.digits,
+          label: config.shortLabel,
+          unit: config.unit,
+        }),
+      },
+    ];
+
+    if (config.remainderBits) {
+      const remainderTemplate = config.binaryRemainder
+        ? config.remainderBits === 1
+          ? UPSTREAM_TEXT.result.safety.numberBases.trailingCoinBit
+          : UPSTREAM_TEXT.result.safety.numberBases.trailingCoinBits
+        : config.remainderBits === 1
+          ? UPSTREAM_TEXT.result.safety.numberBases.mixedRadixOne
+          : UPSTREAM_TEXT.result.safety.numberBases.mixedRadixMany;
+      sourceNotes.push({
+        kind: 'note',
+        text: formatCopy(
+          remainderTemplate,
+          config.binaryRemainder
+            ? {
+                full: config.fullDigits,
+                label: config.shortLabel,
+                n: config.remainderBits,
+              }
+            : {
+                chars: Array.from(config.finalCharacters).join(', '),
+                n: config.remainderBits,
+              },
+        ),
+      });
+    }
+    sourceNotes.push({
+      centeredArrow: true,
+      kind: 'note',
+      text: formatCopy(UPSTREAM_TEXT.result.safety.numberBases.finalLength, {
+        bits: config.bits,
+        words: tab.input.wordCount,
+      }),
+    });
+    return combineSafetyNotes([], sourceNotes);
+  }
+
+  if (tab.input.kind === 'private-key') {
+    const inputState = privateKeyInputState(
+      tab.input.inputValues[tab.input.format],
+      tab.input.format,
+      tab.input.brainWalletTrim,
+    );
+    if (!inputState.canDerive) {
+      return combineSafetyNotes([], []);
+    }
+
+    const sourceWarnings: KeyStationSafetyNote[] = [];
+    const sourceNotes: KeyStationSafetyNote[] = [];
+    switch (tab.input.format) {
+      case 'brain':
+        sourceWarnings.push({
+          kind: 'warning',
+          text: UPSTREAM_TEXT.result.safety.privateKey.brainWarning,
+        });
+        sourceNotes.push({
+          kind: 'note',
+          text: tab.input.brainWalletTrim
+            ? UPSTREAM_TEXT.result.safety.privateKey.brainRecoveryTrimmed
+            : UPSTREAM_TEXT.result.safety.privateKey.brainRecoveryExact,
+        });
+        break;
+      case 'hex':
+        sourceNotes.push({ kind: 'note', text: UPSTREAM_TEXT.result.safety.privateKey.hex });
+        break;
+      case 'mini':
+        sourceNotes.push({ kind: 'note', text: UPSTREAM_TEXT.result.safety.privateKey.mini });
+        break;
+      case 'wif':
+        sourceNotes.push({
+          kind: 'note',
+          text:
+            inputState.requiredCount === inputState.maximumCount
+              ? UPSTREAM_TEXT.result.safety.privateKey.wifCompressed
+              : UPSTREAM_TEXT.result.safety.privateKey.wifUncompressed,
+        });
+        break;
+    }
+    return combineSafetyNotes(sourceWarnings, sourceNotes);
+  }
+
+  return combineSafetyNotes([], []);
+}
 
 export function createKeyStationTab(
   derivation: KeyStationDerivation,

@@ -112,6 +112,22 @@ describe('Number Bases / Hexadecimal', () => {
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
     });
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-0' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.numberBases.entropy
+        .replace('{digits}', '32')
+        .replace('{unit}', UPSTREAM_TEXT.hex.unit.hex)
+        .replace('{bits}', '128')
+        .replace('{label}', UPSTREAM_UI_LABELS.hexFormat.hex.shortLabel),
+    );
+    const finalLength = UPSTREAM_TEXT.result.safety.numberBases.finalLength
+      .replace('{bits}', '128')
+      .replace('{words}', '12');
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-1' }).props.accessibilityLabel).toBe(
+      finalLength,
+    );
+    expect(
+      app!.root.findByProps({ testID: 'wallet-data-safety-note-1-arrow' }).props.children,
+    ).toBe(UPSTREAM_TEXT.calculations.conversionArrow);
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.onPress();
     });
