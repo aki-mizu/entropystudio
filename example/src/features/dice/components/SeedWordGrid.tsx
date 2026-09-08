@@ -63,8 +63,6 @@ export function SeedWordGrid({
                 {`${index + 1}.`}
               </Text>
               <Text
-                adjustsFontSizeToFit
-                minimumFontScale={0.75}
                 numberOfLines={1}
                 selectable
                 style={[

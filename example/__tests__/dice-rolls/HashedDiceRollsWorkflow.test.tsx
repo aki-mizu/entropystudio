@@ -164,6 +164,9 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
     expect(
       app!.root.findByProps({ testID: 'live-dice-words-word-13' }).props.children,
     ).toBe('\u2014');
+    expect(
+      app!.root.findByProps({ testID: 'live-dice-words-word-3' }).props.adjustsFontSizeToFit,
+    ).toBeUndefined();
     expect(app!.root.findAllByProps({ testID: 'mnemonic-output' })).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
