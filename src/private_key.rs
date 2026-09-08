@@ -34,6 +34,13 @@ pub struct PrivateKeyInputState {
     pub trimmed_to_empty: bool,
 }
 
+#[derive(Debug, uniffi::Record)]
+pub struct PrivateKeyMaterial {
+        pub hex_private_key: String,
+        pub wif_compressed: String,
+        pub wif_uncompressed: String,
+}
+
 #[uniffi::export]
 pub fn private_key_input_state(
     mut value: String,
@@ -59,6 +66,26 @@ pub fn private_key_entropy(
     trim_brain_wallet_boundary_whitespace: bool,
 ) -> Result<Vec<u8>, EntropyStudioError> {
     let result = private_key_entropy_inner(&value, format, trim_brain_wallet_boundary_whitespace);
+    wipe_string(&mut value);
+    result
+}
+
+#[uniffi::export]
+pub fn private_key_material(
+    mut value: String,
+    format: PrivateKeyFormat,
+    trim_brain_wallet_boundary_whitespace: bool,
+) -> Result<PrivateKeyMaterial, EntropyStudioError> {
+    let result = private_key_entropy_inner(&value, format, trim_brain_wallet_boundary_whitespace)
+        .map(|mut entropy| {
+            let material = PrivateKeyMaterial {
+                hex_private_key: hex::encode(&entropy),
+                wif_compressed: encode_wif_private_key(&entropy, true),
+                wif_uncompressed: encode_wif_private_key(&entropy, false),
+            };
+            wipe_bytes(&mut entropy);
+            material
+        });
     wipe_string(&mut value);
     result
 }
@@ -130,6 +157,40 @@ fn wif_entropy(value: &str) -> Result<[u8; 32], EntropyStudioError> {
         _ => Err(EntropyStudioError::InvalidWifPrivateKey),
     };
     wipe_bytes(&mut payload);
+    result
+}
+
+pub(crate) fn encode_wif_private_key(entropy: &[u8], compressed: bool) -> String {
+    if entropy.len() != 32 || unsafe { entropylab_wasm::secp_seckey_valid(entropy.as_ptr()) } != 1 {
+        return String::new();
+    }
+
+    let mut payload = [0u8; 34];
+    payload[0] = 0x80;
+    payload[1..33].copy_from_slice(entropy);
+    let payload_length = if compressed {
+        payload[33] = 1;
+        34
+    } else {
+        33
+    };
+    let mut encoded = [0u8; 64];
+    let length = unsafe {
+        entropylab_wasm::el_b58check_encode(
+            payload.as_ptr(),
+            payload_length,
+            encoded.as_mut_ptr(),
+            encoded.len(),
+        )
+    };
+    let result = usize::try_from(length)
+        .ok()
+        .filter(|length| *length <= encoded.len())
+        .and_then(|length| std::str::from_utf8(&encoded[..length]).ok())
+        .map(str::to_owned)
+        .unwrap_or_default();
+    wipe_bytes(&mut payload);
+    wipe_bytes(&mut encoded);
     result
 }
 

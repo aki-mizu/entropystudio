@@ -57,6 +57,7 @@ import {
   privateKeyEntropy,
   privateKeyInputState,
   privateKeyKeyAllowed,
+  privateKeyMaterial,
   seedPhraseAutocomplete,
   seedPhraseKeyAllowed,
   seedPhraseNumbersToWords,
@@ -242,6 +243,7 @@ export {
   privateKeyEntropy,
   privateKeyInputState,
   privateKeyKeyAllowed,
+  privateKeyMaterial,
   seedPhraseAutocomplete,
   seedPhraseKeyAllowed,
   seedPhraseNumbersToWords,
@@ -276,6 +278,7 @@ export type {
   NumberBaseAnalysis,
   NumberBaseCalculations,
   PrivateKeyInputState,
+  PrivateKeyMaterial,
   SeedPhraseAutocompleteResult,
   SeedPhraseState,
 } from 'entropystudio';

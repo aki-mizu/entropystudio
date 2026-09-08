@@ -15,6 +15,7 @@ import type {
   NumberBaseAnalysis,
   NumberBaseCalculations,
   PrivateKeyInputState,
+  PrivateKeyMaterial,
   EntropySyncSnapshot,
 } from '../src/native/entropyStudio';
 import { installCardUiFixtures } from './cardUiFixtures';
@@ -86,6 +87,7 @@ export const mockNumberBaseCalculations = jest.fn<
 export const mockPrivateKeyEntropy = jest.fn<ArrayBuffer, [string, number, boolean]>();
 export const mockPrivateKeyInputState = jest.fn<PrivateKeyInputState, [string, number, boolean]>();
 export const mockPrivateKeyKeyAllowed = jest.fn<boolean, [string, number, number, string, number]>();
+export const mockPrivateKeyMaterial = jest.fn<PrivateKeyMaterial, [string, number, boolean]>();
 export const KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE: KeyDerivationAdvancedState = {
   account: { hardened: true, valid: true, value: 0 },
   addressCount: 1,
@@ -362,6 +364,7 @@ jest.mock('entropystudio', () => ({
   privateKeyEntropy: mockPrivateKeyEntropy,
   privateKeyInputState: mockPrivateKeyInputState,
   privateKeyKeyAllowed: mockPrivateKeyKeyAllowed,
+  privateKeyMaterial: mockPrivateKeyMaterial,
   seedPhraseAutocomplete: mockSeedPhraseAutocomplete,
   seedPhraseKeyAllowed: mockSeedPhraseKeyAllowed,
   seedPhraseNumbersToWords: mockSeedPhraseNumbersToWords,
@@ -396,6 +399,7 @@ installPrivateKeyUiFixtures({
     mockPrivateKeyInputState.mockImplementation(implementation),
   setPrivateKeyKeyAllowed: implementation =>
     mockPrivateKeyKeyAllowed.mockImplementation(implementation),
+  setPrivateKeyMaterial: implementation => mockPrivateKeyMaterial.mockImplementation(implementation),
 });
 installDiceUiFixtures({
   getDirectDiceState: (rolls, method, targetWords) =>

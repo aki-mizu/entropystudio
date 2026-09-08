@@ -7,6 +7,8 @@ export type EntropyResult =
       readonly masterSeed?: string;
       readonly mnemonic?: string;
       readonly rootXprv?: string;
+      readonly wifCompressed?: string;
+      readonly wifUncompressed?: string;
       readonly error?: never;
     }
   | {
@@ -14,6 +16,8 @@ export type EntropyResult =
       readonly masterSeed?: never;
       readonly mnemonic?: never;
       readonly rootXprv?: never;
+      readonly wifCompressed?: never;
+      readonly wifUncompressed?: never;
       readonly error: string;
     };
 
@@ -23,6 +27,8 @@ type Props = {
   readonly masterSeedLabel?: string;
   readonly mnemonicLabel?: string;
   readonly rootXprvLabel?: string;
+  readonly wifCompressedLabel?: string;
+  readonly wifUncompressedLabel?: string;
   readonly result: EntropyResult | null;
 };
 
@@ -32,6 +38,8 @@ export function DiceResultPanel({
   masterSeedLabel,
   mnemonicLabel,
   rootXprvLabel,
+  wifCompressedLabel,
+  wifUncompressedLabel,
   result,
 }: Props) {
   if (!result) {
@@ -49,6 +57,40 @@ export function DiceResultPanel({
         </Text>
       ) : (
         <>
+          {wifCompressedLabel && result.wifCompressed ? (
+            <>
+              <Text
+                style={[styles.label, { color: colors.muted }]}
+                testID="wif-compressed-label"
+              >
+                {wifCompressedLabel}
+              </Text>
+              <Text
+                selectable
+                style={[styles.entropy, { color: colors.text }]}
+                testID="wif-compressed-output"
+              >
+                {result.wifCompressed}
+              </Text>
+            </>
+          ) : null}
+          {wifUncompressedLabel && result.wifUncompressed ? (
+            <>
+              <Text
+                style={[styles.label, styles.wifUncompressedLabel, { color: colors.muted }]}
+                testID="wif-uncompressed-label"
+              >
+                {wifUncompressedLabel}
+              </Text>
+              <Text
+                selectable
+                style={[styles.entropy, { color: colors.text }]}
+                testID="wif-uncompressed-output"
+              >
+                {result.wifUncompressed}
+              </Text>
+            </>
+          ) : null}
           {mnemonicLabel && result.mnemonic ? (
             <>
               <Text
@@ -69,7 +111,10 @@ export function DiceResultPanel({
           <Text
             style={[
               styles.label,
-              mnemonicLabel && result.mnemonic && styles.entropyLabelAfterSeedPhrase,
+              ((mnemonicLabel && result.mnemonic) ||
+                (wifCompressedLabel && result.wifCompressed) ||
+                (wifUncompressedLabel && result.wifUncompressed)) &&
+                styles.entropyLabelAfterValue,
               { color: colors.muted },
             ]}
             testID="result-entropy-label"
@@ -133,7 +178,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 23,
   },
-  entropyLabelAfterSeedPhrase: { marginTop: 16 },
+  entropyLabelAfterValue: { marginTop: 16 },
   label: {
     fontSize: 12,
     fontWeight: '700',
@@ -142,4 +187,5 @@ const styles = StyleSheet.create({
   masterSeedLabel: { marginTop: 16 },
   rootXprvLabel: { marginTop: 16 },
   result: { paddingBottom: 4 },
+  wifUncompressedLabel: { marginTop: 16 },
 });

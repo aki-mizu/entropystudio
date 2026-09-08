@@ -51,8 +51,8 @@ pub use number_bases::{
 	NumberBaseCalculations, NumberBaseDigitValue, NumberBaseFormat,
 };
 pub use private_key::{
-	private_key_entropy, private_key_input_state, private_key_key_allowed, PrivateKeyFormat,
-	PrivateKeyInputState, PrivateKeyInputStatus,
+	private_key_entropy, private_key_input_state, private_key_key_allowed, private_key_material,
+	PrivateKeyFormat, PrivateKeyInputState, PrivateKeyInputStatus, PrivateKeyMaterial,
 };
 pub use seed_phrase::{
 	bip39_passphrase_autocomplete, bip39_passphrase_key_allowed, bip39_passphrase_space_allowed,

@@ -39,6 +39,7 @@ import {
   privateKeyInputHasError,
   privateKeyInputState,
   privateKeyKeyAllowed,
+  privateKeyMaterial,
   privateKeyProgressText,
 } from '../features/privateKey/privateKey';
 import type {
@@ -386,10 +387,13 @@ export function PrivateKeyScreen({
           kind: 'private-key',
         });
       } else {
+        const material = privateKeyMaterial(input, format, brainWalletTrim);
         setDeriveError(null);
         onDeriveKey({
-          entropy: entropyHex(entropy),
+          entropy: material.hexPrivateKey,
           kind: 'private-key',
+          wifCompressed: material.wifCompressed,
+          wifUncompressed: material.wifUncompressed,
         }, {
           brainWalletOutput,
           brainWalletTrim,

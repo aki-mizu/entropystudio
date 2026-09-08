@@ -209,6 +209,21 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
               {tab.name}
             </Text>
             <SafetyNotes colors={colors} notes={safetyNotes} testIDPrefix="private-key-safety" />
+            <Pressable
+              accessibilityLabel={UPSTREAM_TEXT.result.privateKey}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showingPrivateRecoveryMaterial }}
+              onPress={() => setShowingPrivateRecoveryMaterial(value => !value)}
+              style={({ pressed }) => [
+                styles.walletDataSectionButton,
+                { borderColor: colors.border, opacity: pressed ? 0.72 : 1 },
+              ]}
+              testID="toggle-private-key-material"
+            >
+              <Text style={[styles.walletDataSectionTitle, { color: colors.text }]}>
+                {UPSTREAM_TEXT.result.privateKey}
+              </Text>
+            </Pressable>
           </>
         ) : null}
         {derivation.kind === 'bip39' && !showingWalletData ? (
@@ -267,12 +282,26 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
               </Text>
             </Pressable>
           </>
-        ) : derivation.kind === 'private-key' ? (
+        ) : derivation.kind === 'private-key' && showingPrivateRecoveryMaterial ? (
+          <>
+            <Text
+              style={[styles.privateRecoveryMaterialSafety, { color: colors.muted }]}
+              testID="private-key-material-safety"
+            >
+              {UPSTREAM_TEXT.result.privateKeyMaterialSafety}
+            </Text>
           <DiceResultPanel
             colors={colors}
-            entropyLabel={UPSTREAM_TEXT.result.privateKey}
-            result={{ entropy: derivation.entropy }}
+            entropyLabel={UPSTREAM_TEXT.result.hexPrivateKey}
+            result={{
+              entropy: derivation.entropy,
+              wifCompressed: derivation.wifCompressed,
+              wifUncompressed: derivation.wifUncompressed,
+            }}
+            wifCompressedLabel={UPSTREAM_TEXT.result.wifCompressed}
+            wifUncompressedLabel={UPSTREAM_TEXT.result.wifUncompressed}
           />
+          </>
         ) : null}
       </ScrollView>
     </View>

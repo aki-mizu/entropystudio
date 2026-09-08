@@ -6,8 +6,12 @@ import {
   privateKeyEntropy as nativePrivateKeyEntropy,
   privateKeyInputState as nativePrivateKeyInputState,
   privateKeyKeyAllowed as nativePrivateKeyKeyAllowed,
+  privateKeyMaterial as nativePrivateKeyMaterial,
 } from '../../native/entropyStudio';
-import type { PrivateKeyInputState as NativePrivateKeyInputState } from '../../native/entropyStudio';
+import type {
+  PrivateKeyInputState as NativePrivateKeyInputState,
+  PrivateKeyMaterial as NativePrivateKeyMaterial,
+} from '../../native/entropyStudio';
 
 export const PRIVATE_KEY_FORMATS = ['wif', 'hex', 'mini', 'brain'] as const;
 export const BRAIN_WALLET_OUTPUTS = ['scalar', 'hd'] as const;
@@ -15,6 +19,7 @@ export const BRAIN_WALLET_WARNING_COPY = UPSTREAM_UI_FALLBACK_COPY.brainWallet.w
 
 export type PrivateKeyInputFormat = (typeof PRIVATE_KEY_FORMATS)[number];
 export type PrivateKeyInputState = NativePrivateKeyInputState;
+export type PrivateKeyMaterial = NativePrivateKeyMaterial;
 export type BrainWalletOutput = (typeof BRAIN_WALLET_OUTPUTS)[number];
 
 type InputSelection = { readonly end: number; readonly start: number };
@@ -64,6 +69,18 @@ export function privateKeyEntropy(
   trimBrainWalletBoundaryWhitespace: boolean,
 ): ArrayBuffer {
   return nativePrivateKeyEntropy(
+    value,
+    nativePrivateKeyFormat(format),
+    trimBrainWalletBoundaryWhitespace,
+  );
+}
+
+export function privateKeyMaterial(
+  value: string,
+  format: PrivateKeyInputFormat,
+  trimBrainWalletBoundaryWhitespace: boolean,
+): PrivateKeyMaterial {
+  return nativePrivateKeyMaterial(
     value,
     nativePrivateKeyFormat(format),
     trimBrainWalletBoundaryWhitespace,

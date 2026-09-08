@@ -148,6 +148,8 @@ export type KeyStationDerivation =
   | {
       readonly kind: 'private-key';
       readonly entropy: string;
+      readonly wifCompressed: string;
+      readonly wifUncompressed: string;
     };
 
 export type KeyStationTab = {

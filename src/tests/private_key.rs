@@ -47,6 +47,28 @@ fn private_key_entropy_matches_mainnet_wif_hex_and_minikey_vectors() {
 }
 
 #[test]
+fn private_key_material_exports_both_mainnet_wif_encodings() {
+    let material = private_key_material(MAINNET_WIF.to_owned(), PrivateKeyFormat::Wif, false)
+        .unwrap();
+    assert_eq!(material.hex_private_key, KEY_ONE_HEX);
+    assert_eq!(material.wif_compressed, MAINNET_WIF);
+
+    let mut payload = [0u8; 34];
+    let length = unsafe {
+        entropylab_wasm::el_b58check_decode(
+            material.wif_uncompressed.as_ptr(),
+            material.wif_uncompressed.len(),
+            payload.as_mut_ptr(),
+            payload.len(),
+        )
+    };
+    assert_eq!(length, 33);
+    assert_eq!(payload[0], 0x80);
+    assert_eq!(&payload[1..33], &private_key_entropy(MAINNET_WIF.to_owned(), PrivateKeyFormat::Wif, false).unwrap());
+    wipe_bytes(&mut payload);
+}
+
+#[test]
 fn brain_wallet_entropy_hashes_exact_utf8_text() {
     assert_eq!(
         private_key_entropy("abc".to_owned(), PrivateKeyFormat::BrainWallet, false).unwrap(),

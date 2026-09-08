@@ -10,6 +10,7 @@ import {
   mockPrivateKeyEntropy,
   mockPrivateKeyInputState,
   mockPrivateKeyKeyAllowed,
+  mockPrivateKeyMaterial,
   React,
   ReactTestRenderer,
   selectEntropyTool,
@@ -102,13 +103,40 @@ describe('Private Key', () => {
       app!.root.findByProps({ testID: 'derive-private-key' }).props.onPress();
     });
 
+    expect(mockPrivateKeyMaterial).toHaveBeenLastCalledWith(WIF, 0, false);
+    expect(
+      app!.root.findByProps({ testID: 'toggle-private-key-material' }).props.accessibilityState,
+    ).toEqual({ expanded: false });
+    expect(app!.root.findAllByProps({ testID: 'wif-compressed-output' })).toHaveLength(0);
+    expect(app!.root.findAllByProps({ testID: 'private-key-material-safety' })).toHaveLength(0);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'toggle-private-key-material' }).props.onPress();
+    });
+    expect(
+      app!.root.findByProps({ testID: 'toggle-private-key-material' }).props.accessibilityState,
+    ).toEqual({ expanded: true });
+    expect(app!.root.findByProps({ testID: 'private-key-material-safety' }).props.children).toBe(
+      UPSTREAM_TEXT.result.privateKeyMaterialSafety,
+    );
+    expect(app!.root.findByProps({ testID: 'wif-compressed-label' }).props.children).toBe(
+      UPSTREAM_TEXT.result.wifCompressed,
+    );
+    expect(app!.root.findByProps({ testID: 'wif-compressed-output' }).props.children).toBe(WIF);
+    expect(app!.root.findByProps({ testID: 'wif-uncompressed-label' }).props.children).toBe(
+      UPSTREAM_TEXT.result.wifUncompressed,
+    );
+    expect(app!.root.findByProps({ testID: 'wif-uncompressed-output' }).props.children).toBe(
+      '5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAnchuDf',
+    );
     expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
-      UPSTREAM_TEXT.result.privateKey,
+      UPSTREAM_TEXT.result.hexPrivateKey,
     );
     expect(app!.root.findByProps({ testID: 'private-key-safety-note-0' }).props.children).toBe(
       UPSTREAM_TEXT.result.safety.privateKey.wifCompressed,
     );
-    expect(app!.root.findByProps({ testID: 'entropy-output' }).props.children).toBe('0'.repeat(64));
+    expect(app!.root.findByProps({ testID: 'entropy-output' }).props.children).toBe(
+      '0000000000000000000000000000000000000000000000000000000000000001',
+    );
   });
 
   test('uses a direct hexadecimal grid and an enabled brain-wallet space key', async () => {
@@ -460,9 +488,6 @@ describe('Private Key', () => {
     expect(app!.root.findByProps({ testID: 'key-station-private-key-title' }).props.children).toBe(
       'Key 1',
     );
-    expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
-      UPSTREAM_TEXT.result.privateKey,
-    );
     expect(app!.root.findByProps({ testID: 'private-key-safety-note-0' }).props.children).toBe(
       UPSTREAM_TEXT.result.safety.privateKey.brainWarning,
     );
@@ -470,6 +495,12 @@ describe('Private Key', () => {
       UPSTREAM_TEXT.result.safety.privateKey.brainRecoveryExact,
     );
     expect(app!.root.findAllByProps({ testID: 'key-station-seed-words' })).toHaveLength(0);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'toggle-private-key-material' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
+      UPSTREAM_TEXT.result.hexPrivateKey,
+    );
 
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.onPress();

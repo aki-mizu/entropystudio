@@ -305,7 +305,10 @@ export const UPSTREAM_TEXT = {
   },
   result: {
     entropyHex: 'BIP39 entropy hex',
+    hexPrivateKey: 'Hex private key',
     privateKey: 'Private key material',
+    privateKeyMaterialSafety:
+      'These values can spend the bitcoin held by the addresses below. Reveal them only while this file is running offline on an air-gapped computer.',
     privateRecoveryMaterial: 'Private recovery material',
     privateRecoveryMaterialSafety:
       'These values can recreate or spend from the wallet. Reveal them only while this file is running offline on an air-gapped computer.',
@@ -366,6 +369,8 @@ export const UPSTREAM_TEXT = {
     walletDataIntro:
       'Review the root material derived from this seed. Private recovery data is grouped first; watch-only data appears below.',
     walletRecoveryDetails: 'Wallet recovery details',
+    wifCompressed: 'WIF compressed',
+    wifUncompressed: 'WIF uncompressed',
   },
   seed: {
     count: '{entered} of {words} BIP39 words entered',

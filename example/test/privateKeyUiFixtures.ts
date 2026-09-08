@@ -1,4 +1,4 @@
-import type { PrivateKeyInputState } from '../src/native/entropyStudio';
+import type { PrivateKeyInputState, PrivateKeyMaterial } from '../src/native/entropyStudio';
 
 type PrivateKeyUiMockSetters = {
   readonly setPrivateKeyEntropy: (
@@ -20,10 +20,22 @@ type PrivateKeyUiMockSetters = {
       trimBrainWalletBoundaryWhitespace: boolean,
     ) => PrivateKeyInputState,
   ) => void;
+  readonly setPrivateKeyMaterial: (
+    implementation: (
+      value: string,
+      format: number,
+      trimBrainWalletBoundaryWhitespace: boolean,
+    ) => PrivateKeyMaterial,
+  ) => void;
 };
 
 const WIF = 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn';
 const ENTROPY = new Uint8Array(32).buffer;
+const PRIVATE_KEY_MATERIAL: PrivateKeyMaterial = {
+  hexPrivateKey: '0000000000000000000000000000000000000000000000000000000000000001',
+  wifCompressed: WIF,
+  wifUncompressed: '5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAnchuDf',
+};
 
 const PRIVATE_KEY_FIXTURES: Record<string, { readonly entropy?: ArrayBuffer; readonly tag?: string }> = {
   [`0:${WIF}:false`]: { entropy: ENTROPY },
@@ -47,6 +59,13 @@ const PRIVATE_KEY_KEY_ALLOWED_FIXTURES: Record<string, boolean> = {
   '2::0:0:S': true,
   '2:S:1:1:A': true,
   '3::0:0: ': true,
+};
+
+const PRIVATE_KEY_MATERIAL_FIXTURES: Record<string, PrivateKeyMaterial> = {
+  [`0:${WIF}:false`]: PRIVATE_KEY_MATERIAL,
+  '3:brain wallet text:false': PRIVATE_KEY_MATERIAL,
+  '3: recovery phrase :false': PRIVATE_KEY_MATERIAL,
+  '3: recovery phrase :true': PRIVATE_KEY_MATERIAL,
 };
 
 const PRIVATE_KEY_INPUT_STATE_FIXTURES: Record<string, PrivateKeyInputState> = {
@@ -238,6 +257,7 @@ export function installPrivateKeyUiFixtures({
   setPrivateKeyEntropy,
   setPrivateKeyInputState,
   setPrivateKeyKeyAllowed,
+  setPrivateKeyMaterial,
 }: PrivateKeyUiMockSetters) {
   setPrivateKeyEntropy((value, format, trimBrainWalletBoundaryWhitespace) => {
     const fixture = PRIVATE_KEY_FIXTURES[`${format}:${value}:${trimBrainWalletBoundaryWhitespace}`];
@@ -263,5 +283,14 @@ export function installPrivateKeyUiFixtures({
     return PRIVATE_KEY_KEY_ALLOWED_FIXTURES[
       `${format}:${value}:${selectionStart}:${selectionEnd}:${character}`
     ] ?? false;
+  });
+  setPrivateKeyMaterial((value, format, trimBrainWalletBoundaryWhitespace) => {
+    const fixture = PRIVATE_KEY_MATERIAL_FIXTURES[
+      `${format}:${value}:${trimBrainWalletBoundaryWhitespace}`
+    ];
+    if (!fixture) {
+      throw new Error('Missing static private-key material fixture');
+    }
+    return fixture;
   });
 }

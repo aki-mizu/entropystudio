@@ -8,7 +8,7 @@ use crate::hashed_dice::{
     dice_rolls_to_entropy, hashed_dice_state, is_dice_separator, DiceRollMethod,
 };
 use crate::number_bases::{number_base_bits, number_base_value_from_bits, NumberBaseFormat};
-use crate::private_key::{private_key_entropy, PrivateKeyFormat};
+use crate::private_key::{encode_wif_private_key, private_key_entropy, PrivateKeyFormat};
 use crate::seed_phrase::{seed_phrase_state, seed_phrase_words_to_numbers, SeedPhraseInputMethod};
 use crate::wipe::{wipe_bytes, wipe_string};
 
@@ -700,33 +700,8 @@ fn wif_private_key_value(bits: &str) -> String {
     }
 
     let mut entropy = bits_to_bytes(&bits[..256]);
-    if entropy.len() != 32 || unsafe { entropylab_wasm::secp_seckey_valid(entropy.as_ptr()) } != 1 {
-        wipe_bytes(&mut entropy);
-        return String::new();
-    }
-
-    let mut payload = [0u8; 34];
-    payload[0] = 0x80;
-    payload[1..33].copy_from_slice(&entropy);
-    payload[33] = 1;
-    let mut encoded = [0u8; 64];
-    let length = unsafe {
-        entropylab_wasm::el_b58check_encode(
-            payload.as_ptr(),
-            payload.len(),
-            encoded.as_mut_ptr(),
-            encoded.len(),
-        )
-    };
-    let result = usize::try_from(length)
-        .ok()
-        .filter(|length| *length <= encoded.len())
-        .and_then(|length| std::str::from_utf8(&encoded[..length]).ok())
-        .map(str::to_owned)
-        .unwrap_or_default();
+    let result = encode_wif_private_key(&entropy, true);
     wipe_bytes(&mut entropy);
-    wipe_bytes(&mut payload);
-    wipe_bytes(&mut encoded);
     result
 }
 
