@@ -250,10 +250,11 @@ function App() {
   }
 
   function addKeyStationTab(derivation: KeyStationDerivation, input: KeyStationInput) {
+    const editedTab = editInputRequest;
     const tab = createKeyStationTab(
       derivation,
-      nextKeyStationTabId.current++,
-      nextKeyStationTabNumber.current++,
+      editedTab?.id ?? nextKeyStationTabId.current++,
+      editedTab?.number ?? nextKeyStationTabNumber.current++,
       {
         derivationSettings: keyStationDerivationSettings,
         input,
@@ -261,7 +262,10 @@ function App() {
         scriptType: keyStationScriptType,
       },
     );
-    setKeyStationTabs(tabs => [...tabs, tab]);
+    setKeyStationTabs(tabs =>
+      editedTab ? tabs.map(existingTab => (existingTab.id === editedTab.id ? tab : existingTab)) : [...tabs, tab],
+    );
+    setEditInputRequest(null);
     setActiveKeyStationTabId(tab.id);
   }
 

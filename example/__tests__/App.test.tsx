@@ -1344,6 +1344,12 @@ test('Edit input returns to the originating Dice input screen', async () => {
 
   expect(app!.root.findByProps({ testID: 'dice-entry-header-copy' })).toBeDefined();
   expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('1');
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'key-station-tab-1' })).toBeDefined();
+  expect(app!.root.findAllByProps({ testID: 'key-station-tab-2' })).toHaveLength(0);
 });
 
 test('Edit input follows the selected tab method', async () => {
