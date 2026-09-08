@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "EntropyStudioDemo.app"
-               BlueprintName = "EntropyStudioDemo"
-               ReferencedContainer = "container:EntropyStudioDemo.xcodeproj">
+               BuildableName = "EntropyStudio.app"
+               BlueprintName = "EntropyStudio"
+               ReferencedContainer = "container:EntropyStudio.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "EntropyStudioDemoTests.xctest"
-               BlueprintName = "EntropyStudioDemoTests"
-               ReferencedContainer = "container:EntropyStudioDemo.xcodeproj">
+               BuildableName = "EntropyStudioTests.xctest"
+               BlueprintName = "EntropyStudioTests"
+               ReferencedContainer = "container:EntropyStudio.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "EntropyStudioDemo.app"
-            BlueprintName = "EntropyStudioDemo"
-            ReferencedContainer = "container:EntropyStudioDemo.xcodeproj">
+            BuildableName = "EntropyStudio.app"
+            BlueprintName = "EntropyStudio"
+            ReferencedContainer = "container:EntropyStudio.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "EntropyStudioDemo.app"
-            BlueprintName = "EntropyStudioDemo"
-            ReferencedContainer = "container:EntropyStudioDemo.xcodeproj">
+            BuildableName = "EntropyStudio.app"
+            BlueprintName = "EntropyStudio"
+            ReferencedContainer = "container:EntropyStudio.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
