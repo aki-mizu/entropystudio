@@ -23,9 +23,11 @@ type Props = {
 };
 
 export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturnToStation, tab }: Props) {
+  const [showingPrivateRecoveryMaterial, setShowingPrivateRecoveryMaterial] = useState(false);
   const [showingWalletData, setShowingWalletData] = useState(false);
 
   useEffect(() => {
+    setShowingPrivateRecoveryMaterial(false);
     setShowingWalletData(false);
   }, [tab?.id]);
 
@@ -35,6 +37,10 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
     }
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (showingPrivateRecoveryMaterial) {
+        setShowingPrivateRecoveryMaterial(false);
+        return true;
+      }
       if (showingWalletData) {
         setShowingWalletData(false);
         return true;
@@ -43,7 +49,7 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
       return true;
     });
     return () => subscription.remove();
-  }, [isActive, onReturnToStation, showingWalletData]);
+  }, [isActive, onReturnToStation, showingPrivateRecoveryMaterial, showingWalletData]);
 
   if (!tab) {
     return null;
@@ -64,7 +70,10 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
             <Pressable
               accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.common.back}
               accessibilityRole="button"
-              onPress={() => setShowingWalletData(false)}
+              onPress={() => {
+                setShowingPrivateRecoveryMaterial(false);
+                setShowingWalletData(false);
+              }}
               style={styles.backButton}
               testID="close-wallet-data"
             >
@@ -75,20 +84,34 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
             <Text style={[styles.walletDataTitle, { color: colors.text }]} testID="wallet-data-title">
               {UPSTREAM_TEXT.result.walletRecoveryDetails}
             </Text>
-            <Text style={[styles.walletDataSectionTitle, { color: colors.text }]} testID="wallet-data-private-heading">
-              {UPSTREAM_TEXT.result.privateRecoveryMaterial}
-            </Text>
-            <DiceResultPanel
-              colors={colors}
-              entropyLabel={UPSTREAM_TEXT.result.entropyHex}
-              masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
-              result={{
-                entropy: derivation.entropy,
-                masterSeed: derivation.masterSeed,
-                rootXprv: tab.rootXprv,
-              }}
-              rootXprvLabel={formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xprv' })}
-            />
+            <Pressable
+              accessibilityLabel={UPSTREAM_TEXT.result.privateRecoveryMaterial}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showingPrivateRecoveryMaterial }}
+              onPress={() => setShowingPrivateRecoveryMaterial(value => !value)}
+              style={({ pressed }) => [
+                styles.walletDataSectionButton,
+                { borderColor: colors.border, opacity: pressed ? 0.72 : 1 },
+              ]}
+              testID="toggle-private-recovery-material"
+            >
+              <Text style={[styles.walletDataSectionTitle, { color: colors.text }]}>
+                {UPSTREAM_TEXT.result.privateRecoveryMaterial}
+              </Text>
+            </Pressable>
+            {showingPrivateRecoveryMaterial ? (
+              <DiceResultPanel
+                colors={colors}
+                entropyLabel={UPSTREAM_TEXT.result.entropyHex}
+                masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
+                result={{
+                  entropy: derivation.entropy,
+                  masterSeed: derivation.masterSeed,
+                  rootXprv: tab.rootXprv,
+                }}
+                rootXprvLabel={formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xprv' })}
+              />
+            ) : null}
           </View>
         ) : derivation.kind === 'private-key' ? (
           <Text style={[styles.privateKeyTitle, { color: colors.text }]} testID="key-station-private-key-title">
@@ -136,7 +159,10 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
             <Pressable
               accessibilityLabel={UPSTREAM_TEXT.result.walletData}
               accessibilityRole="button"
-              onPress={() => setShowingWalletData(true)}
+              onPress={() => {
+                setShowingPrivateRecoveryMaterial(false);
+                setShowingWalletData(true);
+              }}
               style={({ pressed }) => [
                 styles.walletDataButton,
                 { borderColor: colors.border, opacity: pressed ? 0.72 : 1 },
@@ -239,11 +265,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  walletDataSectionButton: {
+    alignItems: 'flex-start',
+    borderRadius: 6,
+    borderWidth: 1,
+    justifyContent: 'center',
+    marginBottom: 16,
+    minHeight: 48,
+    paddingHorizontal: 12,
+  },
   walletDataSectionTitle: {
     fontSize: 16,
     fontWeight: '700',
     lineHeight: 22,
-    marginBottom: 16,
   },
   walletDataTitle: {
     fontSize: 22,

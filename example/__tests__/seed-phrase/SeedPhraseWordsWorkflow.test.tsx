@@ -371,6 +371,9 @@ describe('Seed Phrase / Words', () => {
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
     });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.onPress();
+    });
     expect(app!.root.findByProps({ testID: 'master-seed-label' }).props.children).toBe(
       UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
     );

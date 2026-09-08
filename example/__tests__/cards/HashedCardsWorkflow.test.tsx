@@ -118,7 +118,19 @@ describe('Hashed cards', () => {
     expect(app!.root.findByProps({ testID: 'wallet-data-title' }).props.children).toBe(
       UPSTREAM_TEXT.result.walletRecoveryDetails,
     );
-    expect(app!.root.findByProps({ testID: 'wallet-data-private-heading' }).props.children).toBe(
+    expect(
+      app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.accessibilityState,
+    ).toEqual({ expanded: false });
+    expect(app!.root.findAllByProps({ testID: 'entropy-output' })).toHaveLength(0);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.onPress();
+    });
+    expect(
+      app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.accessibilityState,
+    ).toEqual({ expanded: true });
+    expect(
+      app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.children.props.children,
+    ).toBe(
       UPSTREAM_TEXT.result.privateRecoveryMaterial,
     );
     expect(app!.root.findAllByProps({ testID: 'key-station-master-fingerprint-value' })).toHaveLength(0);
