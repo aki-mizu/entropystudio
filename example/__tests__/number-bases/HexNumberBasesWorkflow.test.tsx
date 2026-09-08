@@ -13,7 +13,11 @@ import {
   selectEntropyTool,
   selectSeedPhraseLength,
 } from '../../test/testSupport';
-import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
+import {
+  UPSTREAM_TEXT,
+  UPSTREAM_UI_FALLBACK_COPY,
+  UPSTREAM_UI_LABELS,
+} from '../../src/features/upstreamUiCopy';
 
 describe('Number Bases / Hexadecimal', () => {
   test('derives entropy through the native BIP39 binding', async () => {
@@ -33,9 +37,9 @@ describe('Number Bases / Hexadecimal', () => {
     expect(app!.root.findByProps({ testID: 'number-bases-screen-title' }).props.children).toBe(
       UPSTREAM_TEXT.mode.hex,
     );
-    expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.selectedValue).toBe(
-      'hex',
-    );
+    expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.accessibilityValue).toEqual({
+      text: UPSTREAM_UI_LABELS.keyMode.hex,
+    });
 
     await ReactTestRenderer.act(async () => {
       app!

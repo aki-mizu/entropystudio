@@ -18,7 +18,11 @@ import {
   BRAIN_WALLET_WARNING_COPY,
   brainWalletOutputCopy,
 } from '../../src/features/privateKey/privateKey';
-import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
+import {
+  UPSTREAM_UI_FALLBACK_COPY,
+  UPSTREAM_TEXT,
+  UPSTREAM_UI_LABELS,
+} from '../../src/features/upstreamUiCopy';
 
 const WIF = 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn';
 
@@ -35,9 +39,9 @@ describe('Private Key', () => {
     expect(app!.root.findByProps({ testID: 'private-key-screen-title' }).props.children).toBe(
       UPSTREAM_TEXT.mode.key,
     );
-    expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.selectedValue).toBe(
-      'key',
-    );
+    expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.accessibilityValue).toEqual({
+      text: UPSTREAM_UI_LABELS.keyMode.key,
+    });
     expect(app!.root.findByProps({ testID: 'private-key-format-wif' }).props.accessibilityState).toEqual({
       selected: true,
     });

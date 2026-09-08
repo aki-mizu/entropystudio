@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
-import { ScrollView } from 'react-native';
+import { Platform, ScrollView } from 'react-native';
 import type { WordCount } from '../src/features/dice/dice';
 import type {
   DirectDiceCalculationRow,
@@ -364,6 +364,19 @@ export async function selectEntropyTool(
   app: ReactTestRenderer.ReactTestRenderer,
   tool: 'cards' | 'dice' | 'hex' | 'key' | 'seed',
 ) {
+  if (Platform.OS === 'ios') {
+    await ReactTestRenderer.act(async () => {
+      activeMethodList(app).findByProps({ testID: 'key-method-picker' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app.root.findByProps({ testID: 'key-method-picker-wheel' }).props.onValueChange(tool, 0);
+    });
+    await ReactTestRenderer.act(async () => {
+      app.root.findByProps({ testID: 'key-method-picker-done' }).props.onPress();
+    });
+    return;
+  }
+
   await ReactTestRenderer.act(async () => {
     activeMethodList(app).findByProps({ testID: 'key-method-picker' }).props.onValueChange(tool, 0);
   });

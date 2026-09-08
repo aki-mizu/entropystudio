@@ -53,7 +53,7 @@ function expectStartAction(app: ReactTestRenderer.ReactTestRenderer, testID: str
   expect(button.props.children.props.children).toBe(STUDIO_UI_TEXT.actions.start);
 }
 
-test('uses the native method picker for switching workflows', async () => {
+test('opens a native iOS method wheel in a bottom sheet for switching workflows', async () => {
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
     app = ReactTestRenderer.create(<App />);
@@ -62,14 +62,44 @@ test('uses the native method picker for switching workflows', async () => {
   const methodList = activeMethodList(app!);
   const picker = methodList.findByProps({ testID: 'key-method-picker' });
 
-  expect(picker.props.mode).toBe('dropdown');
-  expect(picker.props.selectedValue).toBe('dice');
+  expect(picker.props.accessibilityRole).toBe('button');
+  expect(picker.props.accessibilityValue).toEqual({ text: UPSTREAM_UI_LABELS.keyMode.dice });
+  expect(app!.root.findAllByProps({ testID: 'key-method-picker-sheet-title' })).toHaveLength(0);
 
   await ReactTestRenderer.act(async () => {
-    picker.props.onValueChange('key', 4);
+    picker.props.onPress();
   });
 
-  expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.selectedValue).toBe('key');
+  expect(picker.props.accessibilityState).toEqual({ disabled: false, expanded: true });
+  expect(app!.root.findByProps({ testID: 'key-method-picker-sheet-title' }).props.children).toBe(
+    UPSTREAM_TEXT.keys.methodLabel,
+  );
+  expect(app!.root.findByProps({ testID: 'key-method-picker-wheel' }).props.selectedValue).toBe('dice');
+
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-method-picker-wheel' }).props.onValueChange('cards', 1);
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-method-picker-sheet-close' }).props.onPress();
+  });
+  expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.accessibilityValue).toEqual({
+    text: UPSTREAM_UI_LABELS.keyMode.dice,
+  });
+
+  await ReactTestRenderer.act(async () => {
+    activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-method-picker-wheel' }).props.onValueChange('key', 4);
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-method-picker-done' }).props.onPress();
+  });
+
+  expect(app!.root.findAllByProps({ testID: 'key-method-picker-sheet-title' })).toHaveLength(0);
+  expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.accessibilityValue).toEqual({
+    text: UPSTREAM_UI_LABELS.keyMode.key,
+  });
   expect(app!.root.findByProps({ testID: 'private-key-setup-view' })).toBeDefined();
 });
 
@@ -92,7 +122,9 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
     UPSTREAM_TEXT.keys.methodLabel,
   );
   expect(diceMethodList).toBeDefined();
-  expect(diceMethodList.findByProps({ testID: 'key-method-picker' }).props.selectedValue).toBe('dice');
+  expect(diceMethodList.findByProps({ testID: 'key-method-picker' }).props.accessibilityValue).toEqual({
+    text: UPSTREAM_UI_LABELS.keyMode.dice,
+  });
 
   await selectDiceMethod(app!, 'dice-method-coleman');
   await selectEntropyTool(app!, 'cards');
@@ -100,9 +132,9 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
   expect(app!.root.findByProps({ testID: 'cards-setup-view' })).toBeDefined();
   expectStartAction(app!, 'open-cards-entry');
   expect(app!.root.findAllByProps({ testID: 'cards-entry-view' })).toHaveLength(0);
-  expect(
-    activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.selectedValue,
-  ).toBe('cards');
+  expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.accessibilityValue).toEqual({
+    text: UPSTREAM_UI_LABELS.keyMode.cards,
+  });
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'card-method-direct' }).props.onPress();
   });

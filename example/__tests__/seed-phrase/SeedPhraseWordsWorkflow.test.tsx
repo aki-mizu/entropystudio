@@ -19,6 +19,7 @@ import {
   formatCopy,
   UPSTREAM_TEXT,
   UPSTREAM_UI_FALLBACK_COPY,
+  UPSTREAM_UI_LABELS,
 } from '../../src/features/upstreamUiCopy';
 import { SeedPhraseScreen } from '../../src/screens/SeedPhraseScreen';
 
@@ -56,9 +57,9 @@ describe('Seed Phrase / Words', () => {
     expect(app!.root.findByProps({ testID: 'seed-phrase-screen-title' }).props.children).toBe(
       UPSTREAM_TEXT.mode.seed,
     );
-    expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.selectedValue).toBe(
-      'seed',
-    );
+    expect(activeMethodList(app!).findByProps({ testID: 'key-method-picker' }).props.accessibilityValue).toEqual({
+      text: UPSTREAM_UI_LABELS.keyMode.seed,
+    });
 
     await selectSeedPhraseLength(app!, 12);
     expect(app!.root.findByProps({ testID: 'seed-phrase-method-requirement' }).props.children).toBe(

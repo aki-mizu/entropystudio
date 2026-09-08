@@ -76,6 +76,7 @@ export const UPSTREAM_TEXT = {
   },
   common: {
     cancel: 'Cancel',
+    done: 'Done',
   },
   dice: {
     bitbox: {
