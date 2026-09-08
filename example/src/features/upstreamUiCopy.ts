@@ -354,6 +354,18 @@ export const UPSTREAM_TEXT = {
       passphraseInUse:
         'A passphrase is in use. The same words without this passphrase are a different wallet. Do not store the passphrase with the words.',
       privateKey: {
+        brainHdEntropyExact:
+          'SHA-256 of the exact UTF-8 text is 32 bytes of BIP39 entropy (256 bits → 24 words).',
+        brainHdEntropyTrimmed:
+          'SHA-256 of the UTF-8 text with boundary whitespace trimmed is 32 bytes of BIP39 entropy (256 bits → 24 words).',
+        brainHdMnemonic:
+          'A valid mnemonic does not mean it is the same wallet as hashing the text as a Core private key.',
+        brainHdNotBackup:
+          'This is not a BIP39 passphrase, and it is not a Bitcoin Core hdseed or address-key backup.',
+        brainHdStrength:
+          'Lab only. Strength is the entropy of this text, not the 24-word count.',
+        brainHdUnsalted:
+          'SHA-256(text) is unsalted and fast. Anyone who can guess the text recovers the wallet.',
         brainRecoveryExact: 'Brain wallet recovery: SHA-256 used the passphrase exactly as entered.',
         brainRecoveryTrimmed:
           'Brain wallet recovery: SHA-256 used the passphrase after trimming leading and trailing whitespace.',

@@ -547,14 +547,24 @@ describe('Private Key', () => {
       'd34db33f',
     );
     expect(app!.root.findAllByProps({ testID: 'key-station-seed-words' })).toHaveLength(0);
+    expect(() => app!.root.findByProps({ testID: 'result-safety-notes' })).toThrow();
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
     });
     expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-0' }).props.children).toBe(
-      UPSTREAM_TEXT.result.safety.privateKey.brainWarning,
+      UPSTREAM_TEXT.result.safety.privateKey.brainHdStrength,
     );
     expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-1' }).props.children).toBe(
-      UPSTREAM_TEXT.result.safety.privateKey.brainRecoveryExact,
+      UPSTREAM_TEXT.result.safety.privateKey.brainHdUnsalted,
+    );
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-2' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.privateKey.brainHdNotBackup,
+    );
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-3' }).props.children).toBe(
+      UPSTREAM_TEXT.result.safety.privateKey.brainHdMnemonic,
+    );
+    expect(app!.root.findByProps({ testID: 'wallet-data-safety-note-4' }).props.accessibilityLabel).toBe(
+      UPSTREAM_TEXT.result.safety.privateKey.brainHdEntropyExact,
     );
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'toggle-private-recovery-material' }).props.onPress();

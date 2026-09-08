@@ -60,15 +60,13 @@ function SafetyNote({
       style={styles.safetyNotesCenteredArrowLine}
       testID={noteTestID}
     >
-      <Text accessible={false} style={[styles.safetyNotesCenteredArrowCopy, { color }]}>
+      <Text accessible={false} style={[styles.safetyNotesCopy, { color }]}>
         {beforeArrow}
-      </Text>
-      <View accessible={false} style={styles.safetyNotesCenteredArrowGroup}>
         <Text style={[styles.safetyNotesCenteredArrow, { color }]} testID={`${noteTestID}-arrow`}>
           {arrow}
         </Text>
         <Text style={[styles.safetyNotesCenteredArrowCopy, { color }]}>{afterArrow}</Text>
-      </View>
+      </Text>
     </View>
   );
 }
@@ -418,14 +416,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
   },
-  safetyNotesCenteredArrowGroup: {
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
   safetyNotesCenteredArrowLine: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     marginTop: 6,
   },
   safetyNotesTitle: {

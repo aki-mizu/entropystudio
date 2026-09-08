@@ -173,6 +173,27 @@ export type KeyStationSafetyNote = {
 };
 
 export function keyStationSafetyNotes(tab: KeyStationTab): readonly KeyStationSafetyNote[] {
+  if (
+    tab.derivation.kind === 'bip39' &&
+    tab.input.kind === 'private-key' &&
+    tab.input.format === 'brain' &&
+    tab.input.brainWalletOutput === 'hd'
+  ) {
+    return [
+      { kind: 'warning', text: UPSTREAM_TEXT.result.safety.privateKey.brainHdStrength },
+      { kind: 'warning', text: UPSTREAM_TEXT.result.safety.privateKey.brainHdUnsalted },
+      { kind: 'warning', text: UPSTREAM_TEXT.result.safety.privateKey.brainHdNotBackup },
+      { kind: 'warning', text: UPSTREAM_TEXT.result.safety.privateKey.brainHdMnemonic },
+      {
+        centeredArrow: true,
+        kind: 'note',
+        text: tab.input.brainWalletTrim
+          ? UPSTREAM_TEXT.result.safety.privateKey.brainHdEntropyTrimmed
+          : UPSTREAM_TEXT.result.safety.privateKey.brainHdEntropyExact,
+      },
+    ];
+  }
+
   const resultWarnings: KeyStationSafetyNote[] =
     tab.derivation.kind === 'bip39' && tab.derivation.passphrase
       ? [{ kind: 'warning', text: UPSTREAM_TEXT.result.safety.passphrase }]
