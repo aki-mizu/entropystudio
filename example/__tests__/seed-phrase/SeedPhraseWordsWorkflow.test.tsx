@@ -79,9 +79,34 @@ describe('Seed Phrase / Words', () => {
       app!.root.findByProps({ testID: 'open-seed-phrase-key-settings' }).props.onPress();
     });
     expect(app!.root.findByProps({ testID: 'seed-phrase-key-settings-view' })).toBeDefined();
+    const scriptTypePicker = app!.root.findByProps({ testID: 'seed-phrase-script-type-picker' });
+    expect(scriptTypePicker.props.accessibilityLabel).toBe(UPSTREAM_TEXT.keys.scriptType);
+    expect(scriptTypePicker.props.accessibilityRole).toBe('button');
+    expect(scriptTypePicker.props.accessibilityValue).toEqual({
+      text: UPSTREAM_TEXT.keys.scriptTypes.bip84,
+    });
+    await ReactTestRenderer.act(async () => {
+      scriptTypePicker.props.onPress();
+    });
     expect(
-      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker' }).props.accessibilityLabel,
+      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker-sheet-title' }).props.children,
     ).toBe(UPSTREAM_TEXT.keys.scriptType);
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker-wheel' }).props.selectedValue,
+    ).toBe('bip84');
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'seed-phrase-script-type-picker-wheel' })
+        .props.onValueChange('bip86', 3);
+    });
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'seed-phrase-script-type-picker-sheet-close' })
+        .props.onPress();
+    });
+    expect(
+      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker' }).props.accessibilityValue,
+    ).toEqual({ text: UPSTREAM_TEXT.keys.scriptTypes.bip84 });
     expect(
       app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.value,
     ).toBe("m/84'/0'/0'/0/0");
@@ -120,7 +145,15 @@ describe('Seed Phrase / Words', () => {
       );
     });
     await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker' }).props.onValueChange('bip86', 3);
+      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'seed-phrase-script-type-picker-wheel' })
+        .props.onValueChange('bip86', 3);
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker-done' }).props.onPress();
     });
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText(
@@ -128,7 +161,15 @@ describe('Seed Phrase / Words', () => {
       );
     });
     await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker' }).props.onValueChange('bip44', 0);
+      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!
+        .root.findByProps({ testID: 'seed-phrase-script-type-picker-wheel' })
+        .props.onValueChange('bip44', 0);
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'seed-phrase-script-type-picker-done' }).props.onPress();
     });
     expect(app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.value).toBe(
       "m/44'/1'/2'/0/7",

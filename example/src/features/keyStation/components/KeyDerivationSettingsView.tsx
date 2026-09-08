@@ -1,4 +1,3 @@
-import { Picker } from '@react-native-picker/picker';
 import { useState } from 'react';
 import {
   Pressable,
@@ -10,6 +9,7 @@ import {
 } from 'react-native';
 
 import type { DiceColors } from '../../dice/diceTheme';
+import { NativeSelect, type NativeSelectOption } from '../../../components/NativeSelect';
 import {
   KEY_STATION_SCRIPT_TYPES,
   keyStationDerivationPathState,
@@ -36,6 +36,9 @@ const SCRIPT_TYPE_LABELS: Record<KeyStationScriptType, string> = {
   bip84: UPSTREAM_TEXT.keys.scriptTypes.bip84,
   bip86: UPSTREAM_TEXT.keys.scriptTypes.bip86,
 };
+
+const SCRIPT_TYPE_OPTIONS: readonly NativeSelectOption<KeyStationScriptType>[] =
+  KEY_STATION_SCRIPT_TYPES.map(({ id }) => ({ label: SCRIPT_TYPE_LABELS[id], value: id }));
 
 type AdvancedPathField = 'purpose' | 'network' | 'account' | 'branch' | 'address';
 
@@ -228,26 +231,14 @@ export function KeyDerivationSettingsView({
           <Text style={[styles.label, { color: colors.muted }]}>
             {UPSTREAM_TEXT.keys.scriptType}
           </Text>
-          <View
-            style={[
-              styles.pickerShell,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
-          >
-            <Picker
-              accessibilityLabel={UPSTREAM_TEXT.keys.scriptType}
-              dropdownIconColor={colors.muted}
-              mode="dropdown"
-              onValueChange={value => onSetScriptType(value as KeyStationScriptType)}
-              selectedValue={scriptType}
-              style={[styles.picker, { color: colors.text }]}
-              testID={`${testIDPrefix}-script-type-picker`}
-            >
-              {KEY_STATION_SCRIPT_TYPES.map(({ id }) => (
-                <Picker.Item key={id} label={SCRIPT_TYPE_LABELS[id]} value={id} />
-              ))}
-            </Picker>
-          </View>
+          <NativeSelect
+            accessibilityLabel={UPSTREAM_TEXT.keys.scriptType}
+            controlTestID={`${testIDPrefix}-script-type-picker`}
+            colors={colors}
+            onValueChange={onSetScriptType}
+            options={SCRIPT_TYPE_OPTIONS}
+            selectedValue={scriptType}
+          />
         </View>
         <View style={styles.setting}>
           <Text style={[styles.label, { color: colors.muted }]}>
@@ -416,15 +407,6 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: 12,
     paddingVertical: 10,
-  },
-  picker: {
-    minHeight: 48,
-    width: '100%',
-  },
-  pickerShell: {
-    borderRadius: 6,
-    borderWidth: 1,
-    overflow: 'hidden',
   },
   screen: {
     flex: 1,
