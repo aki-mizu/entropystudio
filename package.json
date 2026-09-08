@@ -22,7 +22,7 @@
     "ios",
     "js",
     "EntropyStudio.xcframework",
-    "Entropystudio.podspec",
+    "EntropystudioFfi.podspec",
     "react-native.config.js",
     "ubrn.config.yaml",
     "LICENSE",
@@ -55,7 +55,7 @@
     "node": ">=20"
   },
   "codegenConfig": {
-    "name": "EntropyStudioSpec",
+    "name": "EntropyStudioFfiSpec",
     "type": "modules",
     "jsSrcsDir": "js",
     "android": {
