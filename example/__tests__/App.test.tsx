@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native';
 
 import {
   activeMethodList,
+  appTabBar,
   App,
   KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
   KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
@@ -138,13 +139,11 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
   expect(app!.root.findByProps({ testID: 'app-workspace-safe-area' }).props.style).toContainEqual({
     backgroundColor: diceColors(false).background,
   });
-  expect(app!.root.findByProps({ testID: 'app-bottom-tab-bar' }).props.style).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({ backgroundColor: diceColors(false).background }),
-    ]),
-  );
+  expect(appTabBar(app!).props.tabBarStyle).toEqual({
+    backgroundColor: diceColors(false).background,
+  });
   expectStartAction(app!, 'open-dice-entry');
-  expect(app!.root.findByProps({ testID: 'app-tab-method' }).props.children.props.children).toBe(
+  expect(appTabBar(app!).props.navigationState.routes[0].title).toBe(
     UPSTREAM_TEXT.keys.tabLabel,
   );
   const diceMethodList = activeMethodList(app!);
@@ -1639,9 +1638,7 @@ test('syncs entropy across methods through the native snapshot', async () => {
   await selectEntropyTool(app!, 'hex');
   await selectSeedPhraseLength(app!, 12);
   await ReactTestRenderer.act(async () => {
-    app!
-      .root.findByProps({ testID: 'app-tab-settings' })
-      .props.onPress();
+    appTabBar(app!).props.onIndexChange(1);
   });
   await ReactTestRenderer.act(async () => {
     app!
@@ -1662,9 +1659,7 @@ test('syncs entropy across methods through the native snapshot', async () => {
   expect(app!.root.findAllByProps({ testID: 'entropy-sync-settings-caution' })).toHaveLength(0);
 
   await ReactTestRenderer.act(async () => {
-    app!
-      .root.findByProps({ testID: 'app-tab-method' })
-      .props.onPress();
+    appTabBar(app!).props.onIndexChange(0);
   });
 
   expect(

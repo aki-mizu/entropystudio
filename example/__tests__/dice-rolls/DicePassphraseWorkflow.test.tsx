@@ -14,6 +14,7 @@ import {
   openDiceEntry,
   React,
   ReactTestRenderer,
+  selectAppTab,
 } from '../../test/testSupport';
 import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../src/features/upstreamUiCopy';
 import { Bip39PassphraseView } from '../../src/features/seedPhrase/bip39Passphrase';
@@ -30,17 +31,13 @@ describe('Dice Rolls / BIP39 passphrase', () => {
       app = ReactTestRenderer.create(<App />);
     });
 
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'app-tab-settings' }).props.onPress();
-    });
+    await selectAppTab(app!, 'settings');
     await ReactTestRenderer.act(async () => {
       app!
         .root.findByProps({ testID: 'seed-phrase-autocomplete-setting' })
         .props.onValueChange(false);
     });
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'app-tab-method' }).props.onPress();
-    });
+    await selectAppTab(app!, 'method');
 
     await openDiceEntry(app!);
 

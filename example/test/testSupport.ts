@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
+import TabView from 'react-native-bottom-tabs';
 import { Platform, ScrollView } from 'react-native';
 import type { WordCount } from '../src/features/dice/dice';
 import type {
@@ -470,6 +471,19 @@ export function activeMethodList(app: ReactTestRenderer.ReactTestRenderer) {
   return methodList;
 }
 
+export function appTabBar(app: ReactTestRenderer.ReactTestRenderer) {
+  return app.root.findByProps({ testID: 'app-bottom-tab-bar' }).findByType(TabView);
+}
+
+export async function selectAppTab(
+  app: ReactTestRenderer.ReactTestRenderer,
+  tab: 'method' | 'settings',
+) {
+  await ReactTestRenderer.act(async () => {
+    appTabBar(app).props.onIndexChange(tab === 'method' ? 0 : 1);
+  });
+}
+
 export async function selectEntropyTool(
   app: ReactTestRenderer.ReactTestRenderer,
   tool: 'cards' | 'dice' | 'hex' | 'key' | 'seed',
@@ -496,15 +510,11 @@ export async function selectSeedPhraseLength(
   app: ReactTestRenderer.ReactTestRenderer,
   wordCount: WordCount,
 ) {
-  await ReactTestRenderer.act(async () => {
-    app.root.findByProps({ testID: 'app-tab-settings' }).props.onPress();
-  });
+  await selectAppTab(app, 'settings');
   await ReactTestRenderer.act(async () => {
     app.root.findByProps({ testID: `word-count-${wordCount}` }).props.onPress();
   });
-  await ReactTestRenderer.act(async () => {
-    app.root.findByProps({ testID: 'app-tab-method' }).props.onPress();
-  });
+  await selectAppTab(app, 'method');
 }
 
 export async function openDiceEntry(app: ReactTestRenderer.ReactTestRenderer) {

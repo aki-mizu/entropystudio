@@ -15,6 +15,7 @@ import {
   React,
   ReactTestRenderer,
   ScrollView,
+  selectAppTab,
 } from '../../test/testSupport';
 import { formatCopy, UPSTREAM_TEXT } from '../../src/features/upstreamUiCopy';
 
@@ -61,9 +62,7 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
     expect(app!.root.findByProps({ testID: 'dice-method-coldcard-title' }).props.children).toBe(
       UPSTREAM_TEXT.dice.coldcard.title,
     );
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'app-tab-settings' }).props.onPress();
-    });
+    await selectAppTab(app!, 'settings');
     expect(
       app!
         .root
@@ -78,9 +77,7 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
         .findByProps({ testID: 'entropy-sync-settings-screen' })
         .findByProps({ testID: 'seed-length-label' }).props.children,
     ).toBe(UPSTREAM_TEXT.seedLength.label);
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'app-tab-method' }).props.onPress();
-    });
+    await selectAppTab(app!, 'method');
     await openDiceEntry(app!);
     expect(app!.root.findByProps({ testID: 'dice-rolls-view' })).toBeDefined();
     expect(

@@ -4,9 +4,11 @@
 
 import {
   App,
+  appTabBar,
   mockSynchronizeEntropy,
   React,
   ReactTestRenderer,
+  selectAppTab,
 } from '../../test/testSupport';
 import { EntropySyncSource } from '../../src/native/entropyStudio';
 import type { EntropySyncSnapshot } from '../../src/native/entropyStudio';
@@ -64,16 +66,10 @@ test('starts entropy synchronization disabled', async () => {
       .root.findByProps({ testID: 'dice-setup-view' })
       .findAllByProps({ testID: 'word-count-24' }),
   ).toHaveLength(0);
-  await ReactTestRenderer.act(async () => {
-    app!
-      .root.findByProps({ testID: 'app-tab-settings' })
-      .props.onPress();
-  });
+  await selectAppTab(app!, 'settings');
 
-  expect(app!.root.findByProps({ testID: 'app-tab-settings' }).props.accessibilityState).toEqual({
-    selected: true,
-  });
-  expect(app!.root.findByProps({ testID: 'app-tab-settings' }).props.accessibilityLabel).toBe(
+  expect(appTabBar(app!).props.navigationState.index).toBe(1);
+  expect(appTabBar(app!).props.navigationState.routes[1].title).toBe(
     STUDIO_UI_TEXT.navigation.settings,
   );
   expect(app!.root.findByProps({ testID: 'dice-screen-safe-area' }).props.pointerEvents).toBe(
@@ -89,15 +85,9 @@ test('starts entropy synchronization disabled', async () => {
   expect(app!.root.findAllByProps({ testID: 'entropy-sync-settings-status' })).toHaveLength(0);
   expect(mockSynchronizeEntropy).not.toHaveBeenCalled();
 
-  await ReactTestRenderer.act(async () => {
-    app!
-      .root.findByProps({ testID: 'app-tab-method' })
-      .props.onPress();
-  });
+  await selectAppTab(app!, 'method');
 
-  expect(app!.root.findByProps({ testID: 'app-tab-method' }).props.accessibilityState).toEqual({
-    selected: true,
-  });
+  expect(appTabBar(app!).props.navigationState.index).toBe(0);
   expect(app!.root.findByProps({ testID: 'dice-screen-safe-area' }).props.pointerEvents).toBe(
     'auto',
   );
@@ -112,11 +102,7 @@ test('updates synchronized entropy when Settings changes seed phrase length', as
     app = ReactTestRenderer.create(<App />);
   });
 
-  await ReactTestRenderer.act(async () => {
-    app!
-      .root.findByProps({ testID: 'app-tab-settings' })
-      .props.onPress();
-  });
+  await selectAppTab(app!, 'settings');
   await ReactTestRenderer.act(async () => {
     app!
       .root.findByProps({ testID: 'entropy-sync-settings-toggle' })
@@ -147,11 +133,7 @@ test('shows native shortfall and unknown-strength cautions for synced entropy', 
     app = ReactTestRenderer.create(<App />);
   });
 
-  await ReactTestRenderer.act(async () => {
-    app!
-      .root.findByProps({ testID: 'app-tab-settings' })
-      .props.onPress();
-  });
+  await selectAppTab(app!, 'settings');
   await ReactTestRenderer.act(async () => {
     app!
       .root.findByProps({ testID: 'entropy-sync-settings-toggle' })

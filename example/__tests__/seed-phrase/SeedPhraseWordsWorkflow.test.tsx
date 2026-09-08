@@ -16,6 +16,7 @@ import {
   mockMnemonicToSeed,
   React,
   ReactTestRenderer,
+  selectAppTab,
   selectEntropyTool,
   selectSeedPhraseLength,
 } from '../../test/testSupport';
@@ -452,9 +453,7 @@ describe('Seed Phrase / Words', () => {
       app = ReactTestRenderer.create(<App />);
     });
 
-    await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'app-tab-settings' }).props.onPress();
-    });
+    await selectAppTab(app!, 'settings');
     const autocompleteSetting = app!.root.findByProps({
       testID: 'seed-phrase-autocomplete-setting',
     });

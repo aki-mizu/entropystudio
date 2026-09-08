@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react';
-import { StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
+import { Platform, StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
+import TabView, { type AppleIcon } from 'react-native-bottom-tabs';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { AppBottomTabs } from './components/AppBottomTabs';
-import type { AppTab } from './components/AppBottomTabs';
 import type { EntropyTool } from './components/EntropyMethodList';
 import { KeyStationTabs } from './components/KeyStationTabs';
 import { diceColors } from './features/dice/diceTheme';
@@ -27,6 +26,8 @@ import {
   keyDerivationProjectAdvancedPath,
   keyDerivationVisiblePathState,
 } from './native/entropyStudio';
+import { STUDIO_UI_TEXT } from './features/studioUiCopy';
+import { UPSTREAM_TEXT } from './features/upstreamUiCopy';
 import type {
   KeyDerivationAdvancedInput,
   KeyDerivationAdvancedState,
@@ -143,6 +144,30 @@ function projectAdvancedSettings(
     visiblePath: projection.visiblePath,
   };
 }
+
+type AppTab = 'method' | 'settings';
+
+type AppTabRoute = {
+  readonly focusedIcon?: AppleIcon;
+  readonly key: AppTab;
+  readonly testID: string;
+  readonly title: string;
+};
+
+const APP_TAB_ROUTES: AppTabRoute[] = [
+  {
+    focusedIcon: Platform.OS === 'ios' ? { sfSymbol: 'key.fill' } : undefined,
+    key: 'method',
+    testID: 'app-tab-method',
+    title: UPSTREAM_TEXT.keys.tabLabel,
+  },
+  {
+    focusedIcon: Platform.OS === 'ios' ? { sfSymbol: 'gearshape.fill' } : undefined,
+    key: 'settings',
+    testID: 'app-tab-settings',
+    title: STUDIO_UI_TEXT.navigation.settings,
+  },
+];
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -265,6 +290,110 @@ function App() {
     setActiveKeyStationTabId(null);
   }
 
+  function renderMethodScene() {
+    return (
+      <View style={styles.scene}>
+        <KeyStationTabs
+          activeTabId={activeKeyStationTabId}
+          colors={colors}
+          onDeleteActiveTab={deleteActiveKeyStationTab}
+          onOpenKeyStation={() => setActiveKeyStationTabId(null)}
+          onSelectTab={setActiveKeyStationTabId}
+          tabs={keyStationTabs}
+        />
+        <View style={styles.content}>
+          <DiceRollsScreen
+            activeTool={activeTool}
+            autocompleteEnabled={seedPhraseAutocompleteEnabled}
+            advancedDerivationHardening={keyStationDerivationSettings.advancedHardening}
+            advancedDerivationInput={keyStationDerivationSettings.advancedInput}
+            derivationPath={keyStationDerivationSettings.visiblePath}
+            derivationPathValid={keyStationDerivationPathValid}
+            editInputRequest={editInputRequest}
+            isActive={activeTool === 'dice' && isKeyStationActive}
+            isDarkMode={isDarkMode}
+            onDeriveKey={addKeyStationTab}
+            onSetAdvancedDerivation={setKeyStationAdvancedDerivation}
+            onSetDerivationPath={setKeyStationDerivationPath}
+            onSetScriptType={selectKeyStationScriptType}
+            onSelectTool={setActiveTool}
+            scriptType={keyStationScriptType}
+          />
+          <CardsScreen
+            activeTool={activeTool}
+            autocompleteEnabled={seedPhraseAutocompleteEnabled}
+            advancedDerivationHardening={keyStationDerivationSettings.advancedHardening}
+            advancedDerivationInput={keyStationDerivationSettings.advancedInput}
+            derivationPath={keyStationDerivationSettings.visiblePath}
+            derivationPathValid={keyStationDerivationPathValid}
+            editInputRequest={editInputRequest}
+            isActive={activeTool === 'cards' && isKeyStationActive}
+            isDarkMode={isDarkMode}
+            onDeriveKey={addKeyStationTab}
+            onSetAdvancedDerivation={setKeyStationAdvancedDerivation}
+            onSetDerivationPath={setKeyStationDerivationPath}
+            onSetScriptType={selectKeyStationScriptType}
+            onSelectTool={setActiveTool}
+            scriptType={keyStationScriptType}
+          />
+          <NumberBasesScreen
+            activeTool={activeTool}
+            autocompleteEnabled={seedPhraseAutocompleteEnabled}
+            editInputRequest={editInputRequest}
+            isActive={activeTool === 'hex' && isKeyStationActive}
+            isDarkMode={isDarkMode}
+            onDeriveKey={addKeyStationTab}
+            onSelectTool={setActiveTool}
+          />
+          <SeedPhraseScreen
+            activeTool={activeTool}
+            autocompleteEnabled={seedPhraseAutocompleteEnabled}
+            advancedDerivationHardening={keyStationDerivationSettings.advancedHardening}
+            advancedDerivationInput={keyStationDerivationSettings.advancedInput}
+            derivationPath={keyStationDerivationSettings.visiblePath}
+            derivationPathValid={keyStationDerivationPathValid}
+            editInputRequest={editInputRequest}
+            isActive={activeTool === 'seed' && isKeyStationActive}
+            isDarkMode={isDarkMode}
+            onDeriveKey={addKeyStationTab}
+            onSetAdvancedDerivation={setKeyStationAdvancedDerivation}
+            onSetDerivationPath={setKeyStationDerivationPath}
+            onSetScriptType={selectKeyStationScriptType}
+            onSelectTool={setActiveTool}
+            scriptType={keyStationScriptType}
+          />
+          <PrivateKeyScreen
+            activeTool={activeTool}
+            editInputRequest={editInputRequest}
+            isActive={activeTool === 'key' && isKeyStationActive}
+            isDarkMode={isDarkMode}
+            onDeriveKey={addKeyStationTab}
+            onSelectTool={setActiveTool}
+          />
+          <KeyStationResultScreen
+            colors={colors}
+            isActive={activeTab === 'method' && activeKeyStationTab !== null}
+            onEditInput={() => (activeKeyStationTab ? editKeyStationInput(activeKeyStationTab) : undefined)}
+            onReturnToStation={() => setActiveKeyStationTabId(null)}
+            tab={activeKeyStationTab}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  function renderSettingsScene() {
+    return (
+      <EntropySyncSettingsScreen
+        autocompleteEnabled={seedPhraseAutocompleteEnabled}
+        isActive={activeTab === 'settings'}
+        isDarkMode={isDarkMode}
+        onSetAutocompleteEnabled={setSeedPhraseAutocompleteEnabled}
+        onReturnToMethod={() => setActiveTab('method')}
+      />
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <EntropySyncProvider>
@@ -275,102 +404,25 @@ function App() {
             style={[styles.workspace, { backgroundColor: colors.background }]}
             testID="app-workspace-safe-area"
           >
-            {activeTab === 'method' ? (
-              <KeyStationTabs
-                activeTabId={activeKeyStationTabId}
-                colors={colors}
-                onDeleteActiveTab={deleteActiveKeyStationTab}
-                onOpenKeyStation={() => setActiveKeyStationTabId(null)}
-                onSelectTab={setActiveKeyStationTabId}
-                tabs={keyStationTabs}
-              />
-            ) : null}
-            <View style={styles.content}>
-              <DiceRollsScreen
-                activeTool={activeTool}
-                autocompleteEnabled={seedPhraseAutocompleteEnabled}
-                advancedDerivationHardening={keyStationDerivationSettings.advancedHardening}
-                advancedDerivationInput={keyStationDerivationSettings.advancedInput}
-                derivationPath={keyStationDerivationSettings.visiblePath}
-                derivationPathValid={keyStationDerivationPathValid}
-                editInputRequest={editInputRequest}
-                isActive={activeTool === 'dice' && isKeyStationActive}
-                isDarkMode={isDarkMode}
-                onDeriveKey={addKeyStationTab}
-                onSetAdvancedDerivation={setKeyStationAdvancedDerivation}
-                onSetDerivationPath={setKeyStationDerivationPath}
-                onSetScriptType={selectKeyStationScriptType}
-                onSelectTool={setActiveTool}
-                scriptType={keyStationScriptType}
-              />
-              <CardsScreen
-                activeTool={activeTool}
-                autocompleteEnabled={seedPhraseAutocompleteEnabled}
-                advancedDerivationHardening={keyStationDerivationSettings.advancedHardening}
-                advancedDerivationInput={keyStationDerivationSettings.advancedInput}
-                derivationPath={keyStationDerivationSettings.visiblePath}
-                derivationPathValid={keyStationDerivationPathValid}
-                editInputRequest={editInputRequest}
-                isActive={activeTool === 'cards' && isKeyStationActive}
-                isDarkMode={isDarkMode}
-                onDeriveKey={addKeyStationTab}
-                onSetAdvancedDerivation={setKeyStationAdvancedDerivation}
-                onSetDerivationPath={setKeyStationDerivationPath}
-                onSetScriptType={selectKeyStationScriptType}
-                onSelectTool={setActiveTool}
-                scriptType={keyStationScriptType}
-              />
-              <NumberBasesScreen
-                activeTool={activeTool}
-                autocompleteEnabled={seedPhraseAutocompleteEnabled}
-                editInputRequest={editInputRequest}
-                isActive={activeTool === 'hex' && isKeyStationActive}
-                isDarkMode={isDarkMode}
-                onDeriveKey={addKeyStationTab}
-                onSelectTool={setActiveTool}
-              />
-              <SeedPhraseScreen
-                activeTool={activeTool}
-                autocompleteEnabled={seedPhraseAutocompleteEnabled}
-                advancedDerivationHardening={keyStationDerivationSettings.advancedHardening}
-                advancedDerivationInput={keyStationDerivationSettings.advancedInput}
-                derivationPath={keyStationDerivationSettings.visiblePath}
-                derivationPathValid={keyStationDerivationPathValid}
-                editInputRequest={editInputRequest}
-                isActive={activeTool === 'seed' && isKeyStationActive}
-                isDarkMode={isDarkMode}
-                onDeriveKey={addKeyStationTab}
-                onSetAdvancedDerivation={setKeyStationAdvancedDerivation}
-                onSetDerivationPath={setKeyStationDerivationPath}
-                onSetScriptType={selectKeyStationScriptType}
-                onSelectTool={setActiveTool}
-                scriptType={keyStationScriptType}
-              />
-              <PrivateKeyScreen
-                activeTool={activeTool}
-                editInputRequest={editInputRequest}
-                isActive={activeTool === 'key' && isKeyStationActive}
-                isDarkMode={isDarkMode}
-                onDeriveKey={addKeyStationTab}
-                onSelectTool={setActiveTool}
-              />
-              <KeyStationResultScreen
-                colors={colors}
-                isActive={activeTab === 'method' && activeKeyStationTab !== null}
-                onEditInput={() => (activeKeyStationTab ? editKeyStationInput(activeKeyStationTab) : undefined)}
-                onReturnToStation={() => setActiveKeyStationTabId(null)}
-                tab={activeKeyStationTab}
-              />
-              <EntropySyncSettingsScreen
-                autocompleteEnabled={seedPhraseAutocompleteEnabled}
-                isActive={activeTab === 'settings'}
-                isDarkMode={isDarkMode}
-                onSetAutocompleteEnabled={setSeedPhraseAutocompleteEnabled}
-                onReturnToMethod={() => setActiveTab('method')}
+            <View style={styles.tabHost} testID="app-bottom-tab-bar">
+              <TabView
+                getTestID={({ route }) => route.testID}
+                navigationState={{
+                  index: activeTab === 'method' ? 0 : 1,
+                  routes: APP_TAB_ROUTES,
+                }}
+                onIndexChange={index => setActiveTab(index === 0 ? 'method' : 'settings')}
+                renderScene={({ route }) =>
+                  route.key === 'method' ? renderMethodScene() : renderSettingsScene()
+                }
+                tabBarActiveTintColor={colors.accent}
+                tabBarInactiveTintColor={colors.muted}
+                tabBarStyle={{ backgroundColor: colors.background }}
+                tabLabelStyle={styles.tabLabel}
+                translucent={false}
               />
             </View>
           </SafeAreaView>
-          <AppBottomTabs activeTab={activeTab} colors={colors} onSelectTab={setActiveTab} />
         </View>
       </EntropySyncProvider>
     </SafeAreaProvider>
@@ -383,6 +435,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scene: {
+    flex: 1,
+  },
+  tabHost: {
+    flex: 1,
+  },
+  tabLabel: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   workspace: {
     flex: 1,
