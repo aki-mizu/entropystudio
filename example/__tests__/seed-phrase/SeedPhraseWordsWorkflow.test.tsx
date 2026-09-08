@@ -368,12 +368,18 @@ describe('Seed Phrase / Words', () => {
     expect(app!.root.findAllByProps({ testID: 'seed-phrase-result-sheet' })).toHaveLength(0);
     expect(app!.root.findAllByProps({ testID: 'seed-phrase-passphrase-view' })).toHaveLength(0);
     expect(mockMnemonicToSeed).toHaveBeenLastCalledWith(mnemonic, '');
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
+    });
     expect(app!.root.findByProps({ testID: 'master-seed-label' }).props.children).toBe(
       UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
     );
     expect(app!.root.findByProps({ testID: 'master-seed-output' }).props.children).toBe(
       '0'.repeat(128),
     );
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-wallet-data' }).props.onPress();
+    });
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
     });

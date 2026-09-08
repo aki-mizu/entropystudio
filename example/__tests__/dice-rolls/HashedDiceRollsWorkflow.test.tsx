@@ -174,6 +174,9 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
     expect(app!.root.findByProps({ testID: 'key-station-result-screen' })).toBeDefined();
     expect(app!.root.findAllByProps({ testID: 'mnemonic-output' })).toHaveLength(0);
     expect(app!.root.findAllByProps({ testID: 'result-phrase-label' })).toHaveLength(0);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
+    });
     expect(app!.root.findByProps({ testID: 'entropy-output' }).props.children).toBe(
       '00000000000000000000000000000000',
     );

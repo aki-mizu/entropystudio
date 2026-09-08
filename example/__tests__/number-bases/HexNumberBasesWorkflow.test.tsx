@@ -109,6 +109,9 @@ describe('Number Bases / Hexadecimal', () => {
     });
 
     expect(mockMnemonicToSeed).toHaveBeenLastCalledWith(mnemonic, '');
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
+    });
     expect(app!.root.findByProps({ testID: 'master-seed-label' }).props.children).toBe(
       UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
     );

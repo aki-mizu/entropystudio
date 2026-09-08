@@ -110,10 +110,22 @@ describe('Hashed cards', () => {
 
     expect(app!.root.findByProps({ testID: 'key-station-tab-1-label' }).props.children).toBe('73c5da0a');
     expect(app!.root.findByProps({ testID: 'key-station-result-screen' })).toBeDefined();
+    expect(mockMnemonicToSeed).toHaveBeenLastCalledWith(mnemonic, '');
+    expect(app!.root.findAllByProps({ testID: 'master-seed-label' })).toHaveLength(0);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'wallet-data-title' }).props.children).toBe(
+      UPSTREAM_TEXT.result.walletRecoveryDetails,
+    );
+    expect(app!.root.findByProps({ testID: 'wallet-data-private-heading' }).props.children).toBe(
+      UPSTREAM_TEXT.result.privateRecoveryMaterial,
+    );
+    expect(app!.root.findAllByProps({ testID: 'key-station-master-fingerprint-value' })).toHaveLength(0);
+    expect(app!.root.findAllByProps({ testID: 'key-station-edit-inputs' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'entropy-output' }).props.children).toBe(
       '00000000000000000000000000000000',
     );
-    expect(mockMnemonicToSeed).toHaveBeenLastCalledWith(mnemonic, '');
     expect(app!.root.findByProps({ testID: 'master-seed-label' }).props.children).toBe(
       UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
     );
@@ -126,6 +138,9 @@ describe('Hashed cards', () => {
     expect(app!.root.findByProps({ testID: 'root-xprv-output' }).props.children).toBe(
       'xprv9s21ZrQH143K3GJpoapnV8SFfukcVBSfeCficPSGfubmSFDxo1kuHnLisriDvSnRRuL2Qrg5ggqHKNVpxR86QEC8w35uxmGoggxtQTPvfUu',
     );
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-wallet-data' }).props.onPress();
+    });
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
     });

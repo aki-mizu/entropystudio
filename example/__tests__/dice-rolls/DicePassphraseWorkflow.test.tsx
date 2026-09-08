@@ -170,6 +170,9 @@ describe('Dice Rolls / BIP39 passphrase', () => {
     });
 
     expect(mockMnemonicToSeed).toHaveBeenLastCalledWith(mnemonic, 'TREZOR');
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
+    });
     expect(app!.root.findByProps({ testID: 'master-seed-label' }).props.children).toBe(
       UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex,
     );

@@ -306,7 +306,10 @@ export const UPSTREAM_TEXT = {
   result: {
     entropyHex: 'BIP39 entropy hex',
     privateKey: 'Private key material',
+    privateRecoveryMaterial: 'Private recovery material',
     rootXprv: 'Root {name}',
+    walletData: 'Wallet data',
+    walletRecoveryDetails: 'Wallet recovery details',
   },
   seed: {
     count: '{entered} of {words} BIP39 words entered',

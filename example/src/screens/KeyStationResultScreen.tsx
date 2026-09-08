@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
@@ -23,17 +23,27 @@ type Props = {
 };
 
 export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturnToStation, tab }: Props) {
+  const [showingWalletData, setShowingWalletData] = useState(false);
+
+  useEffect(() => {
+    setShowingWalletData(false);
+  }, [tab?.id]);
+
   useEffect(() => {
     if (!isActive) {
       return undefined;
     }
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (showingWalletData) {
+        setShowingWalletData(false);
+        return true;
+      }
       onReturnToStation();
       return true;
     });
     return () => subscription.remove();
-  }, [isActive, onReturnToStation]);
+  }, [isActive, onReturnToStation, showingWalletData]);
 
   if (!tab) {
     return null;
@@ -49,12 +59,43 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
       testID="key-station-result-screen"
     >
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {derivation.kind === 'private-key' ? (
+        {showingWalletData && derivation.kind === 'bip39' ? (
+          <View testID="wallet-data-screen">
+            <Pressable
+              accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.common.back}
+              accessibilityRole="button"
+              onPress={() => setShowingWalletData(false)}
+              style={styles.backButton}
+              testID="close-wallet-data"
+            >
+              <Text style={[styles.backButtonText, { color: colors.accent }]}>
+                {UPSTREAM_UI_FALLBACK_COPY.common.back}
+              </Text>
+            </Pressable>
+            <Text style={[styles.walletDataTitle, { color: colors.text }]} testID="wallet-data-title">
+              {UPSTREAM_TEXT.result.walletRecoveryDetails}
+            </Text>
+            <Text style={[styles.walletDataSectionTitle, { color: colors.text }]} testID="wallet-data-private-heading">
+              {UPSTREAM_TEXT.result.privateRecoveryMaterial}
+            </Text>
+            <DiceResultPanel
+              colors={colors}
+              entropyLabel={UPSTREAM_TEXT.result.entropyHex}
+              masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
+              result={{
+                entropy: derivation.entropy,
+                masterSeed: derivation.masterSeed,
+                rootXprv: tab.rootXprv,
+              }}
+              rootXprvLabel={formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xprv' })}
+            />
+          </View>
+        ) : derivation.kind === 'private-key' ? (
           <Text style={[styles.privateKeyTitle, { color: colors.text }]} testID="key-station-private-key-title">
             {tab.name}
           </Text>
         ) : null}
-        {derivation.kind === 'bip39' ? (
+        {derivation.kind === 'bip39' && !showingWalletData ? (
           <>
             <View style={styles.summary} testID="key-station-summary">
               <View style={styles.summaryHeader}>
@@ -92,31 +133,43 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
                 </Pressable>
               </View>
             </View>
-            <DiceResultPanel
-              colors={colors}
-              entropyLabel={UPSTREAM_TEXT.result.entropyHex}
-              masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
-              result={{
-                entropy: derivation.entropy,
-                masterSeed: derivation.masterSeed,
-                rootXprv: tab.rootXprv,
-              }}
-              rootXprvLabel={formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xprv' })}
-            />
+            <Pressable
+              accessibilityLabel={UPSTREAM_TEXT.result.walletData}
+              accessibilityRole="button"
+              onPress={() => setShowingWalletData(true)}
+              style={({ pressed }) => [
+                styles.walletDataButton,
+                { borderColor: colors.border, opacity: pressed ? 0.72 : 1 },
+              ]}
+              testID="open-wallet-data"
+            >
+              <Text style={[styles.walletDataButtonText, { color: colors.accent }]}>
+                {UPSTREAM_TEXT.result.walletData}
+              </Text>
+            </Pressable>
           </>
-        ) : (
+        ) : derivation.kind === 'private-key' ? (
           <DiceResultPanel
             colors={colors}
             entropyLabel={UPSTREAM_TEXT.result.privateKey}
             result={{ entropy: derivation.entropy }}
           />
-        )}
+        ) : null}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  backButton: {
+    alignSelf: 'flex-start',
+    marginBottom: 18,
+    paddingVertical: 6,
+  },
+  backButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
   content: {
     paddingBottom: 28,
     paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
@@ -172,5 +225,30 @@ const styles = StyleSheet.create({
   summaryDetails: {
     flex: 1,
     minWidth: 0,
+  },
+  walletDataButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 6,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 12,
+  },
+  walletDataButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  walletDataSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  walletDataTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    lineHeight: 28,
+    marginBottom: 24,
   },
 });
