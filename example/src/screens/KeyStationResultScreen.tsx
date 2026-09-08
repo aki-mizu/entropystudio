@@ -205,9 +205,36 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
           </View>
         ) : derivation.kind === 'private-key' ? (
           <>
-            <Text style={[styles.privateKeyTitle, { color: colors.text }]} testID="key-station-private-key-title">
-              {tab.name}
-            </Text>
+            <View style={styles.privateKeySummary} testID="key-station-private-key-summary">
+              <View style={styles.summaryDetails}>
+                <Text
+                  style={[styles.privateKeyTitle, { color: colors.text }]}
+                  testID="key-station-private-key-title"
+                >
+                  {UPSTREAM_UI_LABELS.keyMode[tab.method]}
+                </Text>
+                <Text style={[styles.meta, { color: colors.muted }]} testID="key-station-script-value">
+                  {UPSTREAM_TEXT.keys.scriptTypes[tab.scriptType]}
+                </Text>
+                <Text style={[styles.meta, styles.path, { color: colors.muted }]} testID="key-station-path-value">
+                  {tab.derivationPath}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityLabel={UPSTREAM_TEXT.keys.editInput}
+                accessibilityRole="button"
+                onPress={onEditInput}
+                style={({ pressed }) => [
+                  styles.editButton,
+                  { borderColor: colors.border, opacity: pressed ? 0.72 : 1 },
+                ]}
+                testID="key-station-edit-inputs"
+              >
+                <Text style={[styles.editButtonText, { color: colors.accent }]}>
+                  {UPSTREAM_TEXT.keys.editInput}
+                </Text>
+              </Pressable>
+            </View>
             <SafetyNotes colors={colors} notes={safetyNotes} testIDPrefix="private-key-safety" />
             <Pressable
               accessibilityLabel={UPSTREAM_TEXT.result.privateKey}
@@ -358,6 +385,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     lineHeight: 26,
+  },
+  privateKeySummary: {
+    alignItems: 'center',
+    flexDirection: 'row',
     marginBottom: 18,
   },
   privateRecoveryMaterialSafety: {

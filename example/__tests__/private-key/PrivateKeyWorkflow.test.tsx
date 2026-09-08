@@ -104,6 +104,18 @@ describe('Private Key', () => {
     });
 
     expect(mockPrivateKeyMaterial).toHaveBeenLastCalledWith(WIF, 0, false);
+    expect(app!.root.findByProps({ testID: 'key-station-private-key-title' }).props.children).toBe(
+      UPSTREAM_UI_LABELS.keyMode.key,
+    );
+    expect(app!.root.findByProps({ testID: 'key-station-script-value' }).props.children).toBe(
+      UPSTREAM_TEXT.keys.scriptTypes.bip84,
+    );
+    expect(app!.root.findByProps({ testID: 'key-station-path-value' }).props.children).toBe(
+      "m/84'/0'/0'/0/0",
+    );
+    expect(app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.children.props.children).toBe(
+      UPSTREAM_TEXT.keys.editInput,
+    );
     expect(
       app!.root.findByProps({ testID: 'toggle-private-key-material' }).props.accessibilityState,
     ).toEqual({ expanded: false });
@@ -486,7 +498,7 @@ describe('Private Key', () => {
     expect(mockEntropyToMnemonic).not.toHaveBeenCalled();
     expect(app!.root.findByProps({ testID: 'key-station-tab-1-label' }).props.children).toBe('Key 1');
     expect(app!.root.findByProps({ testID: 'key-station-private-key-title' }).props.children).toBe(
-      'Key 1',
+      UPSTREAM_UI_LABELS.keyMode.key,
     );
     expect(app!.root.findByProps({ testID: 'private-key-safety-note-0' }).props.children).toBe(
       UPSTREAM_TEXT.result.safety.privateKey.brainWarning,
