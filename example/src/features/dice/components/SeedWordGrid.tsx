@@ -7,15 +7,22 @@ type Props = {
   readonly compact?: boolean;
   readonly colors: DiceColors;
   readonly finalWord?: string;
+  readonly onSlotLayout?: (index: number, layout: SeedWordSlotLayout) => void;
   readonly slotCount?: number;
   readonly testID: string;
   readonly words: readonly string[];
+};
+
+export type SeedWordSlotLayout = {
+  readonly height: number;
+  readonly y: number;
 };
 
 export function SeedWordGrid({
   compact = false,
   colors,
   finalWord,
+  onSlotLayout,
   slotCount,
   testID,
   words,
@@ -51,6 +58,11 @@ export function SeedWordGrid({
                 compact && styles.compactSlot,
                 { backgroundColor: colors.surface, borderColor: colors.border },
               ]}
+              onLayout={
+                onSlotLayout
+                  ? ({ nativeEvent }) => onSlotLayout(index, nativeEvent.layout)
+                  : undefined
+              }
               testID={`${testID}-slot-${index + 1}`}
             >
               <Text
@@ -73,8 +85,8 @@ export function SeedWordGrid({
                       index === words.length - 1 && finalWord
                         ? colors.accent
                         : word
-                          ? colors.text
-                          : colors.placeholder,
+                        ? colors.text
+                        : colors.placeholder,
                   },
                 ]}
                 testID={`${testID}-word-${index + 1}`}
