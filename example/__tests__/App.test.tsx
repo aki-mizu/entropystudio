@@ -138,6 +138,11 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
   expect(app!.root.findByProps({ testID: 'app-workspace-safe-area' }).props.style).toContainEqual({
     backgroundColor: diceColors(false).background,
   });
+  expect(app!.root.findByProps({ testID: 'app-bottom-tab-bar' }).props.style).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ backgroundColor: diceColors(false).background }),
+    ]),
+  );
   expectStartAction(app!, 'open-dice-entry');
   expect(app!.root.findByProps({ testID: 'app-tab-method' }).props.children.props.children).toBe(
     UPSTREAM_TEXT.keys.tabLabel,

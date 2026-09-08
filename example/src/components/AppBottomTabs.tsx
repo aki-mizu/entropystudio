@@ -17,10 +17,10 @@ export function AppBottomTabs({ activeTab, colors, onSelectTab }: Props) {
   return (
     <SafeAreaView
       edges={['bottom']}
-      style={[styles.safeArea, { backgroundColor: colors.surface, borderTopColor: colors.border }]}
+      style={[styles.safeArea, { backgroundColor: colors.background, borderTopColor: colors.border }]}
       testID="app-bottom-tab-bar"
     >
-      <View style={styles.tabs}>
+      <View style={[styles.tabs, { backgroundColor: colors.surface }]}>
         <Pressable
           accessibilityRole="tab"
           accessibilityState={{ selected: activeTab === 'method' }}
