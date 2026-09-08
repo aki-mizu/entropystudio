@@ -1,4 +1,5 @@
 import { mnemonicToMasterFingerprint, mnemonicToMasterXprv } from '../../native/entropyStudio';
+import type { KeyDerivationAdvancedInput } from '../../native/entropyStudio';
 import type { CardMethod } from '../cards/cards';
 import type { DiceMethod, WordCount } from '../dice/dice';
 import type { NumberBaseFormat } from '../numberBases/numberBases';
@@ -58,50 +59,74 @@ export type KeyStationInput =
     };
 
 export const DEFAULT_KEY_STATION_SCRIPT_TYPE: KeyStationScriptType = 'bip84';
-export const DEFAULT_KEY_STATION_DERIVATION_PATH = "m/84'/0'/0'/0/0";
 
-export type KeyStationDerivationPathState = {
-  readonly message: string;
-  readonly valid: boolean;
+/**
+ * The visible BIP32 path and the retained account-level path are separate
+ * when an Advanced-entry range selects more than one branch or address.
+ * Rust projects and validates this state; the UI only retains its drafts.
+ */
+export type KeyStationDerivationSettings = {
+  readonly accountPath: string;
+  readonly advancedInput: KeyDerivationAdvancedInput;
+  /**
+   * The Harden controls are independent of their editable BIP32 drafts.
+   * EntropyLab retains a control's value while its draft is temporarily
+   * invalid, then synchronizes it again when the draft becomes valid.
+   */
+  readonly advancedHardening: KeyStationAdvancedHardening;
+  readonly visiblePath: string;
 };
 
-export function keyStationDerivationPathState(path: string): KeyStationDerivationPathState {
-  const normalizedPath = path.trim();
-  if (!/^m(?:\/[^/]+)*$/.test(normalizedPath)) {
-    return { message: UPSTREAM_TEXT.keys.derivationPathErrors.root, valid: false };
-  }
+export type KeyStationAdvancedHardening = {
+  readonly account: boolean;
+  readonly address: boolean;
+  readonly branch: boolean;
+  readonly coinType: boolean;
+  readonly purpose: boolean;
+};
 
-  const components = normalizedPath === '' || normalizedPath === 'm' ? [] : normalizedPath.slice(2).split('/');
-  for (const component of components) {
-    const match = /^(\d+)([hH']?)$/.exec(component);
-    const index = Number(match?.[1]);
-    if (!match || !Number.isSafeInteger(index) || index < 0 || index > 2147483647) {
-      return { message: UPSTREAM_TEXT.keys.derivationPathErrors.index, valid: false };
-    }
-  }
+export type KeyStationAdvancedDerivationState = Pick<
+  KeyStationDerivationSettings,
+  'advancedHardening' | 'advancedInput'
+>;
 
-  if (components.length < 5) {
-    return {
-      message: UPSTREAM_TEXT.keys.derivationPathErrors.missingComponents,
-      valid: false,
-    };
-  }
+/**
+ * A UI draft/control update applied against the latest Advanced-entry state.
+ * This prevents two native text-input events delivered in one render from
+ * accidentally restoring an earlier field value or Harden control.
+ */
+export type KeyStationAdvancedDerivationUpdater = (
+  state: KeyStationAdvancedDerivationState,
+) => KeyStationAdvancedDerivationState;
 
-  return { message: UPSTREAM_TEXT.keys.derivationPathHelp, valid: true };
-}
+export function defaultKeyStationDerivationSettings(
+  scriptType: KeyStationScriptType = DEFAULT_KEY_STATION_SCRIPT_TYPE,
+): KeyStationDerivationSettings {
+  const purpose = KEY_STATION_SCRIPT_TYPES.find(({ id }) => id === scriptType)?.purpose ?? 84;
+  const advancedInput: KeyDerivationAdvancedInput = {
+    account: "0'",
+    addressRange: '1',
+    addressStart: '0',
+    branchRange: '1',
+    branchStart: '0',
+    coinType: "0'",
+    purpose: `${purpose}'`,
+  };
+  const advancedHardening: KeyStationAdvancedHardening = {
+    account: true,
+    address: false,
+    branch: false,
+    coinType: true,
+    purpose: true,
+  };
+  const accountPath = `m/${advancedInput.purpose}/${advancedInput.coinType}/${advancedInput.account}`;
 
-export function keyStationDerivationPathForScriptType(
-  scriptType: KeyStationScriptType,
-  currentPath: string,
-): string {
-  const definition = KEY_STATION_SCRIPT_TYPES.find(({ id }) => id === scriptType);
-  const normalizedPath = currentPath.trim();
-  if (!/^m(?:\/\d+[hH']?){3,}$/.test(normalizedPath)) {
-    return `m/${definition?.purpose ?? 84}'/0'/0'/0/0`;
-  }
-
-  const components = normalizedPath.slice(2).split('/');
-  return `m/${definition?.purpose ?? 84}'/${components.slice(1).join('/')}`;
+  return {
+    accountPath,
+    advancedHardening,
+    advancedInput,
+    visiblePath: `${accountPath}/${advancedInput.branchStart}/${advancedInput.addressStart}`,
+  };
 }
 
 export type KeyStationDerivation =
@@ -128,6 +153,7 @@ export type KeyStationTab = {
   readonly number: number;
   readonly scriptType: KeyStationScriptType;
   readonly derivationPath: string;
+  readonly derivationSettings: KeyStationDerivationSettings;
 };
 
 export function createKeyStationTab(
@@ -135,6 +161,7 @@ export function createKeyStationTab(
   id: number,
   number: number,
   settings: {
+    readonly derivationSettings?: KeyStationDerivationSettings;
     readonly derivationPath?: string;
     readonly input: KeyStationInput;
     readonly method?: KeyStationMethod;
@@ -154,6 +181,13 @@ export function createKeyStationTab(
     }
   }
 
+  const scriptType = settings.scriptType ?? DEFAULT_KEY_STATION_SCRIPT_TYPE;
+  const defaultDerivationSettings = defaultKeyStationDerivationSettings(scriptType);
+  const derivationSettings = settings.derivationSettings ?? {
+    ...defaultDerivationSettings,
+    visiblePath: settings.derivationPath ?? defaultDerivationSettings.visiblePath,
+  };
+
   return {
     derivation,
     id,
@@ -164,7 +198,8 @@ export function createKeyStationTab(
     name:
       masterFingerprint || formatCopy(UPSTREAM_TEXT.keys.defaultTab, { n: number }),
     number,
-    scriptType: settings.scriptType ?? DEFAULT_KEY_STATION_SCRIPT_TYPE,
-    derivationPath: settings.derivationPath ?? DEFAULT_KEY_STATION_DERIVATION_PATH,
+    scriptType,
+    derivationPath: derivationSettings.visiblePath,
+    derivationSettings,
   };
 }

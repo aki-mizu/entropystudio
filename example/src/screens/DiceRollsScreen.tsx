@@ -40,6 +40,7 @@ import {
 import { KeyDerivationSettingsButton } from '../features/keyStation/components/KeyDerivationSettingsButton';
 import { KeyDerivationSettingsView } from '../features/keyStation/components/KeyDerivationSettingsView';
 import { DirectDiceStep } from '../native/entropyStudio';
+import type { KeyDerivationAdvancedInput } from '../native/entropyStudio';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import {
   UPSTREAM_TEXT,
@@ -48,11 +49,12 @@ import {
 import { useDiceRolls } from '../features/dice/useDiceRolls';
 import type {
   KeyStationDerivation,
+  KeyStationAdvancedDerivationUpdater,
+  KeyStationAdvancedHardening,
   KeyStationInput,
   KeyStationScriptType,
   KeyStationTab,
 } from '../features/keyStation/keyStation';
-import { keyStationDerivationPathState } from '../features/keyStation/keyStation';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 type DiceView = 'calculations' | 'entry' | 'key-settings' | 'passphrase' | 'setup';
@@ -61,11 +63,15 @@ type SheetName = 'final-word' | null;
 type Props = {
   readonly activeTool: EntropyTool;
   readonly autocompleteEnabled: boolean;
+  readonly advancedDerivationHardening: KeyStationAdvancedHardening;
+  readonly advancedDerivationInput: KeyDerivationAdvancedInput;
   readonly derivationPath: string;
+  readonly derivationPathValid: boolean;
   readonly editInputRequest: KeyStationTab | null;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onDeriveKey: (derivation: KeyStationDerivation, input: KeyStationInput) => void;
+  readonly onSetAdvancedDerivation: (update: KeyStationAdvancedDerivationUpdater) => void;
   readonly onSetDerivationPath: (path: string) => void;
   readonly onSetScriptType: (scriptType: KeyStationScriptType) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
@@ -75,11 +81,15 @@ type Props = {
 export function DiceRollsScreen({
   activeTool,
   autocompleteEnabled,
+  advancedDerivationHardening,
+  advancedDerivationInput,
   derivationPath,
+  derivationPathValid,
   editInputRequest,
   isActive,
   isDarkMode,
   onDeriveKey,
+  onSetAdvancedDerivation,
   onSetDerivationPath,
   onSetScriptType,
   onSelectTool,
@@ -143,7 +153,6 @@ export function DiceRollsScreen({
       : [];
   const canChooseFinalWord =
     method === 'bitbox' && Boolean(directState && directCopy && directState.candidates.length > 0);
-  const derivationPathValid = keyStationDerivationPathState(derivationPath).valid;
   const canDeriveWithPassphrase =
     canDerive && passphraseOptions.canDerive && derivationPathValid;
   const isBitboxCoinTurn =
@@ -523,9 +532,12 @@ export function DiceRollsScreen({
         />
       ) : activeView === 'key-settings' ? (
         <KeyDerivationSettingsView
+          advancedDerivationHardening={advancedDerivationHardening}
+          advancedDerivationInput={advancedDerivationInput}
           colors={colors}
           derivationPath={derivationPath}
           onBack={() => setActiveView('entry')}
+          onSetAdvancedDerivation={onSetAdvancedDerivation}
           onSetDerivationPath={onSetDerivationPath}
           onSetScriptType={onSetScriptType}
           scriptType={scriptType}

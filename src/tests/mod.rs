@@ -4,6 +4,7 @@ mod bip39;
 mod cards;
 mod dice;
 mod entropy_sync;
+mod key_derivation;
 mod lifehash;
 mod number_bases;
 mod private_key;

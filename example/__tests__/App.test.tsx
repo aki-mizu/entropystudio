@@ -2,12 +2,22 @@
  * @format
  */
 
+import { StyleSheet } from 'react-native';
+
 import {
   activeMethodList,
   App,
+  KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+  KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+  KEY_DERIVATION_VISIBLE_PATH_DEFAULT_FIXTURE,
   mockCardTranscriptToEntropy,
   mockDiceRollsToEntropy,
   mockEntropyToMnemonic,
+  mockKeyDerivationAddressBenchmarkMilliseconds,
+  mockKeyDerivationAddressEstimateMilliseconds,
+  mockKeyDerivationAdvancedState,
+  mockKeyDerivationProjectAdvancedPath,
+  mockKeyDerivationVisiblePathState,
   mockLifehashFromFingerprint,
   React,
   ReactTestRenderer,
@@ -19,11 +29,26 @@ import {
   selectSeedPhraseLength,
   mockSynchronizeEntropy,
 } from '../test/testSupport';
-import { EntropySyncSource } from '../src/native/entropyStudio';
-import type { EntropySyncSnapshot } from '../src/native/entropyStudio';
+import {
+  EntropySyncSource,
+  KeyDerivationBranchRole,
+  KeyDerivationNetworkKind,
+  KeyDerivationVisiblePathValidationKind,
+} from '../src/native/entropyStudio';
+import type {
+  EntropySyncSnapshot,
+  KeyDerivationAdvancedState,
+  KeyDerivationPathProjectionState,
+  KeyDerivationVisiblePathState,
+} from '../src/native/entropyStudio';
 import { diceColors } from '../src/features/dice/diceTheme';
 import { STUDIO_UI_TEXT } from '../src/features/studioUiCopy';
-import { formatCopy, UPSTREAM_TEXT, UPSTREAM_UI_LABELS } from '../src/features/upstreamUiCopy';
+import {
+  formatCopy,
+  UPSTREAM_TEXT,
+  UPSTREAM_UI_FALLBACK_COPY,
+  UPSTREAM_UI_LABELS,
+} from '../src/features/upstreamUiCopy';
 
 const SYNCED_ZERO_ENTROPY_SNAPSHOT: EntropySyncSnapshot = {
   base4: '',
@@ -222,6 +247,10 @@ test('opens Advanced entry controls and updates the derivation path', async () =
     app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
   });
 
+  const keySettingsScroll = app!.root.findByProps({ testID: 'dice-key-settings-scroll' });
+  expect(keySettingsScroll.type).toBe(ScrollView);
+  expect(keySettingsScroll.props.keyboardShouldPersistTaps).toBe('handled');
+
   const advancedEntry = app!.root.findByProps({ testID: 'dice-advanced-entry' });
   expect(advancedEntry.props.accessibilityState).toEqual({ expanded: false });
   expect(app!.root.findAllByProps({ testID: 'dice-advanced-fields' })).toHaveLength(0);
@@ -235,13 +264,1038 @@ test('opens Advanced entry controls and updates the derivation path', async () =
   expect(app!.root.findByProps({ testID: 'dice-advanced-fields' })).toBeDefined();
   expect(app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.value).toBe('1');
   expect(app!.root.findByProps({ testID: 'dice-advanced-address-range' }).props.value).toBe('1');
+  expect(
+    StyleSheet.flatten(app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.style),
+  ).toMatchObject({ minHeight: 48 });
+  expect(
+    StyleSheet.flatten(app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.style),
+  ).not.toHaveProperty('flex');
+  expect(
+    StyleSheet.flatten(app!.root.findByProps({ testID: 'dice-advanced-branch' }).props.style),
+  ).toMatchObject({ flex: 1, minHeight: 48 });
+  expect(app!.root.findByProps({ testID: 'dice-advanced-purpose-help' }).props.children).toBe(
+    UPSTREAM_TEXT.keys.purposeIndexHelp,
+  );
+  expect(app!.root.findByProps({ testID: 'dice-advanced-network-help' }).props.children).toBe(
+    UPSTREAM_TEXT.keys.coinTypeIndexHelp,
+  );
+  expect(app!.root.findByProps({ testID: 'dice-advanced-account-help' }).props.children).toBe(
+    UPSTREAM_TEXT.keys.accountIndexHelp,
+  );
+  expect(app!.root.findByProps({ testID: 'dice-advanced-branch-help' }).props.children).toBe(
+    UPSTREAM_TEXT.keys.startingAddressBranchHelp,
+  );
+  expect(app!.root.findByProps({ testID: 'dice-advanced-branch-range-help' }).props.children).toBe(
+    UPSTREAM_TEXT.keys.addressBranchRangeHelp,
+  );
+  expect(app!.root.findByProps({ testID: 'dice-advanced-address-help' }).props.children).toBe(
+    UPSTREAM_TEXT.keys.startingAddressIndexHelp,
+  );
+  expect(app!.root.findByProps({ testID: 'dice-advanced-address-range-help' }).props.children).toBe(
+    UPSTREAM_TEXT.keys.addressRangeHelp,
+  );
+
+  const changedPurposeProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: "m/45'/0'/0'",
+    visiblePath: "m/45'/0'/0'/0/0",
+  };
+  mockKeyDerivationProjectAdvancedPath.mockReturnValue(changedPurposeProjection);
+
+  try {
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-purpose' }).props.onChangeText('45');
+    });
+    expect(mockKeyDerivationProjectAdvancedPath).toHaveBeenLastCalledWith({
+      accountPath: "m/84'/0'/0'",
+      advanced: {
+        account: "0'",
+        addressRange: '1',
+        addressStart: '0',
+        branchRange: '1',
+        branchStart: '0',
+        coinType: "0'",
+        purpose: '45',
+      },
+    });
+    expect(app!.root.findByProps({ testID: 'dice-derivation-path' }).props.value).toBe(
+      "m/45'/0'/0'/0/0",
+    );
+  } finally {
+    mockKeyDerivationProjectAdvancedPath.mockImplementation(
+      () => KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    );
+  }
+});
+
+test('accepts upstream hardening-marker drafts and restores an empty Advanced field', async () => {
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+
+  await openDiceEntry(app!);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+  });
+
+  const purpose = () => app!.root.findByProps({ testID: 'dice-advanced-purpose' });
+  expect(purpose().props.value).toBe("84'");
 
   await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'dice-advanced-purpose' }).props.onChangeText('45');
+    purpose().props.onChangeText('45H');
   });
-  expect(app!.root.findByProps({ testID: 'dice-derivation-path' }).props.value).toBe(
-    "m/45'/0'/0'/0/0",
+  expect(mockKeyDerivationProjectAdvancedPath).toHaveBeenLastCalledWith({
+    accountPath: "m/84'/0'/0'",
+    advanced: {
+      account: "0'",
+      addressRange: '1',
+      addressStart: '0',
+      branchRange: '1',
+      branchStart: '0',
+      coinType: "0'",
+      purpose: "45'",
+    },
+  });
+  expect(purpose().props.value).toBe("45'");
+
+  await ReactTestRenderer.act(async () => {
+    purpose().props.onChangeText('');
+  });
+  expect(purpose().props.value).toBe('');
+  await ReactTestRenderer.act(async () => {
+    purpose().props.onBlur();
+  });
+  expect(mockKeyDerivationProjectAdvancedPath).toHaveBeenLastCalledWith({
+    accountPath: "m/84'/0'/0'",
+    advanced: {
+      account: "0'",
+      addressRange: '1',
+      addressStart: '0',
+      branchRange: '1',
+      branchStart: '0',
+      coinType: "0'",
+      purpose: "84'",
+    },
+  });
+  expect(purpose().props.value).toBe("84'");
+});
+
+test('retains the Harden control while an Advanced index draft is invalid', async () => {
+  const invalidNetworkState: KeyDerivationAdvancedState = {
+    ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    coinType: { hardened: false, valid: false, value: 0 },
+    networkKind: 3,
+    pathHelpKind: 4,
+    valid: false,
+    validationKind: 1,
+  };
+  const invalidNetworkProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: '',
+    advancedState: invalidNetworkState,
+    displayKind: 3,
+    valid: false,
+    visiblePath: '',
+  };
+  const advancedCopy = UPSTREAM_UI_FALLBACK_COPY.keys.advanced;
+
+  mockKeyDerivationAdvancedState.mockImplementation(input =>
+    input.coinType === '' ? invalidNetworkState : KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
   );
+  mockKeyDerivationProjectAdvancedPath.mockImplementation(({ advanced }) =>
+    advanced.coinType === ''
+      ? invalidNetworkProjection
+      : KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+  );
+
+  try {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+    await openDiceEntry(app!);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+    });
+
+    const network = () => app!.root.findByProps({ testID: 'dice-advanced-network' });
+    const networkHarden = () =>
+      app!.root.findByProps({ testID: 'dice-advanced-network-harden' });
+    const networkHelp = () => app!.root.findByProps({ testID: 'dice-advanced-network-help' });
+
+    await ReactTestRenderer.act(async () => {
+      network().props.onChangeText('');
+    });
+    expect(network().props.value).toBe('');
+    expect(networkHarden().props.value).toBe(true);
+    expect(networkHelp().props.children).toBe(advancedCopy.coinTypeIndexHelp('invalid', true));
+
+    await ReactTestRenderer.act(async () => {
+      networkHarden().props.onValueChange(false);
+    });
+    expect(network().props.value).toBe('');
+    expect(networkHarden().props.value).toBe(false);
+    expect(networkHelp().props.children).toBe(advancedCopy.coinTypeIndexHelp('invalid', false));
+
+    await ReactTestRenderer.act(async () => {
+      networkHarden().props.onValueChange(true);
+    });
+    expect(network().props.value).toBe('');
+    expect(networkHarden().props.value).toBe(true);
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-dice-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+    });
+    expect(network().props.value).toBe('');
+    expect(networkHarden().props.value).toBe(true);
+    expect(networkHelp().props.children).toBe(advancedCopy.coinTypeIndexHelp('invalid', true));
+
+    await ReactTestRenderer.act(async () => {
+      network().props.onBlur();
+    });
+    expect(network().props.value).toBe("0'");
+    expect(networkHarden().props.value).toBe(true);
+    expect(networkHelp().props.children).toBe(UPSTREAM_TEXT.keys.coinTypeIndexHelp);
+  } finally {
+    mockKeyDerivationAdvancedState.mockImplementation(
+      () => KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    );
+    mockKeyDerivationProjectAdvancedPath.mockImplementation(
+      () => KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    );
+  }
+});
+
+test('renders Testnet, custom-branch, and hardened Advanced-entry copy variants', async () => {
+  const changeBranch = [{ index: 1, role: 'change' }] as const;
+  const customBranch = [{ index: 2, role: 'custom' }] as const;
+  const testnetChangeState: KeyDerivationAdvancedState = {
+    ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    account: { hardened: false, valid: true, value: 0 },
+    addressWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.addressWindow,
+      start: { hardened: true, valid: true, value: 0 },
+    },
+    branchWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.branchWindow,
+      branches: [{ index: 1, role: KeyDerivationBranchRole.Change }],
+      end: 1,
+      start: { hardened: true, valid: true, value: 1 },
+    },
+    coinType: { hardened: false, valid: true, value: 1 },
+    networkKind: KeyDerivationNetworkKind.Testnet,
+    purpose: { hardened: false, valid: true, value: 84 },
+  };
+  const customBranchState: KeyDerivationAdvancedState = {
+    ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    addressWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.addressWindow,
+      start: { hardened: false, valid: true, value: 0 },
+    },
+    branchWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.branchWindow,
+      branches: [{ index: 2, role: KeyDerivationBranchRole.Custom }],
+      end: 2,
+      start: { hardened: false, valid: true, value: 2 },
+    },
+    coinType: { hardened: true, valid: true, value: 2 },
+    networkKind: KeyDerivationNetworkKind.CustomMainnetAddresses,
+  };
+  const testnetChangeProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: 'm/84/1/0',
+    advancedState: testnetChangeState,
+    visiblePath: "m/84/1/0/1'/0'",
+  };
+  const customBranchProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: "m/84'/2'/0'",
+    advancedState: customBranchState,
+    visiblePath: "m/84'/2'/0'/2/0",
+  };
+  const advancedCopy = UPSTREAM_UI_FALLBACK_COPY.keys.advanced;
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+  await openDiceEntry(app!);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+  });
+
+  const field = (name: string) => app!.root.findByProps({ testID: `dice-advanced-${name}` });
+  const helper = (name: string) =>
+    app!.root.findByProps({ testID: `dice-advanced-${name}-help` });
+  const harden = (name: string) =>
+    app!.root.findByProps({ testID: `dice-advanced-${name}-harden` });
+
+  mockKeyDerivationAdvancedState.mockReturnValue(testnetChangeState);
+  mockKeyDerivationProjectAdvancedPath.mockReturnValue(testnetChangeProjection);
+
+  try {
+    await ReactTestRenderer.act(async () => {
+      field('purpose').props.onChangeText('84');
+      field('network').props.onChangeText('1');
+      field('account').props.onChangeText('0');
+      field('branch').props.onChangeText("1'");
+      field('address').props.onChangeText("0'");
+    });
+
+    expect(harden('purpose').props.value).toBe(false);
+    expect(harden('network').props.value).toBe(false);
+    expect(harden('account').props.value).toBe(false);
+    expect(harden('branch').props.value).toBe(true);
+    expect(harden('address').props.value).toBe(true);
+    expect(helper('purpose').props.children).toBe(advancedCopy.purposeIndexHelp(false));
+    expect(helper('network').props.children).toBe(
+      advancedCopy.coinTypeIndexHelp('testnet', false),
+    );
+    expect(helper('account').props.children).toBe(advancedCopy.accountIndexHelp(false));
+    expect(helper('branch').props.children).toBe(advancedCopy.branchStartHelp(true));
+    expect(helper('branch-range').props.children).toBe(
+      advancedCopy.branchRangeHelp(changeBranch, true, 2),
+    );
+    expect(helper('address').props.children).toBe(
+      advancedCopy.addressStartHelp(changeBranch, true),
+    );
+    expect(helper('address-range').props.children).toBe(
+      advancedCopy.addressRangeHelp(changeBranch, 1, 1, 10_000),
+    );
+
+    mockKeyDerivationAdvancedState.mockReturnValue(customBranchState);
+    mockKeyDerivationProjectAdvancedPath.mockReturnValue(customBranchProjection);
+    await ReactTestRenderer.act(async () => {
+      field('purpose').props.onChangeText("84'");
+      field('network').props.onChangeText("2'");
+      field('account').props.onChangeText("0'");
+      field('branch').props.onChangeText('2');
+      field('address').props.onChangeText('0');
+    });
+
+    expect(harden('purpose').props.value).toBe(true);
+    expect(harden('network').props.value).toBe(true);
+    expect(harden('account').props.value).toBe(true);
+    expect(harden('branch').props.value).toBe(false);
+    expect(harden('address').props.value).toBe(false);
+    expect(helper('purpose').props.children).toBe(advancedCopy.purposeIndexHelp(true));
+    expect(helper('network').props.children).toBe(
+      advancedCopy.coinTypeIndexHelp('custom-mainnet-addresses', true),
+    );
+    expect(helper('account').props.children).toBe(advancedCopy.accountIndexHelp(true));
+    expect(helper('branch').props.children).toBe(advancedCopy.branchStartHelp(false));
+    expect(helper('branch-range').props.children).toBe(
+      advancedCopy.branchRangeHelp(customBranch, false, 2),
+    );
+    expect(helper('address').props.children).toBe(
+      advancedCopy.addressStartHelp(customBranch, false),
+    );
+    expect(helper('address-range').props.children).toBe(
+      advancedCopy.addressRangeHelp(customBranch, 1, 1, 10_000),
+    );
+  } finally {
+    mockKeyDerivationAdvancedState.mockImplementation(
+      () => KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    );
+    mockKeyDerivationProjectAdvancedPath.mockImplementation(
+      () => KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    );
+  }
+});
+
+test('renders the upstream address-estimate variants from native timing', async () => {
+  const estimateMilliseconds = 1_250;
+  const advancedCopy = UPSTREAM_UI_FALLBACK_COPY.keys.advanced;
+  mockKeyDerivationAddressBenchmarkMilliseconds.mockClear();
+  mockKeyDerivationAddressEstimateMilliseconds.mockReturnValue(estimateMilliseconds);
+
+  try {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+    await openDiceEntry(app!);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+    });
+
+    expect(mockKeyDerivationAddressBenchmarkMilliseconds).toHaveBeenCalled();
+    expect(mockKeyDerivationAddressEstimateMilliseconds).toHaveBeenLastCalledWith({
+      account: "0'",
+      addressRange: '1',
+      addressStart: '0',
+      branchRange: '1',
+      branchStart: '0',
+      coinType: "0'",
+      purpose: "84'",
+    });
+    expect(app!.root.findByProps({ testID: 'dice-advanced-address-estimate' }).props.children).toBe(
+      advancedCopy.addressEstimate(advancedCopy.formatAddressEstimate(estimateMilliseconds)),
+    );
+    expect(advancedCopy.formatAddressEstimate(Number.NaN)).toBe(
+      UPSTREAM_TEXT.keys.addressEstimate.underPointOneSeconds,
+    );
+    expect(advancedCopy.formatAddressEstimate(10_000)).toBe(
+      formatCopy(UPSTREAM_TEXT.keys.addressEstimate.aboutSeconds, { n: 10 }),
+    );
+    expect(advancedCopy.formatAddressEstimate(60_000)).toBe(
+      formatCopy(UPSTREAM_TEXT.keys.addressEstimate.aboutMinutes, { n: 1 }),
+    );
+  } finally {
+    mockKeyDerivationAddressBenchmarkMilliseconds.mockImplementation(() => 0.01);
+    mockKeyDerivationAddressEstimateMilliseconds.mockImplementation(() => 0.04);
+  }
+});
+
+test('gives an Advanced range error precedence over an invalid direct path', async () => {
+  const invalidBranchRangeState: KeyDerivationAdvancedState = {
+    ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    addressCount: 0,
+    branchWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.branchWindow,
+      branches: [],
+      end: 0,
+      range: { displayValue: '0', maximum: 2, valid: false, value: 0 },
+      valid: false,
+    },
+    pathHelpKind: 4,
+    valid: false,
+    validationKind: 3,
+    windowsValid: false,
+  };
+  const invalidProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: '',
+    advancedState: invalidBranchRangeState,
+    displayKind: 3,
+    valid: false,
+    visiblePath: '',
+  };
+  const invalidVisiblePath: KeyDerivationVisiblePathState = {
+    ...KEY_DERIVATION_VISIBLE_PATH_DEFAULT_FIXTURE,
+    valid: false,
+    validationKind: KeyDerivationVisiblePathValidationKind.Root,
+  };
+  const advancedCopy = UPSTREAM_UI_FALLBACK_COPY.keys.advanced;
+
+  try {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+    await openDiceEntry(app!);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+    });
+
+    mockKeyDerivationVisiblePathState.mockReturnValue(invalidVisiblePath);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-derivation-path' }).props.onChangeText('not-a-path');
+    });
+    mockKeyDerivationAdvancedState.mockReturnValue(invalidBranchRangeState);
+    mockKeyDerivationProjectAdvancedPath.mockReturnValue(invalidProjection);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.onChangeText('0');
+    });
+
+    expect(app!.root.findByProps({ testID: 'dice-derivation-path-help' }).props.children).toBe(
+      advancedCopy.pathValidationHelp('branch-range', 2, 10_000),
+    );
+  } finally {
+    mockKeyDerivationAdvancedState.mockImplementation(
+      () => KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    );
+    mockKeyDerivationProjectAdvancedPath.mockImplementation(
+      () => KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    );
+    mockKeyDerivationVisiblePathState.mockImplementation(
+      () => KEY_DERIVATION_VISIBLE_PATH_DEFAULT_FIXTURE,
+    );
+  }
+});
+
+test('renders receive-and-change Advanced-entry variants from native state', async () => {
+  const receiveAndChangeState: KeyDerivationAdvancedState = {
+    ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    addressCount: 10,
+    addressWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.addressWindow,
+      end: 4,
+      range: { displayValue: '5', maximum: 10_000, valid: true, value: 5 },
+    },
+    branchWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.branchWindow,
+      branches: [
+        { index: 0, role: 0 },
+        { index: 1, role: 1 },
+      ],
+      end: 1,
+      range: { displayValue: '2', maximum: 2, valid: true, value: 2 },
+    },
+    pathHelpKind: 3,
+  };
+  const receiveAndChangeProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: "m/84'/0'/0'",
+    advancedState: receiveAndChangeState,
+    displayKind: 0,
+    visiblePath: "m/84'/0'/0'",
+  };
+  const advancedCopy = UPSTREAM_UI_FALLBACK_COPY.keys.advanced;
+  mockKeyDerivationAdvancedState.mockReturnValue(receiveAndChangeState);
+  mockKeyDerivationProjectAdvancedPath.mockReturnValue(receiveAndChangeProjection);
+
+  try {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+
+    await openDiceEntry(app!);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.onChangeText('2');
+      app!.root.findByProps({ testID: 'dice-advanced-address-range' }).props.onChangeText('5');
+    });
+
+    expect(mockKeyDerivationAdvancedState).toHaveBeenLastCalledWith({
+      account: "0'",
+      addressRange: '5',
+      addressStart: '0',
+      branchRange: '2',
+      branchStart: '0',
+      coinType: "0'",
+      purpose: "84'",
+    });
+    expect(app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.value).toBe('2');
+    expect(app!.root.findByProps({ testID: 'dice-advanced-address-range' }).props.value).toBe('5');
+    expect(app!.root.findByProps({ testID: 'dice-advanced-branch-range-help' }).props.children).toBe(
+      UPSTREAM_TEXT.keys.addressBranchRangeReceiveAndChangeHelp,
+    );
+    expect(app!.root.findByProps({ testID: 'dice-advanced-address-help' }).props.children).toBe(
+      UPSTREAM_TEXT.keys.startingAddressIndexReceiveAndChangeHelp,
+    );
+    expect(app!.root.findByProps({ testID: 'dice-advanced-address-range-help' }).props.children).toBe(
+      UPSTREAM_TEXT.keys.addressRangeReceiveAndChangeHelp,
+    );
+    expect(app!.root.findByProps({ testID: 'dice-derivation-path-help' }).props.children).toBe(
+      advancedCopy.derivationPathHelp('multiple-branches-and-indexes'),
+    );
+  } finally {
+    mockKeyDerivationAdvancedState.mockImplementation(
+      () => KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    );
+    mockKeyDerivationProjectAdvancedPath.mockImplementation(
+      () => KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    );
+  }
+});
+
+test('retains the last valid address-start helper while either range draft is invalid', async () => {
+  const receiveAndChangeState: KeyDerivationAdvancedState = {
+    ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    addressCount: 10,
+    addressWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.addressWindow,
+      end: 4,
+      range: { displayValue: '5', maximum: 10_000, valid: true, value: 5 },
+    },
+    branchWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.branchWindow,
+      branches: [
+        { index: 0, role: 0 },
+        { index: 1, role: 1 },
+      ],
+      end: 1,
+      range: { displayValue: '2', maximum: 2, valid: true, value: 2 },
+    },
+    pathHelpKind: 3,
+  };
+  const invalidBranchRangeState: KeyDerivationAdvancedState = {
+    ...receiveAndChangeState,
+    addressCount: 0,
+    branchWindow: {
+      ...receiveAndChangeState.branchWindow,
+      branches: [],
+      end: 0,
+      range: { displayValue: '0', maximum: 2, valid: false, value: 0 },
+      valid: false,
+    },
+    pathHelpKind: 4,
+    valid: false,
+    validationKind: 3,
+    windowsValid: false,
+  };
+  const invalidAddressRangeState: KeyDerivationAdvancedState = {
+    ...receiveAndChangeState,
+    addressCount: 0,
+    addressWindow: {
+      ...receiveAndChangeState.addressWindow,
+      end: 0,
+      range: { displayValue: '0', maximum: 10_000, valid: false, value: 0 },
+      valid: false,
+    },
+    pathHelpKind: 4,
+    valid: false,
+    validationKind: 5,
+    windowsValid: false,
+  };
+  const receiveAndChangeProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: "m/84'/0'/0'",
+    advancedState: receiveAndChangeState,
+    displayKind: 0,
+    visiblePath: "m/84'/0'/0'",
+  };
+  const invalidBranchProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: '',
+    advancedState: invalidBranchRangeState,
+    displayKind: 3,
+    valid: false,
+    visiblePath: '',
+  };
+  const invalidAddressProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: '',
+    advancedState: invalidAddressRangeState,
+    displayKind: 3,
+    valid: false,
+    visiblePath: '',
+  };
+
+  mockKeyDerivationAdvancedState.mockReturnValue(receiveAndChangeState);
+  mockKeyDerivationProjectAdvancedPath.mockReturnValue(receiveAndChangeProjection);
+
+  try {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+    await openDiceEntry(app!);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'dice-advanced-address-help' }).props.children).toBe(
+      UPSTREAM_TEXT.keys.startingAddressIndexReceiveAndChangeHelp,
+    );
+
+    mockKeyDerivationAdvancedState.mockReturnValue(invalidBranchRangeState);
+    mockKeyDerivationProjectAdvancedPath.mockReturnValue(invalidBranchProjection);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.onChangeText('0');
+    });
+    expect(app!.root.findByProps({ testID: 'dice-advanced-address-help' }).props.children).toBe(
+      UPSTREAM_TEXT.keys.startingAddressIndexReceiveAndChangeHelp,
+    );
+
+    mockKeyDerivationAdvancedState.mockReturnValue(receiveAndChangeState);
+    mockKeyDerivationProjectAdvancedPath.mockReturnValue(receiveAndChangeProjection);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.onChangeText('2');
+    });
+    mockKeyDerivationAdvancedState.mockReturnValue(invalidAddressRangeState);
+    mockKeyDerivationProjectAdvancedPath.mockReturnValue(invalidAddressProjection);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-address-range' }).props.onChangeText('0');
+    });
+    expect(app!.root.findByProps({ testID: 'dice-advanced-address-help' }).props.children).toBe(
+      UPSTREAM_TEXT.keys.startingAddressIndexReceiveAndChangeHelp,
+    );
+  } finally {
+    mockKeyDerivationAdvancedState.mockImplementation(
+      () => KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    );
+    mockKeyDerivationProjectAdvancedPath.mockImplementation(
+      () => KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    );
+  }
+});
+
+test('uses the account-level visible derivation path for a two-branch range', async () => {
+  const twoBranchState: KeyDerivationAdvancedState = {
+    ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    addressCount: 2,
+    branchWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.branchWindow,
+      branches: [
+        { index: 0, role: 0 },
+        { index: 1, role: 1 },
+      ],
+      end: 1,
+      range: { displayValue: '2', maximum: 2, valid: true, value: 2 },
+    },
+    pathHelpKind: 1,
+  };
+  const twoBranchProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: "m/84'/0'/0'",
+    advancedState: twoBranchState,
+    displayKind: 0,
+    visiblePath: "m/84'/0'/0'",
+  };
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+  await openDiceEntry(app!);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+  });
+
+  mockKeyDerivationAdvancedState.mockReturnValue(twoBranchState);
+  mockKeyDerivationProjectAdvancedPath.mockReturnValue(twoBranchProjection);
+
+  try {
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.onChangeText('2');
+    });
+
+    expect(mockKeyDerivationProjectAdvancedPath).toHaveBeenLastCalledWith({
+      accountPath: "m/84'/0'/0'",
+      advanced: {
+        account: "0'",
+        addressRange: '1',
+        addressStart: '0',
+        branchRange: '2',
+        branchStart: '0',
+        coinType: "0'",
+        purpose: "84'",
+      },
+    });
+    expect(app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.value).toBe('2');
+    expect(app!.root.findByProps({ testID: 'dice-derivation-path' }).props.value).toBe(
+      "m/84'/0'/0'",
+    );
+    expect(mockKeyDerivationVisiblePathState).toHaveBeenLastCalledWith({
+      addressRange: '1',
+      addressStart: '0',
+      branchRange: '2',
+      branchStart: '0',
+      path: "m/84'/0'/0'",
+    });
+    expect(app!.root.findByProps({ testID: 'dice-derivation-path-help' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.keys.advanced.derivationPathHelp('multiple-branches'),
+    );
+  } finally {
+    mockKeyDerivationAdvancedState.mockImplementation(
+      () => KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    );
+    mockKeyDerivationProjectAdvancedPath.mockImplementation(
+      () => KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    );
+  }
+});
+
+test('uses the branch-level visible derivation path for a two-address range', async () => {
+  const twoAddressState: KeyDerivationAdvancedState = {
+    ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    addressCount: 2,
+    addressWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.addressWindow,
+      end: 1,
+      range: { displayValue: '2', maximum: 10_000, valid: true, value: 2 },
+    },
+    pathHelpKind: 2,
+  };
+  const twoAddressProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: "m/84'/0'/0'",
+    advancedState: twoAddressState,
+    displayKind: 1,
+    visiblePath: "m/84'/0'/0'/0",
+  };
+
+  let app: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    app = ReactTestRenderer.create(<App />);
+  });
+  await openDiceEntry(app!);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+  });
+
+  mockKeyDerivationAdvancedState.mockReturnValue(twoAddressState);
+  mockKeyDerivationProjectAdvancedPath.mockReturnValue(twoAddressProjection);
+
+  try {
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-address-range' }).props.onChangeText('2');
+    });
+
+    expect(mockKeyDerivationProjectAdvancedPath).toHaveBeenLastCalledWith({
+      accountPath: "m/84'/0'/0'",
+      advanced: {
+        account: "0'",
+        addressRange: '2',
+        addressStart: '0',
+        branchRange: '1',
+        branchStart: '0',
+        coinType: "0'",
+        purpose: "84'",
+      },
+    });
+    expect(app!.root.findByProps({ testID: 'dice-advanced-address-range' }).props.value).toBe('2');
+    expect(app!.root.findByProps({ testID: 'dice-derivation-path' }).props.value).toBe(
+      "m/84'/0'/0'/0",
+    );
+    expect(app!.root.findByProps({ testID: 'dice-derivation-path-help' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.keys.advanced.derivationPathHelp('multiple-indexes'),
+    );
+  } finally {
+    mockKeyDerivationAdvancedState.mockImplementation(
+      () => KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    );
+    mockKeyDerivationProjectAdvancedPath.mockImplementation(
+      () => KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    );
+  }
+});
+
+test('keeps an Advanced range while reopening settings and editing its Key Station tab', async () => {
+  const twoBranchState: KeyDerivationAdvancedState = {
+    ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    addressCount: 2,
+    branchWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.branchWindow,
+      branches: [
+        { index: 0, role: 0 },
+        { index: 1, role: 1 },
+      ],
+      end: 1,
+      range: { displayValue: '2', maximum: 2, valid: true, value: 2 },
+    },
+    pathHelpKind: 1,
+  };
+  const twoBranchProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: "m/84'/0'/0'",
+    advancedState: twoBranchState,
+    displayKind: 0,
+    visiblePath: "m/84'/0'/0'",
+  };
+  const entropy = new Uint8Array(16).buffer;
+  const mnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+
+  mockKeyDerivationAdvancedState.mockReturnValue(twoBranchState);
+  mockKeyDerivationProjectAdvancedPath.mockReturnValue(twoBranchProjection);
+  mockDiceRollsToEntropy.mockReturnValue(entropy);
+  mockEntropyToMnemonic.mockReturnValue(mnemonic);
+
+  try {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+    await openDiceEntry(app!);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.onChangeText('2');
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-dice-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+    });
+
+    expect(app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.value).toBe('2');
+    expect(app!.root.findByProps({ testID: 'dice-derivation-path' }).props.value).toBe(
+      "m/84'/0'/0'",
+    );
+    expect(mockKeyDerivationVisiblePathState).toHaveBeenLastCalledWith({
+      addressRange: '1',
+      addressStart: '0',
+      branchRange: '2',
+      branchStart: '0',
+      path: "m/84'/0'/0'",
+    });
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-dice-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1');
+    });
+    expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(false);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'key-station-path-value' }).props.children).toBe(
+      "m/84'/0'/0'",
+    );
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-dice-entry' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'dice-setup-view' })).toBeDefined();
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'key-station-tab-1' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'dice-rolls-view' })).toBeDefined();
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.value).toBe('2');
+    expect(app!.root.findByProps({ testID: 'dice-derivation-path' }).props.value).toBe(
+      "m/84'/0'/0'",
+    );
+    expect(mockKeyDerivationVisiblePathState).toHaveBeenLastCalledWith({
+      addressRange: '1',
+      addressStart: '0',
+      branchRange: '2',
+      branchStart: '0',
+      path: "m/84'/0'/0'",
+    });
+  } finally {
+    mockKeyDerivationAdvancedState.mockImplementation(
+      () => KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    );
+    mockKeyDerivationProjectAdvancedPath.mockImplementation(
+      () => KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    );
+    mockDiceRollsToEntropy.mockReset();
+    mockEntropyToMnemonic.mockReset();
+  }
+});
+
+test('blocks derivation when an invalid Advanced range is left in Key Settings', async () => {
+  const invalidBranchRangeState: KeyDerivationAdvancedState = {
+    ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    addressCount: 0,
+    branchWindow: {
+      ...KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE.branchWindow,
+      branches: [],
+      range: { displayValue: '0', maximum: 2, valid: false, value: 0 },
+      valid: false,
+    },
+    pathHelpKind: 4,
+    valid: false,
+    validationKind: 3,
+    windowsValid: false,
+  };
+  const invalidProjection: KeyDerivationPathProjectionState = {
+    ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    accountPath: '',
+    advancedState: invalidBranchRangeState,
+    displayKind: 3,
+    valid: false,
+    visiblePath: '',
+  };
+  const entropy = new Uint8Array(16).buffer;
+  const mnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+
+  mockDiceRollsToEntropy.mockReturnValue(entropy);
+  mockEntropyToMnemonic.mockReturnValue(mnemonic);
+
+  try {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+    await openDiceEntry(app!);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1');
+    });
+    expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(false);
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'open-dice-key-settings' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-entry' }).props.onPress();
+    });
+    mockKeyDerivationAdvancedState.mockReturnValue(invalidBranchRangeState);
+    mockKeyDerivationProjectAdvancedPath.mockReturnValue(invalidProjection);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props.onChangeText('0');
+    });
+
+    expect(app!.root.findByProps({ testID: 'dice-advanced-branch-range' }).props['aria-invalid']).toBe(
+      true,
+    );
+    expect(mockKeyDerivationProjectAdvancedPath).toHaveBeenLastCalledWith({
+      accountPath: "m/84'/0'/0'",
+      advanced: {
+        account: "0'",
+        addressRange: '1',
+        addressStart: '0',
+        branchRange: '0',
+        branchStart: '0',
+        coinType: "0'",
+        purpose: "84'",
+      },
+    });
+    expect(app!.root.findByProps({ testID: 'dice-derivation-path' }).props.value).toBe(
+      "m/84'/0'/0'/0/0",
+    );
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'close-dice-key-settings' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(true);
+  } finally {
+    mockKeyDerivationAdvancedState.mockImplementation(
+      () => KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+    );
+    mockKeyDerivationProjectAdvancedPath.mockImplementation(
+      () => KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    );
+    mockDiceRollsToEntropy.mockReset();
+    mockEntropyToMnemonic.mockReset();
+  }
 });
 
 test('Edit input returns to the originating Dice input screen', async () => {

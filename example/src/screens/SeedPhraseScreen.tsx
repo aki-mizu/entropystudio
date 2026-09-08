@@ -23,8 +23,9 @@ import {
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import type { KeyStationDerivation } from '../features/keyStation/keyStation';
 import {
-  keyStationDerivationPathState,
   type KeyStationInput,
+  type KeyStationAdvancedDerivationUpdater,
+  type KeyStationAdvancedHardening,
   type KeyStationScriptType,
   type KeyStationTab,
 } from '../features/keyStation/keyStation';
@@ -55,6 +56,7 @@ import {
   translateSeedNumberIndices,
 } from '../features/seedPhrase/seedPhrase';
 import { mnemonicToEntropy, mnemonicToSeed } from '../native/entropyStudio';
+import type { KeyDerivationAdvancedInput } from '../native/entropyStudio';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 
@@ -64,11 +66,15 @@ type InputSelection = { readonly end: number; readonly start: number };
 type Props = {
   readonly activeTool: EntropyTool;
   readonly autocompleteEnabled: boolean;
+  readonly advancedDerivationHardening: KeyStationAdvancedHardening;
+  readonly advancedDerivationInput: KeyDerivationAdvancedInput;
   readonly derivationPath: string;
+  readonly derivationPathValid: boolean;
   readonly editInputRequest: KeyStationTab | null;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onDeriveKey: (derivation: KeyStationDerivation, input: KeyStationInput) => void;
+  readonly onSetAdvancedDerivation: (update: KeyStationAdvancedDerivationUpdater) => void;
   readonly onSetDerivationPath: (path: string) => void;
   readonly onSetScriptType: (scriptType: KeyStationScriptType) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
@@ -119,11 +125,15 @@ function replaceInputSelection(value: string, selection: InputSelection, inserte
 export function SeedPhraseScreen({
   activeTool,
   autocompleteEnabled,
+  advancedDerivationHardening,
+  advancedDerivationInput,
   derivationPath,
+  derivationPathValid,
   editInputRequest,
   isActive,
   isDarkMode,
   onDeriveKey,
+  onSetAdvancedDerivation,
   onSetDerivationPath,
   onSetScriptType,
   onSelectTool,
@@ -163,7 +173,6 @@ export function SeedPhraseScreen({
     wordCount,
     zeroIndexed,
   );
-  const derivationPathValid = keyStationDerivationPathState(derivationPath).valid;
   let entropy: ArrayBuffer | null = null;
 
   if (analysis.canDerive) {
@@ -619,9 +628,12 @@ export function SeedPhraseScreen({
         </View>
       ) : activeView === 'key-settings' ? (
         <KeyDerivationSettingsView
+          advancedDerivationHardening={advancedDerivationHardening}
+          advancedDerivationInput={advancedDerivationInput}
           colors={colors}
           derivationPath={derivationPath}
           onBack={() => setActiveView('entry')}
+          onSetAdvancedDerivation={onSetAdvancedDerivation}
           onSetDerivationPath={onSetDerivationPath}
           onSetScriptType={onSetScriptType}
           scriptType={scriptType}

@@ -5,7 +5,11 @@
 import {
   activeMethodList,
   App,
+  KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+  KEY_DERIVATION_VISIBLE_PATH_DEFAULT_FIXTURE,
   mockEntropyToMnemonic,
+  mockKeyDerivationProjectAdvancedPath,
+  mockKeyDerivationVisiblePathState,
   mockLifehashFromFingerprint,
   mockMnemonicToEntropy,
   mockMnemonicToMasterFingerprint,
@@ -15,6 +19,11 @@ import {
   selectEntropyTool,
   selectSeedPhraseLength,
 } from '../../test/testSupport';
+import { KeyDerivationVisiblePathValidationKind } from '../../src/native/entropyStudio';
+import type {
+  KeyDerivationPathProjectionState,
+  KeyDerivationVisiblePathState,
+} from '../../src/native/entropyStudio';
 import {
   formatCopy,
   UPSTREAM_TEXT,
@@ -23,10 +32,76 @@ import {
 } from '../../src/features/upstreamUiCopy';
 import { SeedPhraseScreen } from '../../src/screens/SeedPhraseScreen';
 
+const ROOT_DERIVATION_PATH_FIXTURE: KeyDerivationVisiblePathState = {
+  ...KEY_DERIVATION_VISIBLE_PATH_DEFAULT_FIXTURE,
+  accountComponents: [],
+  accountPath: '',
+  address: undefined,
+  branch: undefined,
+  displayKind: 3,
+  valid: false,
+  validationKind: KeyDerivationVisiblePathValidationKind.Root,
+  visiblePath: '',
+};
+
+const MISSING_COMPONENTS_DERIVATION_PATH_FIXTURE: KeyDerivationVisiblePathState = {
+  ...ROOT_DERIVATION_PATH_FIXTURE,
+  validationKind: KeyDerivationVisiblePathValidationKind.MissingComponents,
+};
+
+const INDEX_DERIVATION_PATH_FIXTURE: KeyDerivationVisiblePathState = {
+  ...ROOT_DERIVATION_PATH_FIXTURE,
+  validationKind: KeyDerivationVisiblePathValidationKind.Index,
+};
+
+const BIP44_DERIVATION_PATH_FIXTURE: KeyDerivationVisiblePathState = {
+  ...KEY_DERIVATION_VISIBLE_PATH_DEFAULT_FIXTURE,
+  accountComponents: [
+    { hardened: true, index: 44 },
+    { hardened: true, index: 1 },
+    { hardened: true, index: 2 },
+  ],
+  accountPath: "m/44'/1'/2'",
+  address: { hardened: false, index: 7 },
+  branch: { hardened: false, index: 0 },
+  visiblePath: "m/44'/1'/2'/0/7",
+};
+
+const BIP84_DERIVATION_PATH_FIXTURE: KeyDerivationVisiblePathState = {
+  ...BIP44_DERIVATION_PATH_FIXTURE,
+  accountComponents: [
+    { hardened: true, index: 84 },
+    { hardened: true, index: 1 },
+    { hardened: true, index: 2 },
+  ],
+  accountPath: "m/84'/1'/2'",
+  visiblePath: "m/84'/1'/2'/0/7",
+};
+
+const BIP44_PATH_PROJECTION_FIXTURE: KeyDerivationPathProjectionState = {
+  ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+  accountPath: "m/44'/1'/2'",
+  visiblePath: "m/44'/1'/2'/0/7",
+};
+
+const BIP86_PATH_PROJECTION_FIXTURE: KeyDerivationPathProjectionState = {
+  ...KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+  accountPath: "m/86'/1'/2'",
+  visiblePath: "m/86'/1'/2'/0/7",
+};
+
 describe('Seed Phrase / Words', () => {
   afterEach(() => {
     mockLifehashFromFingerprint.mockReset();
     mockLifehashFromFingerprint.mockReturnValue('');
+    mockKeyDerivationProjectAdvancedPath.mockReset();
+    mockKeyDerivationProjectAdvancedPath.mockReturnValue(
+      KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
+    );
+    mockKeyDerivationVisiblePathState.mockReset();
+    mockKeyDerivationVisiblePathState.mockReturnValue(
+      KEY_DERIVATION_VISIBLE_PATH_DEFAULT_FIXTURE,
+    );
   });
 
   test('validates a typed Seed Phrase through the native BIP39 binding', async () => {
@@ -116,6 +191,7 @@ describe('Seed Phrase / Words', () => {
     expect(app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props['aria-invalid']).toBe(
       false,
     );
+    mockKeyDerivationVisiblePathState.mockReturnValue(ROOT_DERIVATION_PATH_FIXTURE);
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText('not-a-path');
     });
@@ -125,12 +201,16 @@ describe('Seed Phrase / Words', () => {
     expect(app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props['aria-invalid']).toBe(
       true,
     );
+    mockKeyDerivationVisiblePathState.mockReturnValue(
+      MISSING_COMPONENTS_DERIVATION_PATH_FIXTURE,
+    );
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText("m/84'/0'");
     });
     expect(
       app!.root.findByProps({ testID: 'seed-phrase-derivation-path-help' }).props.children,
     ).toBe(UPSTREAM_TEXT.keys.derivationPathErrors.missingComponents);
+    mockKeyDerivationVisiblePathState.mockReturnValue(INDEX_DERIVATION_PATH_FIXTURE);
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText(
         "m/84'/0'/999999999999999999999/0/0",
@@ -139,6 +219,7 @@ describe('Seed Phrase / Words', () => {
     expect(
       app!.root.findByProps({ testID: 'seed-phrase-derivation-path-help' }).props.children,
     ).toBe(UPSTREAM_TEXT.keys.derivationPathErrors.index);
+    mockKeyDerivationVisiblePathState.mockReturnValue(BIP44_DERIVATION_PATH_FIXTURE);
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText(
         "m/44'/1'/2'/0/7",
@@ -152,9 +233,11 @@ describe('Seed Phrase / Words', () => {
         .root.findByProps({ testID: 'seed-phrase-script-type-picker-wheel' })
         .props.onValueChange('bip86', 3);
     });
+    mockKeyDerivationProjectAdvancedPath.mockReturnValue(BIP86_PATH_PROJECTION_FIXTURE);
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'seed-phrase-script-type-picker-done' }).props.onPress();
     });
+    mockKeyDerivationVisiblePathState.mockReturnValue(BIP84_DERIVATION_PATH_FIXTURE);
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText(
         "m/84'/1'/2'/0/7",
@@ -168,6 +251,7 @@ describe('Seed Phrase / Words', () => {
         .root.findByProps({ testID: 'seed-phrase-script-type-picker-wheel' })
         .props.onValueChange('bip44', 0);
     });
+    mockKeyDerivationProjectAdvancedPath.mockReturnValue(BIP44_PATH_PROJECTION_FIXTURE);
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'seed-phrase-script-type-picker-done' }).props.onPress();
     });
@@ -223,6 +307,7 @@ describe('Seed Phrase / Words', () => {
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'open-seed-phrase-key-settings' }).props.onPress();
     });
+    mockKeyDerivationVisiblePathState.mockReturnValue(ROOT_DERIVATION_PATH_FIXTURE);
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText('not-a-path');
     });
@@ -233,6 +318,7 @@ describe('Seed Phrase / Words', () => {
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'open-seed-phrase-key-settings' }).props.onPress();
     });
+    mockKeyDerivationVisiblePathState.mockReturnValue(BIP44_DERIVATION_PATH_FIXTURE);
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'seed-phrase-derivation-path' }).props.onChangeText(
         "m/44'/1'/2'/0/7",

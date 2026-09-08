@@ -151,6 +151,81 @@ describe('Upstream UI copy provenance', () => {
         source: upstreamAppJs,
         template: /Dice must be faces 1(?:\\u2013|–)6\. Ignored characters: \{chars\}/,
       },
+      'keys.advanced.accountIndexHelp': {
+        source: upstreamAppJs,
+        template:
+          /Account index · \$\{hardening\.account \? "Hardened" : "Unhardened"\} · 0 to 2,147,483,647/,
+      },
+      'keys.advanced.addressRangeHelp': {
+        source: upstreamAppJs,
+        template:
+          /Derives \$\{addressCopies\} \$\{range \* branches\.length === 1 \? "address" : "addresses"\} · Max \$\{maximum\.toLocaleString\(\)\}/,
+      },
+      'keys.advanced.addressEstimate': {
+        source: upstreamAppJs,
+        template:
+          /Estimated derivation time on this device: \$\{hodlFormatAddressEstimate\(hodlAddressBenchmarkMs \* range \* branches\.length \* keyCount\)\}\./,
+      },
+      'keys.advanced.addressStartHelp': {
+        source: upstreamAppJs,
+        template:
+          /First \$\{branchLabels\.toLowerCase\(\)\} index to derive · \$\{hardening\.address \? "Hardened" : "Unhardened"\} · 0 to 2,147,483,647/,
+      },
+      'keys.advanced.branchLabel': {
+        source: upstreamAppJs,
+        template:
+          /return branch === 0 \? "Receive" : branch === 1 \? "Change" : `Custom branch \$\{branch\}`;/,
+      },
+      'keys.advanced.branchRangeHelp': {
+        source: upstreamAppJs,
+        template:
+          /Derives \$\{branchLabels\} \$\{hardening\.branch \? "hardened " : ""\}\$\{branches\.length === 1 \? "branch" : "branches"\} · Max \$\{branchMaximum\}/,
+      },
+      'keys.advanced.branchStartHelp': {
+        source: upstreamAppJs,
+        template:
+          /First address branch to derive · 0 is Receive · 1 is Change · \$\{hardening\.branch \? "Hardened" : "Unhardened"\} · 0 to 2,147,483,647/,
+      },
+      'keys.advanced.coinTypeIndexHelp': {
+        source: upstreamAppJs,
+        template:
+          /Coin type index · \$\{label\} · \$\{hardened \? "Hardened" : "Unhardened"\} · 0 to 2,147,483,647/,
+      },
+      'keys.advanced.coinTypeLabel': {
+        source: upstreamAppJs,
+        template:
+          /(?=[\s\S]*let label = "Custom";)(?=[\s\S]*return Number\(coinType\) === 1 \? hodlT\("Testnet"\) : Number\(coinType\) === 0 \? hodlT\("Mainnet"\) : hodlT\("Custom · Mainnet addresses"\);)/,
+      },
+      'keys.advanced.derivationPathHelp': {
+        source: upstreamAppJs,
+        template:
+          /function hodlDerivationPathRangeMessage\(branchWindow, addressWindow\) \{[\s\S]*?Multiple address branches and indexes selected · path shown through the account level\.[\s\S]*?Multiple address branches selected · path shown through the account level\.[\s\S]*?Multiple address indexes selected · path shown through the address branch\.[\s\S]*?Exact BIP32 address path · edit directly to use a custom path/,
+      },
+      'keys.advanced.formatAddressEstimate': {
+        source: upstreamAppJs,
+        template:
+          /function hodlFormatAddressEstimate\(milliseconds\) \{[\s\S]*?milliseconds < 100\) return hodlTText\("under 0\.1 seconds"\);[\s\S]*?milliseconds < 10000\) return hodlTText\("about \{n\} seconds", \{ n: \(milliseconds \/ 1000\)\.toFixed\(1\) \}\);[\s\S]*?milliseconds < 60000\) return hodlTText\("about \{n\} seconds", \{ n: Math\.round\(milliseconds \/ 1000\) \}\);[\s\S]*?return hodlTText\("about \{n\} minutes", \{ n: Math\.ceil\(milliseconds \/ 60000\) \}\);/,
+      },
+      'keys.advanced.pathValidationHelp': {
+        source: upstreamAppJs,
+        template:
+          /(?=[\s\S]*Complete the purpose, network, and account indexes\.)(?=[\s\S]*Starting address branch index must be a whole number from 0 to 2,147,483,647\.)(?=[\s\S]*Address branch range must be a whole number from 1 to \$\{maximum\}\.)(?=[\s\S]*Starting address index must be a whole number from 0 to 2,147,483,647\.)(?=[\s\S]*Address range must be a whole number from 1 to \$\{maximum\.toLocaleString\(\)\}\.)/,
+      },
+      'keys.advanced.genericAddressStartHelp': {
+        source: upstreamAppJs,
+        template:
+          /First address index to derive · \$\{hardening\.address \? "Hardened" : "Unhardened"\} · 0 to 2,147,483,647/,
+      },
+      'keys.advanced.hardeningLabel': {
+        source: upstreamAppJs,
+        template:
+          /hardening\.(?:purpose|coinType|account|branch|address) \? "Hardened" : "Unhardened"/,
+      },
+      'keys.advanced.purposeIndexHelp': {
+        source: upstreamAppJs,
+        template:
+          /Purpose index · \$\{hardening\.purpose \? "Hardened" : "Unhardened"\} · 0 to 2,147,483,647/,
+      },
       'numberBases.coinNext': {
         source: upstreamAppJs,
         template:

@@ -202,9 +202,30 @@ export const UPSTREAM_TEXT = {
   keys: {
     add: 'Open Key Station to derive another key',
     advancedEntry: 'Advanced entry',
+    accountIndexHelp: 'Account index · Hardened · 0 to 2,147,483,647',
+    addressEstimate: {
+      aboutMinutes: 'about {n} minutes',
+      aboutSeconds: 'about {n} seconds',
+      measuring: 'Measuring this device…',
+      underPointOneSeconds: 'under 0.1 seconds',
+    },
     addressBranchRange: 'Address branch range',
+    addressBranchRangeHelp: 'Derives Receive branch · Max 2',
     addressRange: 'Address range',
+    addressRangeHelp: 'Derives 1 receive address · Max 10,000',
+    addressRangeReceiveAndChangeHelp:
+      'Derives 5 receive and 5 change addresses · Max 10,000',
     account: 'Account',
+    branchLabels: {
+      receive: 'Receive',
+    },
+    coinTypeNetworks: {
+      customMainnetAddresses: 'Custom · Mainnet addresses',
+      mainnet: 'Mainnet',
+      testnet: 'Testnet',
+    },
+    coinTypeIndexHelp:
+      'Coin type index · Mainnet · Hardened · 0 to 2,147,483,647',
     defaultTab: 'Key {n}',
     derivationPath: 'Derivation path',
     derivationPathErrors: {
@@ -212,16 +233,19 @@ export const UPSTREAM_TEXT = {
         "Each derivation path index must be a whole number from 0 to 2,147,483,647, optionally followed by h or '.",
       missingComponents:
         'Derivation path must include purpose, network, and account plus every address component shown.',
-      missingAccount: 'Derivation path must include purpose, network, and account indexes.',
+      missingAccount:
+        'Derivation path must include purpose, network, and account indexes.',
       root: 'Derivation path must start with m and contain slash-separated BIP32 indexes.',
     },
-    derivationPathHelp: 'Exact BIP32 address path · edit directly to use a custom path',
+    derivationPathHelp:
+      'Exact BIP32 address path · edit directly to use a custom path',
     delete: 'Delete current key',
     editInput: 'Edit input',
     harden: 'Harden',
     methodLabel: 'Method',
     network: 'Network',
     purpose: 'Purpose',
+    purposeIndexHelp: 'Purpose index · Hardened · 0 to 2,147,483,647',
     scriptType: 'Script type',
     scriptTypes: {
       bip44: 'Legacy',
@@ -230,7 +254,14 @@ export const UPSTREAM_TEXT = {
       bip86: 'Taproot',
     },
     startingAddressBranch: 'Starting address branch',
+    startingAddressBranchHelp:
+      'First address branch to derive · 0 is Receive · 1 is Change · Unhardened · 0 to 2,147,483,647',
     startingAddressIndex: 'Starting address index',
+    startingAddressIndexHelp:
+      'First receive index to derive · Unhardened · 0 to 2,147,483,647',
+    startingAddressIndexReceiveAndChangeHelp:
+      'First receive and change index to derive · Unhardened · 0 to 2,147,483,647',
+    addressBranchRangeReceiveAndChangeHelp: 'Derives Receive and Change branches · Max 2',
     station: 'Key Station',
     tabLabel: 'Keys',
   },
@@ -338,6 +369,42 @@ export function formatCopy(
   );
 }
 
+/** Semantic branch data from the native Advanced-entry state. */
+export type KeyDerivationAdvancedCopyBranch = {
+  readonly index: number;
+  readonly role: KeyDerivationAdvancedCopyBranchRole;
+};
+
+export type KeyDerivationAdvancedCopyBranchRole =
+  | 'receive'
+  | 'change'
+  | 'custom';
+
+export type KeyDerivationAdvancedCopyNetworkKind =
+  | 'mainnet'
+  | 'testnet'
+  | 'custom-mainnet-addresses'
+  | 'invalid';
+
+export type KeyDerivationAdvancedCopyPathHelpKind =
+  | 'exact'
+  | 'multiple-branches'
+  | 'multiple-indexes'
+  | 'multiple-branches-and-indexes'
+  | 'invalid';
+
+export type KeyDerivationAdvancedCopyValidationKind =
+  | 'valid'
+  | 'account-prefix'
+  | 'branch-start'
+  | 'branch-range'
+  | 'address-start'
+  | 'address-range';
+
+function formatKeyDerivationNumber(value: number): string {
+  return value.toLocaleString();
+}
+
 /** Direct upstream enum label tables used by Studio. */
 export const UPSTREAM_UI_LABELS = {
   hexFormat: hodlHexFormatLabels,
@@ -412,6 +479,167 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
   keyboard: {
     modeButton: 'aA1',
     spaceButton: 'space',
+  },
+  keys: {
+    advanced: (() => {
+      const hardeningLabel = (hardened: boolean) =>
+        hardened ? 'Hardened' : 'Unhardened';
+
+      const coinTypeLabel = (
+        networkKind: KeyDerivationAdvancedCopyNetworkKind,
+      ) => {
+        switch (networkKind) {
+          case 'mainnet':
+            return UPSTREAM_TEXT.keys.coinTypeNetworks.mainnet;
+          case 'testnet':
+            return UPSTREAM_TEXT.keys.coinTypeNetworks.testnet;
+          case 'custom-mainnet-addresses':
+            return UPSTREAM_TEXT.keys.coinTypeNetworks.customMainnetAddresses;
+          case 'invalid':
+            return 'Custom';
+        }
+      };
+
+      const branchLabel = ({
+        index,
+        role,
+      }: KeyDerivationAdvancedCopyBranch): string => {
+        switch (role) {
+          case 'receive':
+            return UPSTREAM_TEXT.keys.branchLabels.receive;
+          case 'change':
+            return 'Change';
+          case 'custom':
+            return `Custom branch ${index}`;
+        }
+      };
+
+      const branchSummary = (
+        branches: readonly KeyDerivationAdvancedCopyBranch[],
+      ) => branches.map(branchLabel).join(' and ');
+
+      const addressCopies = (
+        branches: readonly KeyDerivationAdvancedCopyBranch[],
+        range: number,
+      ) =>
+        branches
+          .map(
+            branch =>
+              `${formatKeyDerivationNumber(range)} ${branchLabel(
+                branch,
+              ).toLowerCase()}`,
+          )
+          .join(' and ');
+
+      return {
+        addressRangeHelp: (
+          branches: readonly KeyDerivationAdvancedCopyBranch[],
+          range: number,
+          addressCount: number,
+          maximum: number,
+        ) =>
+          `Derives ${addressCopies(branches, range)} ${
+            addressCount === 1 ? 'address' : 'addresses'
+          } · Max ${formatKeyDerivationNumber(maximum)}`,
+        addressEstimate: (duration: string) =>
+          `Estimated derivation time on this device: ${duration}.`,
+        formatAddressEstimate: (milliseconds: number): string => {
+          if (!Number.isFinite(milliseconds) || milliseconds < 100) {
+            return UPSTREAM_TEXT.keys.addressEstimate.underPointOneSeconds;
+          }
+          if (milliseconds < 10_000) {
+            return formatCopy(UPSTREAM_TEXT.keys.addressEstimate.aboutSeconds, {
+              n: (milliseconds / 1_000).toFixed(1),
+            });
+          }
+          if (milliseconds < 60_000) {
+            return formatCopy(UPSTREAM_TEXT.keys.addressEstimate.aboutSeconds, {
+              n: Math.round(milliseconds / 1_000),
+            });
+          }
+          return formatCopy(UPSTREAM_TEXT.keys.addressEstimate.aboutMinutes, {
+            n: Math.ceil(milliseconds / 60_000),
+          });
+        },
+        addressStartHelp: (
+          branches: readonly KeyDerivationAdvancedCopyBranch[],
+          hardened: boolean,
+        ) =>
+          `First ${branchSummary(
+            branches,
+          ).toLowerCase()} index to derive · ${hardeningLabel(
+            hardened,
+          )} · 0 to 2,147,483,647`,
+        branchLabel,
+        branchRangeHelp: (
+          branches: readonly KeyDerivationAdvancedCopyBranch[],
+          hardened: boolean,
+          maximum: number,
+        ) =>
+          `Derives ${branchSummary(branches)} ${hardened ? 'hardened ' : ''}${
+            branches.length === 1 ? 'branch' : 'branches'
+          } · Max ${maximum}`,
+        branchStartHelp: (hardened: boolean) =>
+          `First address branch to derive · 0 is Receive · 1 is Change · ${hardeningLabel(
+            hardened,
+          )} · 0 to 2,147,483,647`,
+        coinTypeIndexHelp: (
+          networkKind: KeyDerivationAdvancedCopyNetworkKind,
+          hardened: boolean,
+        ) =>
+          `Coin type index · ${coinTypeLabel(networkKind)} · ${hardeningLabel(
+            hardened,
+          )} · 0 to 2,147,483,647`,
+        coinTypeLabel,
+        derivationPathHelp: (
+          kind: KeyDerivationAdvancedCopyPathHelpKind,
+        ): string | undefined => {
+          switch (kind) {
+            case 'exact':
+              return UPSTREAM_TEXT.keys.derivationPathHelp;
+            case 'multiple-branches':
+              return 'Multiple address branches selected · path shown through the account level.';
+            case 'multiple-indexes':
+              return 'Multiple address indexes selected · path shown through the address branch.';
+            case 'multiple-branches-and-indexes':
+              return 'Multiple address branches and indexes selected · path shown through the account level.';
+            case 'invalid':
+              return undefined;
+          }
+        },
+        pathValidationHelp: (
+          kind: KeyDerivationAdvancedCopyValidationKind,
+          branchMaximum: number,
+          addressMaximum: number,
+        ): string | undefined => {
+          switch (kind) {
+            case 'valid':
+              return undefined;
+            case 'account-prefix':
+              return 'Complete the purpose, network, and account indexes.';
+            case 'branch-start':
+              return 'Starting address branch index must be a whole number from 0 to 2,147,483,647.';
+            case 'branch-range':
+              return `Address branch range must be a whole number from 1 to ${branchMaximum}.`;
+            case 'address-start':
+              return 'Starting address index must be a whole number from 0 to 2,147,483,647.';
+            case 'address-range':
+              return `Address range must be a whole number from 1 to ${formatKeyDerivationNumber(addressMaximum)}.`;
+          }
+        },
+        genericAddressStartHelp: (hardened: boolean) =>
+          `First address index to derive · ${hardeningLabel(
+            hardened,
+          )} · 0 to 2,147,483,647`,
+        hardeningLabel,
+        invalidAddressRangeHelp: 'Choose a valid address range.',
+        invalidBranchRangeHelp: 'Choose one or two valid address branches.',
+        accountIndexHelp: (hardened: boolean) =>
+          `Account index · ${hardeningLabel(hardened)} · 0 to 2,147,483,647`,
+        purposeIndexHelp: (hardened: boolean) =>
+          `Purpose index · ${hardeningLabel(hardened)} · 0 to 2,147,483,647`,
+      } as const;
+    })(),
   },
   numberBases: {
     entropyLabel: (label: string, wordCount: number) =>

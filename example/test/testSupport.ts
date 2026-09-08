@@ -5,6 +5,12 @@ import type { WordCount } from '../src/features/dice/dice';
 import type {
   DirectDiceCalculationRow,
   HashedCardState,
+  KeyDerivationAdvancedInput,
+  KeyDerivationAdvancedState,
+  KeyDerivationPathProjectionInput,
+  KeyDerivationPathProjectionState,
+  KeyDerivationVisiblePathInput,
+  KeyDerivationVisiblePathState,
   NumberBaseAnalysis,
   NumberBaseCalculations,
   PrivateKeyInputState,
@@ -79,6 +85,68 @@ export const mockNumberBaseCalculations = jest.fn<
 export const mockPrivateKeyEntropy = jest.fn<ArrayBuffer, [string, number, boolean]>();
 export const mockPrivateKeyInputState = jest.fn<PrivateKeyInputState, [string, number, boolean]>();
 export const mockPrivateKeyKeyAllowed = jest.fn<boolean, [string, number, number, string, number]>();
+export const KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE: KeyDerivationAdvancedState = {
+  account: { hardened: true, valid: true, value: 0 },
+  addressCount: 1,
+  addressWindow: {
+    end: 0,
+    range: { displayValue: '1', maximum: 10_000, valid: true, value: 1 },
+    start: { hardened: false, valid: true, value: 0 },
+    valid: true,
+  },
+  branchWindow: {
+    branches: [{ index: 0, role: 0 }],
+    end: 0,
+    range: { displayValue: '1', maximum: 2, valid: true, value: 1 },
+    start: { hardened: false, valid: true, value: 0 },
+    valid: true,
+  },
+  coinType: { hardened: true, valid: true, value: 0 },
+  networkKind: 0,
+  pathHelpKind: 0,
+  purpose: { hardened: true, valid: true, value: 84 },
+  valid: true,
+  validationKind: 0,
+  windowsValid: true,
+};
+export const mockKeyDerivationAdvancedState = jest.fn<
+  KeyDerivationAdvancedState,
+  [KeyDerivationAdvancedInput]
+>(() => KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE);
+export const mockKeyDerivationAddressBenchmarkMilliseconds = jest.fn<number, []>(() => 0.01);
+export const mockKeyDerivationAddressEstimateMilliseconds = jest.fn<
+  number,
+  [KeyDerivationAdvancedInput]
+>(() => 0.04);
+export const KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE: KeyDerivationPathProjectionState = {
+  accountPath: "m/84'/0'/0'",
+  advancedState: KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
+  displayKind: 2,
+  valid: true,
+  visiblePath: "m/84'/0'/0'/0/0",
+};
+export const KEY_DERIVATION_VISIBLE_PATH_DEFAULT_FIXTURE: KeyDerivationVisiblePathState = {
+  accountComponents: [
+    { hardened: true, index: 84 },
+    { hardened: true, index: 0 },
+    { hardened: true, index: 0 },
+  ],
+  accountPath: "m/84'/0'/0'",
+  address: { hardened: false, index: 0 },
+  branch: { hardened: false, index: 0 },
+  displayKind: 2,
+  valid: true,
+  validationKind: 0,
+  visiblePath: "m/84'/0'/0'/0/0",
+};
+export const mockKeyDerivationProjectAdvancedPath = jest.fn<
+  KeyDerivationPathProjectionState,
+  [KeyDerivationPathProjectionInput]
+>(() => KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE);
+export const mockKeyDerivationVisiblePathState = jest.fn<
+  KeyDerivationVisiblePathState,
+  [KeyDerivationVisiblePathInput]
+>(() => KEY_DERIVATION_VISIBLE_PATH_DEFAULT_FIXTURE);
 export const mockSynchronizeEntropy = jest.fn<
   EntropySyncSnapshot,
   [string, number, number, boolean, string]
@@ -221,6 +289,43 @@ jest.mock('entropystudio', () => ({
     SecondShuffle: 3,
     Complete: 4,
   },
+  KeyDerivationBranchRole: {
+    Receive: 0,
+    Change: 1,
+    Custom: 2,
+  },
+  KeyDerivationNetworkKind: {
+    Mainnet: 0,
+    Testnet: 1,
+    CustomMainnetAddresses: 2,
+    Invalid: 3,
+  },
+  KeyDerivationPathHelpKind: {
+    Exact: 0,
+    MultipleBranches: 1,
+    MultipleIndexes: 2,
+    MultipleBranchesAndIndexes: 3,
+    Invalid: 4,
+  },
+  KeyDerivationValidationKind: {
+    Valid: 0,
+    AccountPrefix: 1,
+    BranchStart: 2,
+    BranchRange: 3,
+    AddressStart: 4,
+    AddressRange: 5,
+  },
+  KeyDerivationVisiblePathValidationKind: {
+    Valid: 0,
+    Root: 1,
+    Index: 2,
+    MissingComponents: 3,
+    MissingAccount: 4,
+    BranchStart: 5,
+    BranchRange: 6,
+    AddressStart: 7,
+    AddressRange: 8,
+  },
   cardTranscriptToEntropy: mockCardTranscriptToEntropy,
   cardKeyAllowed: mockCardKeyAllowed,
   analyzeNumberBaseInput: mockAnalyzeNumberBaseInput,
@@ -239,6 +344,11 @@ jest.mock('entropystudio', () => ({
   formatDiceTranscript: mockFormatDiceTranscript,
   hashedCardState: mockHashedCardState,
   hashedDiceState: mockHashedDiceState,
+  keyDerivationAddressBenchmarkMilliseconds: mockKeyDerivationAddressBenchmarkMilliseconds,
+  keyDerivationAddressEstimateMilliseconds: mockKeyDerivationAddressEstimateMilliseconds,
+  keyDerivationAdvancedState: mockKeyDerivationAdvancedState,
+  keyDerivationProjectAdvancedPath: mockKeyDerivationProjectAdvancedPath,
+  keyDerivationVisiblePathState: mockKeyDerivationVisiblePathState,
   lifehashFromFingerprint: mockLifehashFromFingerprint,
   mnemonicToEntropy: mockMnemonicToEntropy,
   mnemonicToMasterFingerprint: mockMnemonicToMasterFingerprint,

@@ -47,13 +47,15 @@ import {
 } from '../features/seedPhrase/bip39Passphrase';
 import { STUDIO_UI_TEXT } from '../features/studioUiCopy';
 import { UPSTREAM_UI_FALLBACK_COPY, UPSTREAM_TEXT } from '../features/upstreamUiCopy';
+import type { KeyDerivationAdvancedInput } from '../native/entropyStudio';
 import type {
   KeyStationDerivation,
+  KeyStationAdvancedDerivationUpdater,
+  KeyStationAdvancedHardening,
   KeyStationInput,
   KeyStationScriptType,
   KeyStationTab,
 } from '../features/keyStation/keyStation';
-import { keyStationDerivationPathState } from '../features/keyStation/keyStation';
 
 const CONTENT_HORIZONTAL_PADDING = 24;
 type CardView = 'entry' | 'key-settings' | 'passphrase' | 'setup';
@@ -68,11 +70,15 @@ const EMPTY_CARD_SELECTION: CardSelectionState = {
 type Props = {
   readonly activeTool: EntropyTool;
   readonly autocompleteEnabled: boolean;
+  readonly advancedDerivationHardening: KeyStationAdvancedHardening;
+  readonly advancedDerivationInput: KeyDerivationAdvancedInput;
   readonly derivationPath: string;
+  readonly derivationPathValid: boolean;
   readonly editInputRequest: KeyStationTab | null;
   readonly isActive: boolean;
   readonly isDarkMode: boolean;
   readonly onDeriveKey: (derivation: KeyStationDerivation, input: KeyStationInput) => void;
+  readonly onSetAdvancedDerivation: (update: KeyStationAdvancedDerivationUpdater) => void;
   readonly onSetDerivationPath: (path: string) => void;
   readonly onSetScriptType: (scriptType: KeyStationScriptType) => void;
   readonly onSelectTool: (tool: EntropyTool) => void;
@@ -82,11 +88,15 @@ type Props = {
 export function CardsScreen({
   activeTool,
   autocompleteEnabled,
+  advancedDerivationHardening,
+  advancedDerivationInput,
   derivationPath,
+  derivationPathValid,
   editInputRequest,
   isActive,
   isDarkMode,
   onDeriveKey,
+  onSetAdvancedDerivation,
   onSetDerivationPath,
   onSetScriptType,
   onSelectTool,
@@ -150,7 +160,6 @@ export function CardsScreen({
     : result?.mnemonic
       ? result.mnemonic.split(' ')
       : [];
-  const derivationPathValid = keyStationDerivationPathState(derivationPath).valid;
   const canDeriveWithPassphrase =
     canDerive && passphraseOptions.canDerive && derivationPathValid;
   const handledEditInputRequest = useRef<number | null>(null);
@@ -567,9 +576,12 @@ export function CardsScreen({
         </View>
       ) : activeView === 'key-settings' ? (
         <KeyDerivationSettingsView
+          advancedDerivationHardening={advancedDerivationHardening}
+          advancedDerivationInput={advancedDerivationInput}
           colors={colors}
           derivationPath={derivationPath}
           onBack={() => setActiveView('entry')}
+          onSetAdvancedDerivation={onSetAdvancedDerivation}
           onSetDerivationPath={onSetDerivationPath}
           onSetScriptType={onSetScriptType}
           scriptType={scriptType}

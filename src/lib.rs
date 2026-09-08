@@ -6,6 +6,7 @@ mod entropy_sync;
 mod error;
 mod hash;
 mod hashed_dice;
+mod key_derivation;
 mod lifehash;
 mod number_bases;
 mod private_key;
@@ -32,6 +33,17 @@ pub use entropy_sync::{synchronize_entropy, EntropySyncSnapshot, EntropySyncSour
 pub use error::EntropyStudioError;
 pub use hash::sha256;
 pub use hashed_dice::{dice_rolls_to_entropy, hashed_dice_state, DiceRollMethod, HashedDiceState};
+pub use key_derivation::{
+    key_derivation_address_benchmark_milliseconds, key_derivation_address_estimate_milliseconds,
+    key_derivation_advanced_state, key_derivation_project_advanced_path,
+    key_derivation_visible_path_state, KeyDerivationAddressWindowState, KeyDerivationAdvancedInput,
+    KeyDerivationAdvancedState, KeyDerivationBranch, KeyDerivationBranchRole,
+    KeyDerivationBranchWindowState, KeyDerivationIndexState, KeyDerivationNetworkKind,
+    KeyDerivationPathComponent, KeyDerivationPathDisplayKind, KeyDerivationPathHelpKind,
+    KeyDerivationPathProjectionInput, KeyDerivationPathProjectionState, KeyDerivationRangeState,
+    KeyDerivationValidationKind, KeyDerivationVisiblePathInput, KeyDerivationVisiblePathState,
+    KeyDerivationVisiblePathValidationKind,
+};
 pub use lifehash::lifehash_from_fingerprint;
 pub use number_bases::{
 	analyze_number_base_input, number_base_calculations, number_base_entropy,

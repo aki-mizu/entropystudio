@@ -10,6 +10,11 @@ import {
   DirectDiceMethod as GeneratedDirectDiceMethod,
   DirectDiceStep as GeneratedDirectDiceStep,
   HashedCardInstruction,
+  KeyDerivationBranchRole as GeneratedKeyDerivationBranchRole,
+  KeyDerivationNetworkKind as GeneratedKeyDerivationNetworkKind,
+  KeyDerivationPathHelpKind as GeneratedKeyDerivationPathHelpKind,
+  KeyDerivationValidationKind as GeneratedKeyDerivationValidationKind,
+  KeyDerivationVisiblePathValidationKind as GeneratedKeyDerivationVisiblePathValidationKind,
   NumberBaseFormat as GeneratedNumberBaseFormat,
   PrivateKeyFormat as GeneratedPrivateKeyFormat,
   PrivateKeyInputStatus as GeneratedPrivateKeyInputStatus,
@@ -35,6 +40,11 @@ import {
   formatDiceTranscript,
   hashedCardState,
   hashedDiceState,
+  keyDerivationAddressBenchmarkMilliseconds,
+  keyDerivationAddressEstimateMilliseconds,
+  keyDerivationAdvancedState,
+  keyDerivationProjectAdvancedPath,
+  keyDerivationVisiblePathState,
   lifehashFromFingerprint,
   mnemonicToEntropy,
   mnemonicToMasterFingerprint,
@@ -146,6 +156,48 @@ export const DirectDiceStep = {
   D8D16Complete: GeneratedDirectDiceStep.D8d16Complete,
 } as const;
 
+export const KeyDerivationBranchRole = {
+  Receive: GeneratedKeyDerivationBranchRole.Receive,
+  Change: GeneratedKeyDerivationBranchRole.Change,
+  Custom: GeneratedKeyDerivationBranchRole.Custom,
+} as const;
+
+export const KeyDerivationNetworkKind = {
+  Mainnet: GeneratedKeyDerivationNetworkKind.Mainnet,
+  Testnet: GeneratedKeyDerivationNetworkKind.Testnet,
+  CustomMainnetAddresses: GeneratedKeyDerivationNetworkKind.CustomMainnetAddresses,
+  Invalid: GeneratedKeyDerivationNetworkKind.Invalid,
+} as const;
+
+export const KeyDerivationPathHelpKind = {
+  Exact: GeneratedKeyDerivationPathHelpKind.Exact,
+  MultipleBranches: GeneratedKeyDerivationPathHelpKind.MultipleBranches,
+  MultipleIndexes: GeneratedKeyDerivationPathHelpKind.MultipleIndexes,
+  MultipleBranchesAndIndexes: GeneratedKeyDerivationPathHelpKind.MultipleBranchesAndIndexes,
+  Invalid: GeneratedKeyDerivationPathHelpKind.Invalid,
+} as const;
+
+export const KeyDerivationValidationKind = {
+  Valid: GeneratedKeyDerivationValidationKind.Valid,
+  AccountPrefix: GeneratedKeyDerivationValidationKind.AccountPrefix,
+  BranchStart: GeneratedKeyDerivationValidationKind.BranchStart,
+  BranchRange: GeneratedKeyDerivationValidationKind.BranchRange,
+  AddressStart: GeneratedKeyDerivationValidationKind.AddressStart,
+  AddressRange: GeneratedKeyDerivationValidationKind.AddressRange,
+} as const;
+
+export const KeyDerivationVisiblePathValidationKind = {
+  Valid: GeneratedKeyDerivationVisiblePathValidationKind.Valid,
+  Root: GeneratedKeyDerivationVisiblePathValidationKind.Root,
+  Index: GeneratedKeyDerivationVisiblePathValidationKind.Index,
+  MissingComponents: GeneratedKeyDerivationVisiblePathValidationKind.MissingComponents,
+  MissingAccount: GeneratedKeyDerivationVisiblePathValidationKind.MissingAccount,
+  BranchStart: GeneratedKeyDerivationVisiblePathValidationKind.BranchStart,
+  BranchRange: GeneratedKeyDerivationVisiblePathValidationKind.BranchRange,
+  AddressStart: GeneratedKeyDerivationVisiblePathValidationKind.AddressStart,
+  AddressRange: GeneratedKeyDerivationVisiblePathValidationKind.AddressRange,
+} as const;
+
 export {
   CardHashMethod,
   CardInputMethod,
@@ -173,6 +225,11 @@ export {
   formatDiceTranscript,
   hashedCardState,
   hashedDiceState,
+  keyDerivationAddressBenchmarkMilliseconds,
+  keyDerivationAddressEstimateMilliseconds,
+  keyDerivationAdvancedState,
+  keyDerivationProjectAdvancedPath,
+  keyDerivationVisiblePathState,
   lifehashFromFingerprint,
   mnemonicToEntropy,
   mnemonicToMasterFingerprint,
@@ -204,6 +261,18 @@ export type {
   EntropySyncSnapshot,
   HashedCardState,
   HashedDiceState,
+  KeyDerivationAdvancedInput,
+  KeyDerivationAdvancedState,
+  KeyDerivationPathComponent,
+  KeyDerivationPathProjectionInput,
+  KeyDerivationPathProjectionState,
+  KeyDerivationBranch,
+  KeyDerivationBranchWindowState,
+  KeyDerivationAddressWindowState,
+  KeyDerivationIndexState,
+  KeyDerivationRangeState,
+  KeyDerivationVisiblePathInput,
+  KeyDerivationVisiblePathState,
   NumberBaseAnalysis,
   NumberBaseCalculations,
   PrivateKeyInputState,
