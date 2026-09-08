@@ -6,7 +6,6 @@ import {
   App,
   React,
   ReactTestRenderer,
-  ScrollView,
   selectEntropyTool,
   selectSeedPhraseLength,
 } from '../../test/testSupport';
@@ -74,11 +73,8 @@ describe('Number Bases / Base64', () => {
     expect(app!.root.findByProps({ testID: 'number-base-help' }).props.children).toBe(
       'Each complete Base64 character contributes 6 bits. Seed-word cards fill as enough bits arrive; the checksum-derived final word appears when all 39 characters are entered. Enter 37 complete Base64 characters; the controls and progress message then switch to 2 coin flip(s), using Heads (0) or Tails (1). No generator \u2014 enter entropy you already created.',
     );
-    expect(
-      app!
-        .root.findByProps({ testID: 'number-bases-entry-view' })
-        .findAllByType(ScrollView),
-    ).toHaveLength(1);
+    expect(app!.root.findByProps({ testID: 'number-base-words-scroll' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'number-base-help-scroll' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'number-base-help-scroll' }).props.nestedScrollEnabled).toBe(
       true,
     );

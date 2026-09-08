@@ -94,6 +94,15 @@ describe(UPSTREAM_TEXT.dice.coleman.title, () => {
     ).toBe(UPSTREAM_TEXT.fingerprint.withPassphrase);
     expect(app!.root.findByType(DiceGrid).props.columns).toBe(6);
     expectPlaceholderSeedGrid(app!, 'live-dice-words', 24);
+    expect(
+      app!.root.findByProps({ testID: 'dice-rolls-view' }).findAllByType(ScrollView),
+    ).toHaveLength(1);
+    expect(app!.root.findByProps({ testID: 'live-dice-words-scroll' }).props.nestedScrollEnabled).toBe(
+      true,
+    );
+    expect(app!.root.findByProps({ testID: 'live-dice-words-scroll' }).props.overScrollMode).toBe(
+      'never',
+    );
     await closeDiceEntry(app!);
     expect(app!.root.findByProps({ testID: 'dice-setup-view' })).toBeDefined();
 

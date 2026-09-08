@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import type { DirectDiceState } from '../../../native/entropyStudio';
 import type { DiceColors } from '../diceTheme';
 import { SeedWordGrid } from './SeedWordGrid';
@@ -39,14 +39,23 @@ export function DiceWordList({
         { borderColor: colors.border },
       ]}
     >
-      <SeedWordGrid
-        compact={compact}
-        colors={colors}
-        finalWord={finalWord}
-        slotCount={slotCount}
-        testID={testID}
-        words={words}
-      />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        nestedScrollEnabled
+        overScrollMode="never"
+        showsVerticalScrollIndicator
+        style={styles.scroll}
+        testID={`${testID}-scroll`}
+      >
+        <SeedWordGrid
+          compact={compact}
+          colors={colors}
+          finalWord={finalWord}
+          slotCount={slotCount}
+          testID={testID}
+          words={words}
+        />
+      </ScrollView>
     </View>
   );
 }
@@ -80,8 +89,19 @@ const styles = StyleSheet.create({
   },
   container: {
     borderTopWidth: StyleSheet.hairlineWidth,
+    flex: 1,
+    flexShrink: 1,
     marginBottom: 8,
+    minHeight: 0,
     paddingBottom: 4,
     paddingTop: 8,
+  },
+  scroll: {
+    flex: 1,
+    flexShrink: 1,
+    minHeight: 0,
+  },
+  scrollContent: {
+    paddingRight: 4,
   },
 });

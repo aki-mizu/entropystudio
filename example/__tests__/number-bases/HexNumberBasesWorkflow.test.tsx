@@ -9,7 +9,6 @@ import {
   mockMnemonicToSeed,
   React,
   ReactTestRenderer,
-  ScrollView,
   selectEntropyTool,
   selectSeedPhraseLength,
 } from '../../test/testSupport';
@@ -73,11 +72,8 @@ describe('Number Bases / Hexadecimal', () => {
     expect(app!.root.findByProps({ testID: 'number-base-input' }).props.showSoftInputOnFocus).toBe(
       false,
     );
-    expect(
-      app!
-        .root.findByProps({ testID: 'number-bases-entry-view' })
-        .findAllByType(ScrollView),
-    ).toHaveLength(0);
+    expect(app!.root.findByProps({ testID: 'number-base-words-scroll' })).toBeDefined();
+    expect(app!.root.findAllByProps({ testID: 'number-base-help-scroll' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'derive-number-base-phrase' }).props.disabled).toBe(true);
 
     await ReactTestRenderer.act(async () => {

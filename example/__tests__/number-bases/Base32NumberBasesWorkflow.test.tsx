@@ -6,7 +6,6 @@ import {
   App,
   React,
   ReactTestRenderer,
-  ScrollView,
   selectEntropyTool,
 } from '../../test/testSupport';
 
@@ -24,12 +23,8 @@ describe('Number Bases / Crockford Base32', () => {
       numberBasesSetup.findByProps({ testID: 'open-number-bases-entry' }).props.onPress();
     });
 
-    expect(
-      app!
-        .root
-        .findByProps({ testID: 'number-bases-entry-view' })
-        .findAllByType(ScrollView),
-    ).toHaveLength(1);
+    expect(app!.root.findByProps({ testID: 'number-base-words-scroll' })).toBeDefined();
+    expect(app!.root.findByProps({ testID: 'number-base-help-scroll' })).toBeDefined();
     expect(app!.root.findByProps({ testID: 'number-base-key-0' }).props.disabled).toBe(false);
     expect(app!.root.findByProps({ testID: 'number-base-key-Z' }).props.disabled).toBe(false);
 
