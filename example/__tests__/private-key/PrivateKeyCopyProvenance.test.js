@@ -332,6 +332,11 @@ describe('Upstream UI copy provenance', () => {
         template:
           /\$\{count2\} of \$\{required2\} WIF characters entered \\xB7 \$\{Math\.max\(0, required2 - count2\)\} remaining/,
       },
+      'result.seedPhrase': {
+        source: upstreamAppJs,
+        template:
+          /Your seed phrase \\xB7 \$\{wallet\.mnemonic\.trim\(\)\.split\(\/\\s\+\/\)\.length\} words/,
+      },
       'seedPhrase.placeholder': {
         source: upstreamAppJs,
         template: /placeholder="Enter exactly \$\{config\.words\} BIP39 words"/,

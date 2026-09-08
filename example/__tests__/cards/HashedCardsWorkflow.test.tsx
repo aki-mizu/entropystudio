@@ -142,6 +142,12 @@ describe('Hashed cards', () => {
     );
     expect(app!.root.findAllByProps({ testID: 'key-station-master-fingerprint-value' })).toHaveLength(0);
     expect(app!.root.findAllByProps({ testID: 'key-station-edit-inputs' })).toHaveLength(0);
+    expect(app!.root.findByProps({ testID: 'result-seed-phrase-label' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.result.seedPhrase(mnemonic.trim().split(/\s+/).length),
+    );
+    expect(app!.root.findByProps({ testID: 'result-seed-phrase-output' }).props.children).toBe(
+      mnemonic,
+    );
     expect(app!.root.findByProps({ testID: 'entropy-output' }).props.children).toBe(
       '00000000000000000000000000000000',
     );

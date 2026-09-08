@@ -189,9 +189,13 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
                   colors={colors}
                   entropyLabel={UPSTREAM_TEXT.result.entropyHex}
                   masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
+                  mnemonicLabel={UPSTREAM_UI_FALLBACK_COPY.result.seedPhrase(
+                    derivation.mnemonic.trim().split(/\s+/).length,
+                  )}
                   result={{
                     entropy: derivation.entropy,
                     masterSeed: derivation.masterSeed,
+                    mnemonic: derivation.mnemonic,
                     rootXprv: tab.rootXprv,
                   }}
                   rootXprvLabel={formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xprv' })}

@@ -778,6 +778,7 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
   },
   result: {
     masterSeedHex: 'Master seed hex',
+    seedPhrase: (wordCount: number) => `Your seed phrase · ${wordCount} words`,
   },
   seedPhrase: {
     autocomplete: 'Autocomplete BIP39 words',

@@ -5,12 +5,14 @@ export type EntropyResult =
   | {
       readonly entropy: string;
       readonly masterSeed?: string;
+      readonly mnemonic?: string;
       readonly rootXprv?: string;
       readonly error?: never;
     }
   | {
       readonly entropy?: never;
       readonly masterSeed?: never;
+      readonly mnemonic?: never;
       readonly rootXprv?: never;
       readonly error: string;
     };
@@ -19,6 +21,7 @@ type Props = {
   readonly colors: DiceColors;
   readonly entropyLabel: string;
   readonly masterSeedLabel?: string;
+  readonly mnemonicLabel?: string;
   readonly rootXprvLabel?: string;
   readonly result: EntropyResult | null;
 };
@@ -27,6 +30,7 @@ export function DiceResultPanel({
   colors,
   entropyLabel,
   masterSeedLabel,
+  mnemonicLabel,
   rootXprvLabel,
   result,
 }: Props) {
@@ -45,8 +49,29 @@ export function DiceResultPanel({
         </Text>
       ) : (
         <>
+          {mnemonicLabel && result.mnemonic ? (
+            <>
+              <Text
+                style={[styles.label, { color: colors.muted }]}
+                testID="result-seed-phrase-label"
+              >
+                {mnemonicLabel}
+              </Text>
+              <Text
+                selectable
+                style={[styles.entropy, { color: colors.text }]}
+                testID="result-seed-phrase-output"
+              >
+                {result.mnemonic}
+              </Text>
+            </>
+          ) : null}
           <Text
-            style={[styles.label, { color: colors.muted }]}
+            style={[
+              styles.label,
+              mnemonicLabel && result.mnemonic && styles.entropyLabelAfterSeedPhrase,
+              { color: colors.muted },
+            ]}
             testID="result-entropy-label"
           >
             {entropyLabel}
@@ -108,6 +133,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 23,
   },
+  entropyLabelAfterSeedPhrase: { marginTop: 16 },
   label: {
     fontSize: 12,
     fontWeight: '700',
