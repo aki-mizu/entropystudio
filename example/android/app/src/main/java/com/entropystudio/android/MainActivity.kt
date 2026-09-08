@@ -1,4 +1,4 @@
-package com.entropystudio
+package com.entropystudio.android
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

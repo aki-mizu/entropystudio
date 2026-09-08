@@ -1,4 +1,4 @@
-package com.entropystudio
+package com.entropystudio.android
 
 import android.app.Application
 import android.preference.PreferenceManager
