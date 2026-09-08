@@ -513,9 +513,17 @@ describe('Private Key', () => {
     expect(app!.root.findByProps({ testID: 'result-entropy-label' }).props.children).toBe(
       UPSTREAM_TEXT.result.hexPrivateKey,
     );
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
+    });
+    expect(app!.root.findByProps({ testID: 'private-key-input' }).props.value).toBe(
+      'brain wallet text',
+    );
+    expect(app!.root.findAllByProps({ testID: 'brain-wallet-warning-inline' })).toHaveLength(0);
+    expect(app!.root.findByProps({ testID: 'brain-wallet-warning-trigger' })).toBeDefined();
 
     await ReactTestRenderer.act(async () => {
-      app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.onPress();
+      app!.root.findByProps({ testID: 'key-station-tab-1' }).props.onPress();
     });
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'brain-wallet-output-hd' }).props.onPress();

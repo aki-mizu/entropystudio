@@ -185,15 +185,22 @@ export function PrivateKeyScreen({
     if (editInputRequest.input.kind !== 'private-key') {
       return;
     }
+    const editedPrivateKeyInput = editInputRequest.input;
 
     setActiveView('entry');
-    setBrainWalletOutput(editInputRequest.input.brainWalletOutput);
-    setBrainWalletTrim(editInputRequest.input.brainWalletTrim);
+    setBrainWalletOutput(editedPrivateKeyInput.brainWalletOutput);
+    setBrainWalletTrim(editedPrivateKeyInput.brainWalletTrim);
+    if (editedPrivateKeyInput.format === 'brain') {
+      setBrainWalletWarningAcknowledgements(previous => ({
+        ...previous,
+        [editedPrivateKeyInput.brainWalletOutput]: true,
+      }));
+    }
     setBrainWalletWarningVisible(false);
     setDeriveError(null);
-    setFormat(editInputRequest.input.format);
+    setFormat(editedPrivateKeyInput.format);
     setInputSelection(null);
-    setInputValues(editInputRequest.input.inputValues);
+    setInputValues(editedPrivateKeyInput.inputValues);
   }, [editInputRequest, isActive]);
 
   useEffect(() => {
