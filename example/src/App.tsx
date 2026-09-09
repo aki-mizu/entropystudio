@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 import { Platform, StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
-import TabView, { type AppleIcon } from 'react-native-bottom-tabs';
+import TabView, { type AppleIcon, useBottomTabBarHeight } from 'react-native-bottom-tabs';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import type { EntropyTool } from './components/EntropyMethodList';
 import { KeyStationTabs } from './components/KeyStationTabs';
@@ -169,6 +169,12 @@ const APP_TAB_ROUTES: AppTabRoute[] = [
   },
 ];
 
+function TabScene({ children }: { readonly children: ReactNode }) {
+  const tabBarHeight = useBottomTabBarHeight();
+
+  return <View style={[styles.scene, { paddingBottom: tabBarHeight }]}>{children}</View>;
+}
+
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
   const [activeTool, setActiveTool] = useState<EntropyTool>('dice');
@@ -296,7 +302,7 @@ function App() {
 
   function renderMethodScene() {
     return (
-      <View style={styles.scene}>
+      <TabScene>
         <KeyStationTabs
           activeTabId={activeKeyStationTabId}
           colors={colors}
@@ -382,19 +388,21 @@ function App() {
             tab={activeKeyStationTab}
           />
         </View>
-      </View>
+      </TabScene>
     );
   }
 
   function renderSettingsScene() {
     return (
-      <EntropySyncSettingsScreen
-        autocompleteEnabled={seedPhraseAutocompleteEnabled}
-        isActive={activeTab === 'settings'}
-        isDarkMode={isDarkMode}
-        onSetAutocompleteEnabled={setSeedPhraseAutocompleteEnabled}
-        onReturnToMethod={() => setActiveTab('method')}
-      />
+      <TabScene>
+        <EntropySyncSettingsScreen
+          autocompleteEnabled={seedPhraseAutocompleteEnabled}
+          isActive={activeTab === 'settings'}
+          isDarkMode={isDarkMode}
+          onSetAutocompleteEnabled={setSeedPhraseAutocompleteEnabled}
+          onReturnToMethod={() => setActiveTab('method')}
+        />
+      </TabScene>
     );
   }
 
