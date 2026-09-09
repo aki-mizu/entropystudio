@@ -99,16 +99,19 @@ fn mnemonic_to_master_xprv_matches_entropylab_bip32() {
 }
 
 #[test]
-fn account_private_material_has_a_core_key_and_checksummed_change_descriptor() {
+fn account_private_material_uses_the_selected_branch_in_its_descriptors() {
     let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    let material = account_private_material(phrase.to_owned(), String::new(), "m/84'/0'/0'".to_owned(), "73c5da0a".to_owned(), AccountScriptType::NativeSegwit, false, false).unwrap();
+    let material = account_private_material(phrase.to_owned(), String::new(), "m/84'/0'/0'".to_owned(), "73c5da0a".to_owned(), AccountScriptType::NativeSegwit, vec![0], false, false).unwrap();
     assert!(material.bitcoin_core_xprv.starts_with("xprv"));
     assert!(material.slip132_private.as_deref().is_some_and(|key| key.starts_with("zprv")));
-    assert!(material.spending_change_descriptor.starts_with(&format!("wpkh([73c5da0a/84h/0h/0h]{}/1/*)#", material.bitcoin_core_xprv)));
+    assert!(material.watch_only_change_descriptor.starts_with(&format!("wpkh([73c5da0a/84h/0h/0h]{}/0/*)#", material.bitcoin_core_xpub)));
 
-    let custom_purpose = account_private_material(phrase.to_owned(), String::new(), "m/44'/0'/0'".to_owned(), "73c5da0a".to_owned(), AccountScriptType::NativeSegwit, true, true).unwrap();
+    let receive_and_change = account_private_material(phrase.to_owned(), String::new(), "m/84'/0'/0'".to_owned(), "73c5da0a".to_owned(), AccountScriptType::NativeSegwit, vec![0, 1], false, false).unwrap();
+    assert!(receive_and_change.watch_only_change_descriptor.contains("/<0;1>/*)#"));
+
+    let custom_purpose = account_private_material(phrase.to_owned(), String::new(), "m/44'/0'/0'".to_owned(), "73c5da0a".to_owned(), AccountScriptType::NativeSegwit, vec![0], true, true).unwrap();
     assert!(custom_purpose.slip132_private.is_none());
-    assert!(custom_purpose.spending_change_descriptor.contains("/1h/*')#"));
+    assert!(custom_purpose.spending_change_descriptor.contains("/0h/*')#"));
 }
 
 #[test]

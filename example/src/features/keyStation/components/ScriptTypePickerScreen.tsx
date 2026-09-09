@@ -26,6 +26,7 @@ type Props = {
     readonly masterFingerprint: string;
     readonly mnemonic: string;
     readonly passphrase: string;
+    readonly branches: readonly number[];
     readonly addressHardened: boolean;
     readonly branchHardened: boolean;
   };
@@ -50,10 +51,12 @@ export function ScriptTypePickerScreen({
 }: Props) {
   const [privateMaterial, setPrivateMaterial] = useState<AccountPrivateMaterial | null>(null);
   const [showingPrivateMaterial, setShowingPrivateMaterial] = useState(false);
+  const [showingWatchOnlyMaterial, setShowingWatchOnlyMaterial] = useState(false);
 
   useEffect(() => {
     setPrivateMaterial(null);
     setShowingPrivateMaterial(false);
+    setShowingWatchOnlyMaterial(false);
   }, [scriptType, privateAccountMaterialInput?.accountPath]);
 
   const revealPrivateMaterial = () => {
@@ -65,6 +68,7 @@ export function ScriptTypePickerScreen({
           privateAccountMaterialInput.accountPath,
           privateAccountMaterialInput.masterFingerprint,
           nativeScriptType(scriptType),
+          [...privateAccountMaterialInput.branches],
           privateAccountMaterialInput.branchHardened,
           privateAccountMaterialInput.addressHardened,
         ),
@@ -171,6 +175,91 @@ export function ScriptTypePickerScreen({
                 </Text>
               </View>
             ) : null}
+            <Pressable
+              accessibilityLabel={UPSTREAM_TEXT.result.watchOnlyWalletData}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showingWatchOnlyMaterial }}
+              onPress={() => {
+                if (!privateMaterial) {
+                  setPrivateMaterial(
+                    accountPrivateMaterial(
+                      privateAccountMaterialInput.mnemonic,
+                      privateAccountMaterialInput.passphrase,
+                      privateAccountMaterialInput.accountPath,
+                      privateAccountMaterialInput.masterFingerprint,
+                      nativeScriptType(scriptType),
+                      [...privateAccountMaterialInput.branches],
+                      privateAccountMaterialInput.branchHardened,
+                      privateAccountMaterialInput.addressHardened,
+                    ),
+                  );
+                }
+                setShowingWatchOnlyMaterial(value => !value);
+              }}
+              style={({ pressed }) => [
+                styles.privateMaterialButton,
+                styles.watchOnlyButton,
+                { borderColor: colors.border, opacity: pressed ? 0.72 : 1 },
+              ]}
+              testID="toggle-watch-only-account-data"
+            >
+              <Text style={[styles.privateMaterialTitle, { color: colors.text }]}>
+                {UPSTREAM_TEXT.result.watchOnlyWalletData}
+              </Text>
+            </Pressable>
+            {showingWatchOnlyMaterial && privateMaterial ? (
+              <View testID="watch-only-account-data">
+                <Text
+                  style={[styles.privateMaterialIntro, { color: colors.muted }]}
+                  testID="watch-only-cannot-spend-warning"
+                >
+                  <Text style={styles.privateMaterialWarningLead}>
+                    {UPSTREAM_TEXT.result.watchOnlyAccountWarningLead}
+                  </Text>{' '}
+                  {UPSTREAM_TEXT.result.watchOnlyAccountWarningTail}
+                </Text>
+                <Text style={[styles.privateMaterialLabel, { color: colors.muted }]}>
+                  {UPSTREAM_UI_FALLBACK_COPY.result.bitcoinCore('xpub')}
+                </Text>
+                <Text selectable style={[styles.privateMaterialValue, { color: colors.text }]}>
+                  {privateMaterial.bitcoinCoreXpub}
+                </Text>
+                {privateMaterial.slip132Public ? (
+                  <>
+                    <Text style={[styles.privateMaterialLabel, { color: colors.muted }]}>
+                      {UPSTREAM_UI_FALLBACK_COPY.result.slip132(
+                        privateMaterial.slip132PublicLabel ?? '',
+                      )}
+                    </Text>
+                    <Text selectable style={[styles.privateMaterialValue, { color: colors.text }]}>
+                      {privateMaterial.slip132Public}
+                    </Text>
+                  </>
+                ) : null}
+                <Text style={[styles.privateMaterialIntro, { color: colors.muted }]}>
+                  {UPSTREAM_TEXT.result.slip132PrefixNote}
+                </Text>
+                {privateMaterial.multisigCosignerXpub ? (
+                  <>
+                    <Text style={[styles.privateMaterialLabel, { color: colors.muted }]}>
+                      {UPSTREAM_UI_FALLBACK_COPY.result.multisigCosigner(
+                        'xpub',
+                        UPSTREAM_TEXT.result.nativeSegwitBip48,
+                      )}
+                    </Text>
+                    <Text selectable style={[styles.privateMaterialValue, { color: colors.text }]}>
+                      {privateMaterial.multisigCosignerXpub}
+                    </Text>
+                  </>
+                ) : null}
+                <Text style={[styles.privateMaterialLabel, { color: colors.muted }]}>
+                  {UPSTREAM_UI_FALLBACK_COPY.result.watchOnlyWalletDescriptor}
+                </Text>
+                <Text selectable style={[styles.privateMaterialValue, { color: colors.text }]}>
+                  {privateMaterial.watchOnlyChangeDescriptor}
+                </Text>
+              </View>
+            ) : null}
           </View>
         ) : null}
       </ScrollView>
@@ -208,6 +297,7 @@ const styles = StyleSheet.create({
   privateMaterialValue: { fontFamily: 'monospace', fontSize: 14, lineHeight: 22, marginBottom: 16 },
   privateMaterialWarning: { fontSize: 14, lineHeight: 21, marginTop: 2 },
   privateMaterialWarningLead: { fontWeight: '700' },
+  watchOnlyButton: { marginTop: 16 },
   screen: { flex: 1 },
 });
 

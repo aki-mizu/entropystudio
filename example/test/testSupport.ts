@@ -56,11 +56,19 @@ export const mockMnemonicToEntropy = jest.fn<ArrayBuffer, [string]>();
 export const mockAccountPrivateMaterial = jest.fn(() => ({
   bitcoinCoreXprv:
     'xprv9ypBANFCsoi3cKAup1JcTb8apefb337JTxyuUq3htnm1EvknF8xnN6PGpseChsZaT7pQaJCZufhpQiwbGELGWnAUghw8Z3Z4w3qv3ahvtRU',
+  bitcoinCoreXpub:
+    'xpub6CatWdiZioJb1Q4eKBZyEBNL6emUEzP4tG3XZ4v1VWp4WJRUtiAyMXME1gMpC7zrF3M6Koc5jMrbEaWW2S1MtWpk2gRUo6PSJNWNq7rD2V',
   spendingChangeDescriptor:
     'wpkh([73c5da0a/84h/0h/0h]xprv9ypBANFCsoi3cKAup1JcTb8apefb337JTxyuUq3htnm1EvknF8xnN6PGpseChsZaT7pQaJCZufhpQiwbGELGWnAUghw8Z3Z4w3qv3ahvtRU/1/*)#wj5e6ypv',
   slip132Private:
     'zprvAdG4iTXWBoARxY7s6VrBxzUQ3BYKkrAnMtGnz4uQkH2UPnBqiKRQKyEErmEHEcfmR6KuwqXzA1UDjZogejvWknQCRgc5sDLbvpDNvYgCwp',
   slip132PrivateLabel: 'zprv',
+  slip132Public: 'zpub6qUQGY8Y5eN3L3HwTYBiWKxVfZNKnZxawWAwL3oE7iX8xuwS6V88dhCawSyJj5p2zG6W8FVeFTH9P1s4VWjKbbNPuY65JHPcGn5YNVKoDG',
+  slip132PublicLabel: 'zpub',
+  watchOnlyChangeDescriptor:
+    'wpkh([73c5da0a/84h/0h/0h]xpub6CatWdiZioJb1Q4eKBZyEBNL6emUEzP4tG3XZ4v1VWp4WJRUtiAyMXME1gMpC7zrF3M6Koc5jMrbEaWW2S1MtWpk2gRUo6PSJNWNq7rD2V/1/*)#wj5e6ypv',
+  multisigCosignerXpub:
+    'xpub6DqcMHoDrh5uNPeEqNo33hPLZmEGfwsk2q71meBoisrzhnQNbbqLyJWssFzqvjasmUGihxAYa6DfLNFHzNt7Fr4TyV9bF6edv7eK423Xch6',
 }));
 const MASTER_SEED_FIXTURE = new Uint8Array(64).buffer;
 const BIP39_MNEMONIC_FIXTURE =

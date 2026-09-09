@@ -16,13 +16,18 @@ pub enum AccountScriptType { Legacy, NestedSegwit, NativeSegwit, Taproot }
 #[derive(Debug, uniffi::Record)]
 pub struct AccountPrivateMaterial {
     pub bitcoin_core_xprv: String,
+    pub bitcoin_core_xpub: String,
     pub slip132_private: Option<String>,
     pub slip132_private_label: Option<String>,
+    pub slip132_public: Option<String>,
+    pub slip132_public_label: Option<String>,
     pub spending_change_descriptor: String,
+    pub watch_only_change_descriptor: String,
+    pub multisig_cosigner_xpub: Option<String>,
 }
 
 #[uniffi::export]
-pub fn account_private_material(phrase: String, passphrase: String, account_path: String, master_fingerprint: String, script_type: AccountScriptType, branch_hardened: bool, address_hardened: bool) -> Result<AccountPrivateMaterial, EntropyStudioError> {
+pub fn account_private_material(phrase: String, passphrase: String, account_path: String, master_fingerprint: String, script_type: AccountScriptType, branches: Vec<u32>, branch_hardened: bool, address_hardened: bool) -> Result<AccountPrivateMaterial, EntropyStudioError> {
     let mut components = parse_account_path(&account_path)?;
     let mut seed = mnemonic_to_seed(phrase, passphrase);
     let mut node = [0u8; 78];
@@ -31,19 +36,21 @@ pub fn account_private_material(phrase: String, passphrase: String, account_path
         return Err(EntropyStudioError::InvalidMasterKey);
     }
     wipe_bytes(&mut seed);
-    for (index, hardened) in &mut components {
-        let mut child = [0u8; 78];
-        loop {
-            let child_index = *index | if *hardened { 1 << 31 } else { 0 };
-            match unsafe { entropylab_wasm::el_hd_ckd_priv(node.as_ptr(), child_index, child.as_mut_ptr()) } {
-                78 => break,
-                1 => *index = index.checked_add(1).filter(|next| *next < (1 << 31)).ok_or(EntropyStudioError::InvalidMasterKey)?,
-                _ => { wipe_bytes(&mut node); wipe_bytes(&mut child); return Err(EntropyStudioError::InvalidMasterKey); }
-            }
-        }
-        wipe_bytes(&mut node); node = child;
-    }
     let testnet = components.get(1).is_some_and(|(index, _)| *index == 1);
+    let root = node;
+    node = derive_private_path(node, &mut components)?;
+    let multisig_cosigner_xpub = if let (AccountScriptType::NativeSegwit, Some((coin, _)), Some((account, _))) = (script_type, components.get(1), components.get(2)) {
+        let mut bip48 = [(48, true), (*coin, true), (*account, true), (2, true)];
+        let cosigner = derive_private_path(root, &mut bip48)?;
+        let mut cosigner_public = public_node(&cosigner)?;
+        cosigner_public[..4].copy_from_slice(if testnet { &[0x04, 0x35, 0x87, 0xcf] } else { &[0x04, 0x88, 0xb2, 0x1e] });
+        let output = base58check_node(&cosigner_public)?;
+        wipe_bytes(&mut cosigner_public);
+        Some(output)
+    } else { None };
+    let mut public_node = public_node(&node)?;
+    public_node[..4].copy_from_slice(if testnet { &[0x04, 0x35, 0x87, 0xcf] } else { &[0x04, 0x88, 0xb2, 0x1e] });
+    let bitcoin_core_xpub = base58check_node(&public_node)?;
     node[..4].copy_from_slice(if testnet { &[0x04, 0x35, 0x83, 0x94] } else { &[0x04, 0x88, 0xad, 0xe4] });
     let bitcoin_core_xprv = base58check_node(&node)?;
     // Upstream only assigns the y/z SLIP-132 family if both the selected
@@ -59,8 +66,17 @@ pub fn account_private_material(phrase: String, passphrase: String, account_path
         node[..4].copy_from_slice(if testnet { &testnet_version } else { &mainnet_version });
         base58check_node(&node)
     }).transpose()?;
+    let slip132_public = slip132_config.map(|(_, _, label)| {
+        let (testnet_version, mainnet_version) = match label {
+            "uprv" | "yprv" => ([0x04, 0x4a, 0x52, 0x62], [0x04, 0x9d, 0x7c, 0xb2]),
+            "vprv" | "zprv" => ([0x04, 0x5f, 0x1c, 0xf6], [0x04, 0xb2, 0x47, 0x46]),
+            _ => unreachable!("only supported SLIP-132 families are configured"),
+        };
+        public_node[..4].copy_from_slice(if testnet { &testnet_version } else { &mainnet_version });
+        base58check_node(&public_node)
+    }).transpose()?;
     let origin_path = components.iter().map(|(index, hardened)| format!("{index}{}", if *hardened { "h" } else { "" })).collect::<Vec<_>>().join("/");
-    let branch_step = if branch_hardened { "1h" } else { "1" };
+    let branch_step = descriptor_branch_step(&branches, branch_hardened)?;
     let wildcard = if address_hardened { "*'" } else { "*" };
     let key = format!("[{master_fingerprint}/{origin_path}]{bitcoin_core_xprv}/{branch_step}/{wildcard}");
     let body = match script_type {
@@ -69,13 +85,59 @@ pub fn account_private_material(phrase: String, passphrase: String, account_path
         AccountScriptType::NativeSegwit => format!("wpkh({key})"),
         AccountScriptType::Taproot => format!("tr({key})"),
     };
+    let watch_only_body = body.replace(&bitcoin_core_xprv, &bitcoin_core_xpub);
     wipe_bytes(&mut node);
+    wipe_bytes(&mut public_node);
     Ok(AccountPrivateMaterial {
         bitcoin_core_xprv,
+        bitcoin_core_xpub,
         slip132_private,
         slip132_private_label: slip132_config.map(|(_, _, label)| label.to_owned()),
+        slip132_public,
+        slip132_public_label: slip132_config.map(|(_, _, label)| match label { "uprv" => "upub", "yprv" => "ypub", "vprv" => "vpub", "zprv" => "zpub", _ => unreachable!() }.to_owned()),
         spending_change_descriptor: format!("{body}#{}", descriptor_checksum(&body)?),
+        watch_only_change_descriptor: format!("{watch_only_body}#{}", descriptor_checksum(&watch_only_body)?),
+        multisig_cosigner_xpub,
     })
+}
+
+/// Formats precisely the currently selected upstream address-branch window:
+/// a lone branch is emitted directly, while a two-branch window uses the
+/// standard descriptor multipath syntax.
+fn descriptor_branch_step(branches: &[u32], hardened: bool) -> Result<String, EntropyStudioError> {
+    match branches {
+        [branch] if *branch < (1 << 31) => Ok(format!("{branch}{}", if hardened { "h" } else { "" })),
+        [first, second] if *first < (1 << 31) && *second < (1 << 31) && !hardened => Ok(format!("<{first};{second}>")),
+        _ => Err(EntropyStudioError::InvalidMasterKey),
+    }
+}
+
+fn derive_private_path(mut node: [u8; 78], components: &mut [(u32, bool)]) -> Result<[u8; 78], EntropyStudioError> {
+    for (index, hardened) in components {
+        let mut child = [0u8; 78];
+        loop {
+            match unsafe { entropylab_wasm::el_hd_ckd_priv(node.as_ptr(), *index | if *hardened { 1 << 31 } else { 0 }, child.as_mut_ptr()) } {
+                78 => break,
+                1 => *index = index.checked_add(1).filter(|next| *next < (1 << 31)).ok_or(EntropyStudioError::InvalidMasterKey)?,
+                _ => { wipe_bytes(&mut node); wipe_bytes(&mut child); return Err(EntropyStudioError::InvalidMasterKey); }
+            }
+        }
+        wipe_bytes(&mut node); node = child;
+    }
+    Ok(node)
+}
+
+fn public_node(private_node: &[u8; 78]) -> Result<[u8; 78], EntropyStudioError> {
+    let mut public_key = [0u8; 65];
+    if unsafe { entropylab_wasm::secp_pubkey_create(private_node[46..].as_ptr(), public_key.as_mut_ptr(), 1) } != 33 {
+        wipe_bytes(&mut public_key);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    let mut node = [0u8; 78];
+    node[4..45].copy_from_slice(&private_node[4..45]);
+    node[45..].copy_from_slice(&public_key[..33]);
+    wipe_bytes(&mut public_key);
+    Ok(node)
 }
 
 fn parse_account_path(path: &str) -> Result<Vec<(u32, bool)>, EntropyStudioError> {

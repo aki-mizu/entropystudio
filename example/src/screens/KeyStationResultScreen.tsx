@@ -183,6 +183,7 @@ export function KeyStationResultScreen({
           derivation.kind === 'bip39'
             ? {
                 accountPath: tab.derivationSettings.accountPath,
+                branches: derivationState.branchWindow.branches.map(branch => branch.index),
                 addressHardened: tab.derivationSettings.advancedHardening.address,
                 branchHardened: tab.derivationSettings.advancedHardening.branch,
                 masterFingerprint: tab.masterFingerprint,

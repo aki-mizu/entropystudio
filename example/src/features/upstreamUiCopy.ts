@@ -312,6 +312,10 @@ export const UPSTREAM_TEXT = {
       'Keep these exports together only in secure offline backups.',
     privateAccountMaterialWarningTail:
       "An account extended public key combined with any non-hardened descendant private key, including a WIF shown in the address tables below, can reconstruct that account's extended private key.",
+    slip132PrefixNote: 'Prefix swap only (same payload, new version bytes and checksum). Script lives in the descriptor, not the prefix. x = legacy, y = nested BIP49, z = native BIP84, Y = nested BIP48 nested-msig, Z = native BIP48 native-msig. Testnet: t / u / v / U / V. No Taproot SLIP prefix.',
+    watchOnlyAccountWarningLead: 'Cannot spend:',
+    watchOnlyAccountWarningTail:
+      'these exports can monitor every address and reveal this account\'s transaction history and balance. Treat them as privacy-sensitive.',
     compactSeedQr: 'CompactSeedQR. Same seed, smaller binary code.',
     compactSeedQrCompatible: 'Compatible with: SeedSigner, Krux, Jade, Passport.',
     entropyHex: 'BIP39 entropy hex',
@@ -324,6 +328,7 @@ export const UPSTREAM_TEXT = {
       'These values can recreate or spend from the wallet. Reveal them only while this file is running offline on an air-gapped computer.',
     rootXprv: 'Root {name}',
     watchOnlyWalletData: 'Watch-only wallet data',
+    nativeSegwitBip48: 'Native SegWit · BIP48',
     watchOnlyWalletDataSafety:
       'These values identify the wallet or enable watch-only use, but do not authorize spending. Treat them as privacy-sensitive because extended public keys and descriptors can reveal wallet addresses, balances, and transaction history.',
     safetyNotes: 'Safety notes',
@@ -818,9 +823,13 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
     bitcoinCore: (label: string) => `Bitcoin Core ${label}`,
     genericDescriptorCompatibility: (label: string) =>
       `Generic ${label} for descriptor compatibility`,
+    multisigCosigner: (prefix: string, label: string) =>
+      `Multisig co-signer ${prefix} · ${label}`,
+    watchOnlyWalletDescriptor: 'Watch-only wallet descriptor',
     masterSeedHex: 'Master seed hex',
     seedPhrase: (wordCount: number) => `Your seed phrase · ${wordCount} words`,
     spendingDescriptor: (branch: string) => `Spending ${branch.toLowerCase()} descriptor`,
+    watchOnlyDescriptor: (branch: string) => `Watch-only ${branch.toLowerCase()} descriptor`,
     slip132: (label: string) => `SLIP-132 ${label}`,
   },
   seedPhrase: {
