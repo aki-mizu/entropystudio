@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { NativeSelect, type NativeSelectOption } from '../../../components/NativeSelect';
 import type { DiceColors } from '../../dice/diceTheme';
+import { QrCode } from './SeedQrPanel';
 import {
   UPSTREAM_TEXT,
   UPSTREAM_UI_FALLBACK_COPY,
@@ -52,11 +53,15 @@ export function ScriptTypePickerScreen({
   const [privateMaterial, setPrivateMaterial] = useState<AccountPrivateMaterial | null>(null);
   const [showingPrivateMaterial, setShowingPrivateMaterial] = useState(false);
   const [showingWatchOnlyMaterial, setShowingWatchOnlyMaterial] = useState(false);
+  const [showingWatchOnlyDescriptorQr, setShowingWatchOnlyDescriptorQr] = useState(false);
+  const { width } = useWindowDimensions();
+  const qrWidth = Math.max(0, width - 72);
 
   useEffect(() => {
     setPrivateMaterial(null);
     setShowingPrivateMaterial(false);
     setShowingWatchOnlyMaterial(false);
+    setShowingWatchOnlyDescriptorQr(false);
   }, [scriptType, privateAccountMaterialInput?.accountPath]);
 
   const revealPrivateMaterial = () => {
@@ -252,14 +257,61 @@ export function ScriptTypePickerScreen({
                     </Text>
                   </>
                 ) : null}
-                <Text style={[styles.privateMaterialLabel, { color: colors.muted }]}>
-                  {UPSTREAM_UI_FALLBACK_COPY.result.watchOnlyWalletDescriptor}
-                </Text>
-                <Text selectable style={[styles.privateMaterialValue, { color: colors.text }]}>
-                  {privateMaterial.watchOnlyChangeDescriptor}
-                </Text>
+                <Pressable
+                  accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.result.watchOnlyWalletDescriptor}
+                  accessibilityRole="button"
+                  onPress={() => setShowingWatchOnlyDescriptorQr(true)}
+                  style={({ pressed }) => [styles.descriptorButton, { opacity: pressed ? 0.72 : 1 }]}
+                  testID="open-watch-only-descriptor-qr-popup"
+                >
+                  <View style={styles.descriptorButtonContent}>
+                    <Text style={[styles.privateMaterialLabel, { color: colors.muted }]}>
+                      {UPSTREAM_UI_FALLBACK_COPY.result.watchOnlyWalletDescriptor}
+                    </Text>
+                    <Text accessibilityElementsHidden style={[styles.descriptorArrow, { color: colors.muted }]}>
+                      ›
+                    </Text>
+                  </View>
+                </Pressable>
               </View>
             ) : null}
+            <Modal
+              animationType="fade"
+              onRequestClose={() => setShowingWatchOnlyDescriptorQr(false)}
+              transparent
+              visible={showingWatchOnlyDescriptorQr && privateMaterial !== null}
+            >
+              <View style={styles.modalBackdrop}>
+                <Pressable
+                  accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.common.back}
+                  onPress={() => setShowingWatchOnlyDescriptorQr(false)}
+                  style={styles.modalDismissArea}
+                  testID="close-watch-only-descriptor-qr-popup"
+                />
+                <View style={[styles.modalCard, { backgroundColor: colors.background }]}>
+                  {privateMaterial ? (
+                    <>
+                      <Text
+                        selectable
+                        style={[styles.descriptorPopupValue, { color: colors.text }]}
+                        testID="watch-only-descriptor-popup-value"
+                      >
+                        {privateMaterial.watchOnlyChangeDescriptor}
+                      </Text>
+                      <QrCode
+                        accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.result.watchOnlyWalletDescriptor}
+                        data={privateMaterial.watchOnlyChangeDescriptor}
+                        size={qrWidth}
+                        testID="watch-only-descriptor-qr-code"
+                      />
+                      <Text style={[styles.qrImportNote, { color: colors.muted }]}>
+                        {UPSTREAM_TEXT.result.watchOnlyWalletDescriptorImport}
+                      </Text>
+                    </>
+                  ) : null}
+                </View>
+              </View>
+            </Modal>
           </View>
         ) : null}
       </ScrollView>
@@ -273,6 +325,16 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 28, paddingHorizontal: 24, paddingTop: 22 },
   description: { fontSize: 14, lineHeight: 21, marginTop: 4 },
   descriptionKicker: { fontSize: 14, fontWeight: '700', lineHeight: 21, marginTop: 12 },
+  descriptorArrow: { fontSize: 24, lineHeight: 24 },
+  descriptorButton: { marginBottom: 16 },
+  descriptorButtonContent: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  descriptorPopupValue: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
   genericCompatibilitySection: { borderTopWidth: 1, marginTop: 4, paddingTop: 16 },
   header: {
     alignItems: 'center',
@@ -297,6 +359,16 @@ const styles = StyleSheet.create({
   privateMaterialValue: { fontFamily: 'monospace', fontSize: 14, lineHeight: 22, marginBottom: 16 },
   privateMaterialWarning: { fontSize: 14, lineHeight: 21, marginTop: 2 },
   privateMaterialWarningLead: { fontWeight: '700' },
+  modalBackdrop: {
+    alignItems: 'center',
+    backgroundColor: '#00000099',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalDismissArea: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
+  modalCard: { alignItems: 'center', borderRadius: 8, maxWidth: '100%', padding: 12 },
+  qrImportNote: { fontSize: 12, lineHeight: 18, marginTop: 8, textAlign: 'center' },
   watchOnlyButton: { marginTop: 16 },
   screen: { flex: 1 },
 });

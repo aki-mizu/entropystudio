@@ -1601,6 +1601,23 @@ test('keeps derived keys in removable Key Station tabs', async () => {
   );
   expect(app!.root.findByProps({ testID: 'private-account-material' })).toBeDefined();
   await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'toggle-watch-only-account-data' }).props.onPress();
+  });
+  expect(
+    app!.root.findByProps({ testID: 'watch-only-cannot-spend-warning' }).props.children,
+  ).toEqual([
+    expect.objectContaining({ props: expect.objectContaining({ children: UPSTREAM_TEXT.result.watchOnlyAccountWarningLead }) }),
+    ' ',
+    UPSTREAM_TEXT.result.watchOnlyAccountWarningTail,
+  ]);
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-watch-only-descriptor-qr-popup' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'watch-only-descriptor-qr-code' })).toBeDefined();
+  expect(app!.root.findByProps({ testID: 'watch-only-descriptor-qr-code' }).props.accessibilityLabel).toBe(
+    UPSTREAM_UI_FALLBACK_COPY.result.watchOnlyWalletDescriptor,
+  );
+  await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'close-key-station-script-type' }).props.onPress();
   });
   expect(app!.root.findByProps({ testID: 'key-station-script-value' }).props.children).toBe(

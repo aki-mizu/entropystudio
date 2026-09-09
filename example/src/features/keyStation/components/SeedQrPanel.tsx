@@ -23,7 +23,7 @@ type Props = {
   readonly passphraseUsed: boolean;
 };
 
-function QrCode({
+export function QrCode({
   accessibilityLabel,
   data,
   size,
