@@ -916,8 +916,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   setupActionArea: {
-    flex: 1,
-    justifyContent: 'flex-end',
+    marginTop: 16,
   },
   setupContent: {
     flex: 1,

@@ -962,8 +962,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   setupActionArea: {
-    flex: 1,
-    justifyContent: 'flex-end',
+    marginTop: 16,
   },
   setupContent: {
     flex: 1,
