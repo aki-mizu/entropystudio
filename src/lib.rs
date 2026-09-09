@@ -14,7 +14,7 @@ mod seed_phrase;
 mod wipe;
 
 pub use bip39::{
-	account_private_material, AccountPrivateMaterial, AccountScriptType, AccountWatchOnlyBranchDescriptor,
+	account_private_material, AccountPrivateMaterial, AccountScriptType, AccountWatchOnlyAddress, AccountWatchOnlyBranchDescriptor,
 	bip39_entropy_bits, entropy_to_mnemonic, mnemonic_to_entropy, mnemonic_to_master_fingerprint,
 	mnemonic_to_master_xprv, mnemonic_to_master_xpub, mnemonic_to_seed, seed_qr_data, SeedQrData,
 };

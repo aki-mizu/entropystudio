@@ -832,6 +832,7 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
       `Generic ${label} for descriptor compatibility`,
     multisigCosigner: (prefix: string, label: string) =>
       `Multisig co-signer ${prefix} · ${label}`,
+    address: (label: string, index: number) => `${label} address #${index}`,
     watchOnlyWalletDescriptor: 'Watch-only wallet descriptor',
     masterSeedHex: 'Master seed hex',
     seedPhrase: (wordCount: number) => `Your seed phrase · ${wordCount} words`,

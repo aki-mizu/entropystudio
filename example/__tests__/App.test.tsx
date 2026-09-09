@@ -1596,6 +1596,7 @@ test('keeps derived keys in removable Key Station tabs', async () => {
     '73c5da0a',
     3,
     [0],
+    0,
     false,
     false,
   );
@@ -1627,6 +1628,15 @@ test('keeps derived keys in removable Key Station tabs', async () => {
   expect(
     app!.root.findByProps({ testID: 'toggle-watch-only-branch-descriptors' }).props.accessibilityState,
   ).toEqual({ expanded: true });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'close-watch-only-descriptor-qr-popup' }).props.onPress();
+    app!.root.findByProps({ testID: 'toggle-addresses' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'open-first-watch-only-address-popup' })).toBeDefined();
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'open-first-watch-only-address-popup' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'first-watch-only-address-qr-code' })).toBeDefined();
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'close-key-station-script-type' }).props.onPress();
   });

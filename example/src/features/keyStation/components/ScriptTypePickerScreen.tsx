@@ -28,6 +28,7 @@ type Props = {
     readonly mnemonic: string;
     readonly passphrase: string;
     readonly branches: readonly number[];
+    readonly addressIndex: number;
     readonly addressHardened: boolean;
     readonly branchHardened: boolean;
   };
@@ -64,6 +65,7 @@ export function ScriptTypePickerScreen({
   const [showingBranchDescriptors, setShowingBranchDescriptors] = useState(false);
   const [showingAdvancedWatchOnlyExport, setShowingAdvancedWatchOnlyExport] = useState(false);
   const [showingAddresses, setShowingAddresses] = useState(false);
+  const [showingFirstAddressPopup, setShowingFirstAddressPopup] = useState(false);
   const { width } = useWindowDimensions();
   const qrWidth = Math.max(0, width - 72);
 
@@ -75,6 +77,7 @@ export function ScriptTypePickerScreen({
     setShowingBranchDescriptors(false);
     setShowingAdvancedWatchOnlyExport(false);
     setShowingAddresses(false);
+    setShowingFirstAddressPopup(false);
   }, [scriptType, privateAccountMaterialInput?.accountPath]);
 
   const revealPrivateMaterial = () => {
@@ -87,6 +90,7 @@ export function ScriptTypePickerScreen({
           privateAccountMaterialInput.masterFingerprint,
           nativeScriptType(scriptType),
           [...privateAccountMaterialInput.branches],
+          privateAccountMaterialInput.addressIndex,
           privateAccountMaterialInput.branchHardened,
           privateAccountMaterialInput.addressHardened,
         ),
@@ -207,6 +211,7 @@ export function ScriptTypePickerScreen({
                       privateAccountMaterialInput.masterFingerprint,
                       nativeScriptType(scriptType),
                       [...privateAccountMaterialInput.branches],
+                      privateAccountMaterialInput.addressIndex,
                       privateAccountMaterialInput.branchHardened,
                       privateAccountMaterialInput.addressHardened,
                     ),
@@ -364,7 +369,24 @@ export function ScriptTypePickerScreen({
               accessibilityLabel={UPSTREAM_TEXT.result.addresses}
               accessibilityRole="button"
               accessibilityState={{ expanded: showingAddresses }}
-              onPress={() => setShowingAddresses(value => !value)}
+              onPress={() => {
+                if (!privateMaterial) {
+                  setPrivateMaterial(
+                    accountPrivateMaterial(
+                      privateAccountMaterialInput.mnemonic,
+                      privateAccountMaterialInput.passphrase,
+                      privateAccountMaterialInput.accountPath,
+                      privateAccountMaterialInput.masterFingerprint,
+                      nativeScriptType(scriptType),
+                      [...privateAccountMaterialInput.branches],
+                      privateAccountMaterialInput.addressIndex,
+                      privateAccountMaterialInput.branchHardened,
+                      privateAccountMaterialInput.addressHardened,
+                    ),
+                  );
+                }
+                setShowingAddresses(value => !value);
+              }}
               style={({ pressed }) => [
                 styles.privateMaterialButton,
                 styles.addressesButton,
@@ -376,10 +398,38 @@ export function ScriptTypePickerScreen({
                 {UPSTREAM_TEXT.result.addresses}
               </Text>
             </Pressable>
-            {showingAddresses ? (
-              <Text style={[styles.privateMaterialIntro, { color: colors.muted }]}>
-                {UPSTREAM_TEXT.result.addressesVerification}
-              </Text>
+            {showingAddresses && privateMaterial ? (
+              <View>
+                <Text style={[styles.privateMaterialIntro, { color: colors.muted }]}>
+                  {UPSTREAM_TEXT.result.addressesVerification}
+                </Text>
+                {privateMaterial.firstWatchOnlyAddress ? (
+                  <>
+                    <Pressable
+                      accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.result.address(
+                        watchOnlyBranchLabel(privateMaterial.firstWatchOnlyAddress.branch),
+                        privateMaterial.firstWatchOnlyAddress.index,
+                      )}
+                      accessibilityRole="button"
+                      onPress={() => setShowingFirstAddressPopup(true)}
+                      style={({ pressed }) => [styles.descriptorButton, { opacity: pressed ? 0.72 : 1 }]}
+                      testID="open-first-watch-only-address-popup"
+                    >
+                      <View style={styles.descriptorButtonContent}>
+                        <Text style={[styles.privateMaterialLabel, { color: colors.muted }]}>
+                          {UPSTREAM_UI_FALLBACK_COPY.result.address(
+                            watchOnlyBranchLabel(privateMaterial.firstWatchOnlyAddress.branch),
+                            privateMaterial.firstWatchOnlyAddress.index,
+                          )}
+                        </Text>
+                        <Text accessibilityElementsHidden style={[styles.descriptorArrow, { color: colors.muted }]}>
+                          ›
+                        </Text>
+                      </View>
+                    </Pressable>
+                  </>
+                ) : null}
+              </View>
             ) : null}
             <Modal
               animationType="fade"
@@ -418,6 +468,40 @@ export function ScriptTypePickerScreen({
                 </View>
               </View>
             </Modal>
+            <Modal
+              animationType="fade"
+              onRequestClose={() => setShowingFirstAddressPopup(false)}
+              transparent
+              visible={showingFirstAddressPopup && privateMaterial?.firstWatchOnlyAddress !== undefined}
+            >
+              <View style={styles.modalBackdrop}>
+                <Pressable
+                  accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.common.back}
+                  onPress={() => setShowingFirstAddressPopup(false)}
+                  style={styles.modalDismissArea}
+                  testID="close-first-watch-only-address-popup"
+                />
+                {privateMaterial?.firstWatchOnlyAddress ? (
+                  <View style={[styles.modalCard, { backgroundColor: colors.background }]}>
+                    <QrCode
+                      accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.result.address(
+                        watchOnlyBranchLabel(privateMaterial.firstWatchOnlyAddress.branch),
+                        privateMaterial.firstWatchOnlyAddress.index,
+                      )}
+                      data={privateMaterial.firstWatchOnlyAddress.address}
+                      size={qrWidth}
+                      testID="first-watch-only-address-qr-code"
+                    />
+                    <Text selectable style={[styles.privateMaterialValue, { color: colors.text }]}>
+                      {privateMaterial.firstWatchOnlyAddress.address}
+                    </Text>
+                    <Text selectable style={[styles.addressPath, { color: colors.muted }]}>
+                      {privateMaterial.firstWatchOnlyAddress.path}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            </Modal>
           </View>
         ) : null}
       </ScrollView>
@@ -429,6 +513,7 @@ const styles = StyleSheet.create({
   backButton: { paddingVertical: 6 },
   backButtonText: { fontSize: 14, fontWeight: '700' },
   addressesButton: { marginTop: 16 },
+  addressPath: { fontFamily: 'monospace', fontSize: 14, lineHeight: 21, marginBottom: 16 },
   content: { paddingBottom: 28, paddingHorizontal: 24, paddingTop: 22 },
   description: { fontSize: 14, lineHeight: 21, marginTop: 4 },
   descriptionKicker: { fontSize: 14, fontWeight: '700', lineHeight: 21, marginTop: 12 },

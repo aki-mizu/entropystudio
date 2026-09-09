@@ -76,6 +76,12 @@ export const mockAccountPrivateMaterial = jest.fn(() => ({
   ],
   advancedWatchOnlyExport:
     'xpub6CatWdiZioJb1Q4eKBZyEBNL6emUEzP4tG3XZ4v1VWp4WJRUtiAyMXME1gMpC7zrF3M6Koc5jMrbEaWW2S1MtWpk2gRUo6PSJNWNq7rD2V',
+  firstWatchOnlyAddress: {
+    address: '1PXNDrQ1LGeGDeyJHSjrF4kBrkqCEtmMX1',
+    branch: 0,
+    index: 0,
+    path: "m/84'/0'/0'/0/0",
+  },
   multisigCosignerXpub:
     'xpub6DqcMHoDrh5uNPeEqNo33hPLZmEGfwsk2q71meBoisrzhnQNbbqLyJWssFzqvjasmUGihxAYa6DfLNFHzNt7Fr4TyV9bF6edv7eK423Xch6',
 }));

@@ -354,6 +354,10 @@ describe('Upstream UI copy provenance', () => {
         source: upstreamAppJs,
         template: /hodlPublicFieldHtml\("Multisig co-signer \{prefix\} · \{label\}", item\.value, \{ prefix: item\.prefix, label: item\.label \}\)/,
       },
+      'result.address': {
+        source: upstreamAppJs,
+        template: /\$\{hodlEscapeHtml\(firstLabel\)\} address #\$\{hodlAddressIndexHtml\(firstIndex\)\}/,
+      },
       'result.spendingDescriptor': {
         source: upstreamAppJs,
         template: /let label = `\$\{isPrivate \? "Spending" : "Watch-only"\} \$\{hodlAddressBranchLabel\(branch\.branch\)\.toLowerCase\(\)\} descriptor`/,
