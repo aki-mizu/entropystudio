@@ -74,6 +74,8 @@ export const mockAccountPrivateMaterial = jest.fn(() => ({
         'wpkh([73c5da0a/84h/0h/0h]xpub6CatWdiZioJb1Q4eKBZyEBNL6emUEzP4tG3XZ4v1VWp4WJRUtiAyMXME1gMpC7zrF3M6Koc5jMrbEaWW2S1MtWpk2gRUo6PSJNWNq7rD2V/0/*)#9y9gw9n2',
     },
   ],
+  advancedWatchOnlyExport:
+    'xpub6CatWdiZioJb1Q4eKBZyEBNL6emUEzP4tG3XZ4v1VWp4WJRUtiAyMXME1gMpC7zrF3M6Koc5jMrbEaWW2S1MtWpk2gRUo6PSJNWNq7rD2V',
   multisigCosignerXpub:
     'xpub6DqcMHoDrh5uNPeEqNo33hPLZmEGfwsk2q71meBoisrzhnQNbbqLyJWssFzqvjasmUGihxAYa6DfLNFHzNt7Fr4TyV9bF6edv7eK423Xch6',
 }));

@@ -62,6 +62,7 @@ export function ScriptTypePickerScreen({
   const [showingWatchOnlyMaterial, setShowingWatchOnlyMaterial] = useState(false);
   const [showingWatchOnlyDescriptorQr, setShowingWatchOnlyDescriptorQr] = useState(false);
   const [showingBranchDescriptors, setShowingBranchDescriptors] = useState(false);
+  const [showingAdvancedWatchOnlyExport, setShowingAdvancedWatchOnlyExport] = useState(false);
   const { width } = useWindowDimensions();
   const qrWidth = Math.max(0, width - 72);
 
@@ -71,6 +72,7 @@ export function ScriptTypePickerScreen({
     setShowingWatchOnlyMaterial(false);
     setShowingWatchOnlyDescriptorQr(false);
     setShowingBranchDescriptors(false);
+    setShowingAdvancedWatchOnlyExport(false);
   }, [scriptType, privateAccountMaterialInput?.accountPath]);
 
   const revealPrivateMaterial = () => {
@@ -318,6 +320,40 @@ export function ScriptTypePickerScreen({
                           </View>
                         ))
                       : null}
+                  </>
+                ) : null}
+                {privateMaterial.advancedWatchOnlyExport ? (
+                  <>
+                    <Pressable
+                      accessibilityLabel={UPSTREAM_TEXT.result.advancedWatchOnlyExport}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: showingAdvancedWatchOnlyExport }}
+                      onPress={() => setShowingAdvancedWatchOnlyExport(value => !value)}
+                      style={({ pressed }) => [styles.branchDescriptorsHeader, { opacity: pressed ? 0.72 : 1 }]}
+                      testID="toggle-advanced-watch-only-export"
+                    >
+                      <View style={styles.branchDescriptorsHeaderContent}>
+                        <Text
+                          accessibilityElementsHidden
+                          style={[styles.branchDescriptorsIndicator, { color: showingAdvancedWatchOnlyExport ? colors.text : colors.muted }]}
+                        >
+                          {showingAdvancedWatchOnlyExport ? '▼' : '▶'}
+                        </Text>
+                        <Text style={[styles.branchDescriptorsTitle, { color: showingAdvancedWatchOnlyExport ? colors.text : colors.muted }]}>
+                          {UPSTREAM_TEXT.result.advancedWatchOnlyExport}
+                        </Text>
+                      </View>
+                    </Pressable>
+                    {showingAdvancedWatchOnlyExport ? (
+                      <View>
+                        <Text style={[styles.privateMaterialLabel, { color: colors.muted }]}>
+                          {UPSTREAM_UI_FALLBACK_COPY.result.genericDescriptorCompatibility('xpub')}
+                        </Text>
+                        <Text selectable style={[styles.branchDescriptorValue, { color: colors.text }]}>
+                          {privateMaterial.advancedWatchOnlyExport}
+                        </Text>
+                      </View>
+                    ) : null}
                   </>
                 ) : null}
               </View>

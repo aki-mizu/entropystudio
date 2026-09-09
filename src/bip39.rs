@@ -30,6 +30,7 @@ pub struct AccountPrivateMaterial {
     pub spending_change_descriptor: String,
     pub watch_only_change_descriptor: String,
     pub watch_only_branch_descriptors: Vec<AccountWatchOnlyBranchDescriptor>,
+    pub advanced_watch_only_export: Option<String>,
     pub multisig_cosigner_xpub: Option<String>,
 }
 
@@ -117,6 +118,7 @@ pub fn account_private_material(phrase: String, passphrase: String, account_path
             })
         }).collect::<Result<Vec<_>, EntropyStudioError>>()?
     };
+    let advanced_watch_only_export = slip132_config.map(|_| bitcoin_core_xpub.clone());
     wipe_bytes(&mut node);
     wipe_bytes(&mut account_public_node);
     Ok(AccountPrivateMaterial {
@@ -129,6 +131,7 @@ pub fn account_private_material(phrase: String, passphrase: String, account_path
         spending_change_descriptor: format!("{body}#{}", descriptor_checksum(&body)?),
         watch_only_change_descriptor: format!("{watch_only_body}#{}", descriptor_checksum(&watch_only_body)?),
         watch_only_branch_descriptors,
+        advanced_watch_only_export,
         multisig_cosigner_xpub,
     })
 }
