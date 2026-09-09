@@ -332,6 +332,9 @@ export const UPSTREAM_TEXT = {
       'Import this output descriptor into Sparrow or another wallet.',
     addressBranchDescriptors: 'Address branch descriptors',
     advancedWatchOnlyExport: 'Advanced watch-only export',
+    addresses: 'Addresses',
+    addressesVerification:
+      'Verify the first selected address on another trusted wallet or signing device before accepting bitcoin.',
     nativeSegwitBip48: 'Native SegWit · BIP48',
     watchOnlyWalletDataSafety:
       'These values identify the wallet or enable watch-only use, but do not authorize spending. Treat them as privacy-sensitive because extended public keys and descriptors can reveal wallet addresses, balances, and transaction history.',

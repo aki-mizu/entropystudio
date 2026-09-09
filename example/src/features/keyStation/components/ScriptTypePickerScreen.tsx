@@ -63,6 +63,7 @@ export function ScriptTypePickerScreen({
   const [showingWatchOnlyDescriptorQr, setShowingWatchOnlyDescriptorQr] = useState(false);
   const [showingBranchDescriptors, setShowingBranchDescriptors] = useState(false);
   const [showingAdvancedWatchOnlyExport, setShowingAdvancedWatchOnlyExport] = useState(false);
+  const [showingAddresses, setShowingAddresses] = useState(false);
   const { width } = useWindowDimensions();
   const qrWidth = Math.max(0, width - 72);
 
@@ -73,6 +74,7 @@ export function ScriptTypePickerScreen({
     setShowingWatchOnlyDescriptorQr(false);
     setShowingBranchDescriptors(false);
     setShowingAdvancedWatchOnlyExport(false);
+    setShowingAddresses(false);
   }, [scriptType, privateAccountMaterialInput?.accountPath]);
 
   const revealPrivateMaterial = () => {
@@ -358,6 +360,27 @@ export function ScriptTypePickerScreen({
                 ) : null}
               </View>
             ) : null}
+            <Pressable
+              accessibilityLabel={UPSTREAM_TEXT.result.addresses}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showingAddresses }}
+              onPress={() => setShowingAddresses(value => !value)}
+              style={({ pressed }) => [
+                styles.privateMaterialButton,
+                styles.addressesButton,
+                { borderColor: colors.border, opacity: pressed ? 0.72 : 1 },
+              ]}
+              testID="toggle-addresses"
+            >
+              <Text style={[styles.privateMaterialTitle, { color: colors.text }]}>
+                {UPSTREAM_TEXT.result.addresses}
+              </Text>
+            </Pressable>
+            {showingAddresses ? (
+              <Text style={[styles.privateMaterialIntro, { color: colors.muted }]}>
+                {UPSTREAM_TEXT.result.addressesVerification}
+              </Text>
+            ) : null}
             <Modal
               animationType="fade"
               onRequestClose={() => setShowingWatchOnlyDescriptorQr(false)}
@@ -405,6 +428,7 @@ export function ScriptTypePickerScreen({
 const styles = StyleSheet.create({
   backButton: { paddingVertical: 6 },
   backButtonText: { fontSize: 14, fontWeight: '700' },
+  addressesButton: { marginTop: 16 },
   content: { paddingBottom: 28, paddingHorizontal: 24, paddingTop: 22 },
   description: { fontSize: 14, lineHeight: 21, marginTop: 4 },
   descriptionKicker: { fontSize: 14, fontWeight: '700', lineHeight: 21, marginTop: 12 },
