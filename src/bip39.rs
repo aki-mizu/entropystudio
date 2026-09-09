@@ -1,5 +1,6 @@
 use crate::error::EntropyStudioError;
 use crate::wipe::{wipe_bytes, wipe_string};
+use miniscript::descriptor::checksum::Engine as DescriptorChecksumEngine;
 use unicode_normalization::UnicodeNormalization;
 
 #[derive(Debug, uniffi::Record)]
@@ -95,20 +96,9 @@ fn base58check_node(node: &[u8; 78]) -> Result<String, EntropyStudioError> {
 }
 
 fn descriptor_checksum(descriptor: &str) -> Result<String, EntropyStudioError> {
-    const INPUT: &str = "0123456789()[],'/*abcdefgh@:$%{}IJKLMNOPQRSTUVWXYZ&+-.;<=>?!^_|~ijklmnopqrstuvwxyzABCDEFGH`JKLMNOPQRSTUVWXYZ";
-    const OUTPUT: &[u8] = b"qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-    const GEN: [u64; 5] = [0xf5dee51989, 0xa9fdca3312, 0x1bab10e32d, 0x3706b1677a, 0x644d626ffd];
-    let mut symbols = Vec::new(); let mut classes = Vec::new();
-    for character in descriptor.chars() {
-        let value = INPUT.find(character).ok_or(EntropyStudioError::InvalidMasterKey)? as u8;
-        classes.push(value >> 5); symbols.push(value & 31);
-        if classes.len() == 3 { symbols.push(classes[0] * 9 + classes[1] * 3 + classes[2]); classes.clear(); }
-    }
-    if classes.len() == 1 { symbols.push(classes[0]); } else if classes.len() == 2 { symbols.push(classes[0] * 3 + classes[1]); }
-    symbols.extend([0; 8]); let mut polymod = 1u64;
-    for value in symbols { let top = polymod >> 35; polymod = ((polymod & 0x7ffffffff) << 5) ^ u64::from(value); for (bit, generator) in GEN.iter().enumerate() { if ((top >> bit) & 1) != 0 { polymod ^= generator; } } }
-    polymod ^= 1;
-    Ok((0..8).map(|offset| OUTPUT[((polymod >> (5 * (7 - offset))) & 31) as usize] as char).collect())
+    let mut engine = DescriptorChecksumEngine::new();
+    engine.input(descriptor).map_err(|_| EntropyStudioError::InvalidMasterKey)?;
+    Ok(engine.checksum())
 }
 
 #[uniffi::export]

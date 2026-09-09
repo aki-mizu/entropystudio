@@ -311,6 +311,7 @@ dependencies = [
  "bc-lifehash",
  "entropylab-wasm",
  "hex",
+ "miniscript",
  "png",
  "unicode-normalization",
  "uniffi",
