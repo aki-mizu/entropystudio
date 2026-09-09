@@ -184,6 +184,7 @@ export function KeyStationResultScreen({
             ? {
                 accountPath: tab.derivationSettings.accountPath,
                 addressIndex: derivationState.addressWindow.start.value,
+                addressCount: derivationState.addressWindow.range.value,
                 branches: derivationState.branchWindow.branches.map(branch => branch.index),
                 addressHardened: tab.derivationSettings.advancedHardening.address,
                 branchHardened: tab.derivationSettings.advancedHardening.branch,

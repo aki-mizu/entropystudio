@@ -81,7 +81,17 @@ export const mockAccountPrivateMaterial = jest.fn(() => ({
     branch: 0,
     index: 0,
     path: "m/84'/0'/0'/0/0",
+    wif: 'KxRXi1B8ePgmHesuCBANTrokXhsXFb3Mp7wFk9cLHcBWMHF4SsHE',
   },
+  watchOnlyAddresses: [
+    {
+      address: '1PXNDrQ1LGeGDeyJHSjrF4kBrkqCEtmMX1',
+      branch: 0,
+      index: 0,
+      path: "m/84'/0'/0'/0/0",
+      wif: 'KxRXi1B8ePgmHesuCBANTrokXhsXFb3Mp7wFk9cLHcBWMHF4SsHE',
+    },
+  ],
   multisigCosignerXpub:
     'xpub6DqcMHoDrh5uNPeEqNo33hPLZmEGfwsk2q71meBoisrzhnQNbbqLyJWssFzqvjasmUGihxAYa6DfLNFHzNt7Fr4TyV9bF6edv7eK423Xch6',
 }));

@@ -29,6 +29,7 @@ type Props = {
     readonly passphrase: string;
     readonly branches: readonly number[];
     readonly addressIndex: number;
+    readonly addressCount: number;
     readonly addressHardened: boolean;
     readonly branchHardened: boolean;
   };
@@ -91,6 +92,7 @@ export function ScriptTypePickerScreen({
           nativeScriptType(scriptType),
           [...privateAccountMaterialInput.branches],
           privateAccountMaterialInput.addressIndex,
+          privateAccountMaterialInput.addressCount,
           privateAccountMaterialInput.branchHardened,
           privateAccountMaterialInput.addressHardened,
         ),
@@ -212,6 +214,7 @@ export function ScriptTypePickerScreen({
                       nativeScriptType(scriptType),
                       [...privateAccountMaterialInput.branches],
                       privateAccountMaterialInput.addressIndex,
+                      privateAccountMaterialInput.addressCount,
                       privateAccountMaterialInput.branchHardened,
                       privateAccountMaterialInput.addressHardened,
                     ),
@@ -380,6 +383,7 @@ export function ScriptTypePickerScreen({
                       nativeScriptType(scriptType),
                       [...privateAccountMaterialInput.branches],
                       privateAccountMaterialInput.addressIndex,
+                      privateAccountMaterialInput.addressCount,
                       privateAccountMaterialInput.branchHardened,
                       privateAccountMaterialInput.addressHardened,
                     ),
@@ -427,6 +431,37 @@ export function ScriptTypePickerScreen({
                         </Text>
                       </View>
                     </Pressable>
+                    <Text style={[styles.addressTableTitle, { color: colors.text }]}>
+                      {watchOnlyBranchLabel(privateMaterial.firstWatchOnlyAddress.branch)}
+                    </Text>
+                    <View style={[styles.addressTable, { borderColor: colors.border }]}>
+                      <ScrollView horizontal showsHorizontalScrollIndicator>
+                        <View>
+                          <View style={[styles.addressTableRow, styles.addressTableHeader]}>
+                            <Text style={[styles.addressTableCell, styles.addressIndexCell, { color: colors.muted }]}>#</Text>
+                            <Text style={[styles.addressTableCell, styles.addressPathCell, { color: colors.muted }]}>{UPSTREAM_TEXT.result.path}</Text>
+                            <Text style={[styles.addressTableCell, styles.addressValueCell, { color: colors.muted }]}>{UPSTREAM_TEXT.result.address}</Text>
+                            <Text style={[styles.addressTableCell, styles.addressWifCell, { color: colors.muted }]}>{UPSTREAM_TEXT.result.wif}</Text>
+                          </View>
+                          {privateMaterial.watchOnlyAddresses.map(item => (
+                            <View key={`${item.branch}-${item.index}`} style={[styles.addressTableRow, styles.addressTableDataRow, { borderTopColor: colors.border }]}>
+                              <Text ellipsizeMode="clip" numberOfLines={1} style={[styles.addressTableCell, styles.addressIndexCell, { color: colors.text }]}>
+                                {item.index}
+                              </Text>
+                              <Text ellipsizeMode="clip" numberOfLines={1} selectable style={[styles.addressTableCell, styles.addressPathCell, styles.addressTableValue, { color: colors.text }]}>
+                                {item.path}
+                              </Text>
+                              <Text ellipsizeMode="clip" numberOfLines={1} selectable style={[styles.addressTableCell, styles.addressValueCell, styles.addressTableValue, { color: colors.text }]}>
+                                {item.address}
+                              </Text>
+                              <Text ellipsizeMode="clip" numberOfLines={1} selectable style={[styles.addressTableCell, styles.addressWifCell, styles.addressTableValue, { color: colors.text }]}>
+                                {item.wif}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      </ScrollView>
+                    </View>
                   </>
                 ) : null}
               </View>
@@ -518,6 +553,17 @@ const styles = StyleSheet.create({
   backButtonText: { fontSize: 14, fontWeight: '700' },
   addressesButton: { marginTop: 16 },
   addressPath: { fontFamily: 'monospace', fontSize: 14, lineHeight: 21, marginBottom: 16 },
+  addressIndexCell: { width: 24 },
+  addressPathCell: { width: 124 },
+  addressTable: { borderRadius: 9, borderWidth: 1, marginTop: 6, overflow: 'hidden' },
+  addressTableCell: { fontSize: 12, lineHeight: 18, paddingHorizontal: 8, paddingVertical: 4 },
+  addressTableDataRow: { borderTopWidth: 1 },
+  addressTableHeader: { backgroundColor: 'transparent' },
+  addressTableRow: { flexDirection: 'row' },
+  addressTableTitle: { fontSize: 14, fontWeight: '700', lineHeight: 20, marginTop: 20, marginBottom: 6 },
+  addressTableValue: { fontFamily: 'monospace' },
+  addressValueCell: { width: 480 },
+  addressWifCell: { width: 400 },
   content: { paddingBottom: 28, paddingHorizontal: 24, paddingTop: 22 },
   description: { fontSize: 14, lineHeight: 21, marginTop: 4 },
   descriptionKicker: { fontSize: 14, fontWeight: '700', lineHeight: 21, marginTop: 12 },

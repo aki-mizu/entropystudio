@@ -19,12 +19,13 @@ pub struct AccountWatchOnlyBranchDescriptor {
     pub descriptor: String,
 }
 
-#[derive(Debug, uniffi::Record)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct AccountWatchOnlyAddress {
     pub branch: u32,
     pub index: u32,
     pub address: String,
     pub path: String,
+    pub wif: String,
 }
 
 #[derive(Debug, uniffi::Record)]
@@ -39,12 +40,13 @@ pub struct AccountPrivateMaterial {
     pub watch_only_change_descriptor: String,
     pub watch_only_branch_descriptors: Vec<AccountWatchOnlyBranchDescriptor>,
     pub first_watch_only_address: Option<AccountWatchOnlyAddress>,
+    pub watch_only_addresses: Vec<AccountWatchOnlyAddress>,
     pub advanced_watch_only_export: Option<String>,
     pub multisig_cosigner_xpub: Option<String>,
 }
 
 #[uniffi::export]
-pub fn account_private_material(phrase: String, passphrase: String, account_path: String, master_fingerprint: String, script_type: AccountScriptType, branches: Vec<u32>, address_index: u32, branch_hardened: bool, address_hardened: bool) -> Result<AccountPrivateMaterial, EntropyStudioError> {
+pub fn account_private_material(phrase: String, passphrase: String, account_path: String, master_fingerprint: String, script_type: AccountScriptType, branches: Vec<u32>, address_index: u32, address_count: u32, branch_hardened: bool, address_hardened: bool) -> Result<AccountPrivateMaterial, EntropyStudioError> {
     let mut components = parse_account_path(&account_path)?;
     let mut seed = mnemonic_to_seed(phrase, passphrase);
     let mut node = [0u8; 78];
@@ -130,18 +132,23 @@ pub fn account_private_material(phrase: String, passphrase: String, account_path
         }).collect::<Result<Vec<_>, EntropyStudioError>>()?
     };
     let advanced_watch_only_export = slip132_config.map(|_| bitcoin_core_xpub.clone());
-    let first_watch_only_address = branches.first().map(|branch| {
-        derive_account_address(
-            account_node,
-            *branch,
-            address_index,
-            script_type,
-            testnet,
-            branch_hardened,
-            address_hardened,
-            &display_account_path,
-        )
-    }).transpose()?;
+    let mut watch_only_addresses = Vec::new();
+    for branch in &branches {
+        for offset in 0..address_count {
+            let index = address_index.checked_add(offset).filter(|index| *index < (1 << 31)).ok_or(EntropyStudioError::InvalidMasterKey)?;
+            watch_only_addresses.push(derive_account_address(
+                account_node,
+                *branch,
+                index,
+                script_type,
+                testnet,
+                branch_hardened,
+                address_hardened,
+                &display_account_path,
+            )?);
+        }
+    }
+    let first_watch_only_address = watch_only_addresses.first().cloned();
     wipe_bytes(&mut node);
     wipe_bytes(&mut account_node);
     wipe_bytes(&mut account_public_node);
@@ -156,6 +163,7 @@ pub fn account_private_material(phrase: String, passphrase: String, account_path
         watch_only_change_descriptor: format!("{watch_only_body}#{}", descriptor_checksum(&watch_only_body)?),
         watch_only_branch_descriptors,
         first_watch_only_address,
+        watch_only_addresses,
         advanced_watch_only_export,
         multisig_cosigner_xpub,
     })
@@ -189,6 +197,7 @@ fn derive_account_address(
         }
     };
     let mut output = [0u8; 128];
+    let wif = encode_derived_wif(&child[46..], testnet)?;
     let address_length = if script_length > 0 {
         unsafe { entropylab_wasm::el_addr_from_script(script.as_ptr(), script_length as usize, if testnet { 1 } else { 0 }, output.as_mut_ptr(), output.len()) }
     } else {
@@ -208,7 +217,28 @@ fn derive_account_address(
         index: steps[1].0,
         address,
         path: format!("m/{display_account_path}/{}{}/{}{}", steps[0].0, if steps[0].1 { "'" } else { "" }, steps[1].0, if steps[1].1 { "'" } else { "" }),
+        wif,
     })
+}
+
+fn encode_derived_wif(private_key: &[u8], testnet: bool) -> Result<String, EntropyStudioError> {
+    if private_key.len() != 32 || unsafe { entropylab_wasm::secp_seckey_valid(private_key.as_ptr()) } != 1 {
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    let mut payload = [0u8; 34];
+    payload[0] = if testnet { 0xef } else { 0x80 };
+    payload[1..33].copy_from_slice(private_key);
+    payload[33] = 1;
+    let mut encoded = [0u8; 64];
+    let length = unsafe { entropylab_wasm::el_b58check_encode(payload.as_ptr(), payload.len(), encoded.as_mut_ptr(), encoded.len()) };
+    let result = if length > 0 && (length as usize) <= encoded.len() {
+        std::str::from_utf8(&encoded[..length as usize]).map(str::to_owned).map_err(|_| EntropyStudioError::InvalidMasterKey)
+    } else {
+        Err(EntropyStudioError::InvalidMasterKey)
+    };
+    wipe_bytes(&mut payload);
+    wipe_bytes(&mut encoded);
+    result
 }
 
 fn script_descriptor(script_type: AccountScriptType, key: &str) -> String {

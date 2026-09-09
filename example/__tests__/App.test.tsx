@@ -1597,6 +1597,7 @@ test('keeps derived keys in removable Key Station tabs', async () => {
     3,
     [0],
     0,
+    1,
     false,
     false,
   );

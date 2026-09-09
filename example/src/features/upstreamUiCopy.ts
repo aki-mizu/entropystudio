@@ -335,6 +335,9 @@ export const UPSTREAM_TEXT = {
     addresses: 'Addresses',
     addressesVerification:
       'Verify the first selected address on another trusted wallet or signing device before accepting bitcoin.',
+    address: 'Address',
+    path: 'Path',
+    wif: 'WIF',
     nativeSegwitBip48: 'Native SegWit · BIP48',
     watchOnlyWalletDataSafety:
       'These values identify the wallet or enable watch-only use, but do not authorize spending. Treat them as privacy-sensitive because extended public keys and descriptors can reveal wallet addresses, balances, and transaction history.',
@@ -833,6 +836,7 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
     multisigCosigner: (prefix: string, label: string) =>
       `Multisig co-signer ${prefix} · ${label}`,
     address: (label: string, index: number) => `${label} address #${index}`,
+    addressesWithWif: (label: string) => `${label} with WIF private keys`,
     watchOnlyWalletDescriptor: 'Watch-only wallet descriptor',
     masterSeedHex: 'Master seed hex',
     seedPhrase: (wordCount: number) => `Your seed phrase · ${wordCount} words`,

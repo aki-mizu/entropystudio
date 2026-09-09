@@ -358,6 +358,10 @@ describe('Upstream UI copy provenance', () => {
         source: upstreamAppJs,
         template: /\$\{hodlEscapeHtml\(firstLabel\)\} address #\$\{hodlAddressIndexHtml\(firstIndex\)\}/,
       },
+      'result.addressesWithWif': {
+        source: upstreamAppJs,
+        template: /hodlTText\("\{label\} with WIF private keys", \{ label \}\)/,
+      },
       'result.spendingDescriptor': {
         source: upstreamAppJs,
         template: /let label = `\$\{isPrivate \? "Spending" : "Watch-only"\} \$\{hodlAddressBranchLabel\(branch\.branch\)\.toLowerCase\(\)\} descriptor`/,
