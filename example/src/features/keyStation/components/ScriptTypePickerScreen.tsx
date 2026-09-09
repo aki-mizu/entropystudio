@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import {
+  type LayoutChangeEvent,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import { NativeSelect, type NativeSelectOption } from '../../../components/NativeSelect';
 import type { DiceColors } from '../../dice/diceTheme';
@@ -42,6 +51,16 @@ const SCRIPT_TYPE_OPTIONS: readonly NativeSelectOption<KeyStationScriptType>[] =
     value: id,
   }));
 
+type AddressTableColumn = 'index' | 'path' | 'address' | 'wif';
+type AddressTableColumnWidths = Readonly<Record<AddressTableColumn, number>>;
+
+const EMPTY_ADDRESS_TABLE_COLUMN_WIDTHS: AddressTableColumnWidths = {
+  address: 0,
+  index: 0,
+  path: 0,
+  wif: 0,
+};
+
 function watchOnlyBranchLabel(branch: number): string {
   return UPSTREAM_UI_FALLBACK_COPY.keys.advanced.branchLabel({
     index: branch,
@@ -67,10 +86,22 @@ export function ScriptTypePickerScreen({
   const [showingAdvancedWatchOnlyExport, setShowingAdvancedWatchOnlyExport] = useState(false);
   const [showingAddresses, setShowingAddresses] = useState(false);
   const [showingFirstAddressPopup, setShowingFirstAddressPopup] = useState(false);
+  const [addressTableColumnWidths, setAddressTableColumnWidths] = useState<AddressTableColumnWidths>(
+    EMPTY_ADDRESS_TABLE_COLUMN_WIDTHS,
+  );
   const { width } = useWindowDimensions();
   const qrWidth = Math.max(0, width - 72);
+  const measureAddressTableColumn = (column: AddressTableColumn) => (event: LayoutChangeEvent) => {
+    const measuredWidth = Math.ceil(event.nativeEvent.layout.width);
+    setAddressTableColumnWidths(current =>
+      measuredWidth <= current[column] ? current : { ...current, [column]: measuredWidth },
+    );
+  };
+  const addressTableColumnStyle = (column: AddressTableColumn) =>
+    addressTableColumnWidths[column] > 0 ? { width: addressTableColumnWidths[column] } : undefined;
 
   useEffect(() => {
+    setAddressTableColumnWidths(EMPTY_ADDRESS_TABLE_COLUMN_WIDTHS);
     setPrivateMaterial(null);
     setShowingPrivateMaterial(false);
     setShowingWatchOnlyMaterial(false);
@@ -80,6 +111,10 @@ export function ScriptTypePickerScreen({
     setShowingAddresses(false);
     setShowingFirstAddressPopup(false);
   }, [scriptType, privateAccountMaterialInput?.accountPath]);
+
+  useEffect(() => {
+    setAddressTableColumnWidths(EMPTY_ADDRESS_TABLE_COLUMN_WIDTHS);
+  }, [privateMaterial]);
 
   const revealPrivateMaterial = () => {
     if (!showingPrivateMaterial && !privateMaterial && privateAccountMaterialInput) {
@@ -435,26 +470,45 @@ export function ScriptTypePickerScreen({
                       {watchOnlyBranchLabel(privateMaterial.firstWatchOnlyAddress.branch)}
                     </Text>
                     <View style={[styles.addressTable, { borderColor: colors.border }]}>
+                      <View
+                        accessible={false}
+                        importantForAccessibility="no-hide-descendants"
+                        pointerEvents="none"
+                        style={styles.addressTableMeasure}
+                      >
+                        <Text numberOfLines={1} onLayout={measureAddressTableColumn('index')} style={styles.addressTableMeasureText}>#</Text>
+                        <Text numberOfLines={1} onLayout={measureAddressTableColumn('path')} style={styles.addressTableMeasureText}>{UPSTREAM_TEXT.result.path}</Text>
+                        <Text numberOfLines={1} onLayout={measureAddressTableColumn('address')} style={styles.addressTableMeasureText}>{UPSTREAM_TEXT.result.address}</Text>
+                        <Text numberOfLines={1} onLayout={measureAddressTableColumn('wif')} style={styles.addressTableMeasureText}>{UPSTREAM_TEXT.result.wif}</Text>
+                        {privateMaterial.watchOnlyAddresses.map(item => (
+                          <View key={`measure-${item.branch}-${item.index}`}>
+                            <Text numberOfLines={1} onLayout={measureAddressTableColumn('index')} style={styles.addressTableMeasureText}>{item.index}</Text>
+                            <Text numberOfLines={1} onLayout={measureAddressTableColumn('path')} style={[styles.addressTableMeasureText, styles.addressTableValue]}>{item.path}</Text>
+                            <Text numberOfLines={1} onLayout={measureAddressTableColumn('address')} style={[styles.addressTableMeasureText, styles.addressTableValue]}>{item.address}</Text>
+                            <Text numberOfLines={1} onLayout={measureAddressTableColumn('wif')} style={[styles.addressTableMeasureText, styles.addressTableValue]}>{item.wif}</Text>
+                          </View>
+                        ))}
+                      </View>
                       <ScrollView horizontal showsHorizontalScrollIndicator>
-                        <View>
+                        <View style={styles.addressTableContent}>
                           <View style={[styles.addressTableRow, styles.addressTableHeader]}>
-                            <Text style={[styles.addressTableCell, styles.addressIndexCell, { color: colors.muted }]}>#</Text>
-                            <Text style={[styles.addressTableCell, styles.addressPathCell, { color: colors.muted }]}>{UPSTREAM_TEXT.result.path}</Text>
-                            <Text style={[styles.addressTableCell, styles.addressValueCell, { color: colors.muted }]}>{UPSTREAM_TEXT.result.address}</Text>
-                            <Text style={[styles.addressTableCell, styles.addressWifCell, { color: colors.muted }]}>{UPSTREAM_TEXT.result.wif}</Text>
+                            <Text numberOfLines={1} style={[styles.addressTableCell, styles.addressIndexCell, addressTableColumnStyle('index'), { color: colors.muted }]}>#</Text>
+                            <Text numberOfLines={1} style={[styles.addressTableCell, styles.addressPathCell, addressTableColumnStyle('path'), { color: colors.muted }]}>{UPSTREAM_TEXT.result.path}</Text>
+                            <Text numberOfLines={1} style={[styles.addressTableCell, styles.addressValueCell, addressTableColumnStyle('address'), { color: colors.muted }]}>{UPSTREAM_TEXT.result.address}</Text>
+                            <Text numberOfLines={1} style={[styles.addressTableCell, styles.addressWifCell, addressTableColumnStyle('wif'), { color: colors.muted }]}>{UPSTREAM_TEXT.result.wif}</Text>
                           </View>
                           {privateMaterial.watchOnlyAddresses.map(item => (
                             <View key={`${item.branch}-${item.index}`} style={[styles.addressTableRow, styles.addressTableDataRow, { borderTopColor: colors.border }]}>
-                              <Text ellipsizeMode="clip" numberOfLines={1} style={[styles.addressTableCell, styles.addressIndexCell, { color: colors.text }]}>
+                              <Text numberOfLines={1} style={[styles.addressTableCell, styles.addressIndexCell, addressTableColumnStyle('index'), { color: colors.text }]}>
                                 {item.index}
                               </Text>
-                              <Text ellipsizeMode="clip" numberOfLines={1} selectable style={[styles.addressTableCell, styles.addressPathCell, styles.addressTableValue, { color: colors.text }]}>
+                              <Text numberOfLines={1} selectable style={[styles.addressTableCell, styles.addressPathCell, styles.addressTableValue, addressTableColumnStyle('path'), { color: colors.text }]}>
                                 {item.path}
                               </Text>
-                              <Text ellipsizeMode="clip" numberOfLines={1} selectable style={[styles.addressTableCell, styles.addressValueCell, styles.addressTableValue, { color: colors.text }]}>
+                              <Text numberOfLines={1} selectable style={[styles.addressTableCell, styles.addressValueCell, styles.addressTableValue, addressTableColumnStyle('address'), { color: colors.text }]}>
                                 {item.address}
                               </Text>
-                              <Text ellipsizeMode="clip" numberOfLines={1} selectable style={[styles.addressTableCell, styles.addressWifCell, styles.addressTableValue, { color: colors.text }]}>
+                              <Text numberOfLines={1} selectable style={[styles.addressTableCell, styles.addressWifCell, styles.addressTableValue, addressTableColumnStyle('wif'), { color: colors.text }]}>
                                 {item.wif}
                               </Text>
                             </View>
@@ -553,17 +607,20 @@ const styles = StyleSheet.create({
   backButtonText: { fontSize: 14, fontWeight: '700' },
   addressesButton: { marginTop: 16 },
   addressPath: { fontFamily: 'monospace', fontSize: 14, lineHeight: 21, marginBottom: 16 },
-  addressIndexCell: { width: 24 },
-  addressPathCell: { width: 124 },
+  addressIndexCell: { marginRight: 4 },
+  addressPathCell: { marginRight: 4 },
   addressTable: { borderRadius: 9, borderWidth: 1, marginTop: 6, overflow: 'hidden' },
-  addressTableCell: { fontSize: 12, lineHeight: 18, paddingHorizontal: 8, paddingVertical: 4 },
+  addressTableCell: { alignSelf: 'flex-start', flexShrink: 0, fontSize: 12, lineHeight: 18, paddingVertical: 4 },
+  addressTableContent: { alignSelf: 'flex-start', flexShrink: 0, paddingHorizontal: 4 },
   addressTableDataRow: { borderTopWidth: 1 },
   addressTableHeader: { backgroundColor: 'transparent' },
+  addressTableMeasure: { left: -10000, opacity: 0, position: 'absolute', top: -10000 },
+  addressTableMeasureText: { alignSelf: 'flex-start', flexShrink: 0, fontSize: 12, lineHeight: 18 },
   addressTableRow: { flexDirection: 'row' },
   addressTableTitle: { fontSize: 14, fontWeight: '700', lineHeight: 20, marginTop: 20, marginBottom: 6 },
   addressTableValue: { fontFamily: 'monospace' },
-  addressValueCell: { width: 480 },
-  addressWifCell: { width: 400 },
+  addressValueCell: { marginRight: 4 },
+  addressWifCell: {},
   content: { paddingBottom: 28, paddingHorizontal: 24, paddingTop: 22 },
   description: { fontSize: 14, lineHeight: 21, marginTop: 4 },
   descriptionKicker: { fontSize: 14, fontWeight: '700', lineHeight: 21, marginTop: 12 },
