@@ -64,6 +64,7 @@ import {
   seedPhraseSpaceAllowed,
   seedPhraseState,
   seedPhraseWordsToNumbers,
+  seedQrData,
   synchronizeEntropy,
   translateSeedNumberIndices,
 } from 'entropystudio';
@@ -250,6 +251,7 @@ export {
   seedPhraseSpaceAllowed,
   seedPhraseState,
   seedPhraseWordsToNumbers,
+  seedQrData,
   synchronizeEntropy,
   translateSeedNumberIndices,
 };
@@ -280,5 +282,6 @@ export type {
   PrivateKeyInputState,
   PrivateKeyMaterial,
   SeedPhraseAutocompleteResult,
+  SeedQrData,
   SeedPhraseState,
 } from 'entropystudio';

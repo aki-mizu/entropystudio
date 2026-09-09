@@ -4,7 +4,9 @@ import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'reac
 import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import type { DiceColors } from '../features/dice/diceTheme';
 import { KeyStationLifeHash } from '../features/keyStation/components/KeyStationLifeHash';
+import { SeedQrPanel } from '../features/keyStation/components/SeedQrPanel';
 import { keyStationSafetyNotes } from '../features/keyStation/keyStation';
+import { seedQrData } from '../native/entropyStudio';
 import type { KeyStationSafetyNote, KeyStationTab } from '../features/keyStation/keyStation';
 import {
   formatCopy,
@@ -128,6 +130,10 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
 
   const { derivation } = tab;
   const safetyNotes = keyStationSafetyNotes(tab);
+  const seedQr =
+    derivation.kind === 'bip39' && showingWalletData && showingPrivateRecoveryMaterial
+      ? seedQrData(derivation.mnemonic)
+      : null;
 
   return (
     <View
@@ -198,6 +204,9 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
                   }}
                   rootXprvLabel={formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xprv' })}
                 />
+                {seedQr ? (
+                  <SeedQrPanel colors={colors} data={seedQr} passphraseUsed={Boolean(derivation.passphrase)} />
+                ) : null}
               </>
             ) : null}
           </View>

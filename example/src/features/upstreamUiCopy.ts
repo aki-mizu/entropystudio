@@ -304,6 +304,8 @@ export const UPSTREAM_TEXT = {
     wordsNote: '(lowercase words separated by single spaces)',
   },
   result: {
+    compactSeedQr: 'CompactSeedQR. Same seed, smaller binary code.',
+    compactSeedQrCompatible: 'Compatible with: SeedSigner, Krux, Jade, Passport.',
     entropyHex: 'BIP39 entropy hex',
     hexPrivateKey: 'Hex private key',
     privateKey: 'Private key material',
@@ -314,6 +316,12 @@ export const UPSTREAM_TEXT = {
       'These values can recreate or spend from the wallet. Reveal them only while this file is running offline on an air-gapped computer.',
     rootXprv: 'Root {name}',
     safetyNotes: 'Safety notes',
+    seedQr: 'SeedQR',
+    seedQrCompatible: 'Compatible with: SeedSigner, Krux, Jade, Passport, Coldcard Q.',
+    seedQrNumeric: 'SeedQR. Numeric.',
+    seedQrPassphrase: ' This QR is the seed only. Enter the passphrase on the signer after scanning.',
+    seedQrScan: 'Scan into a camera signer. This is the seed.',
+    seedQrUnsupported: 'SeedQR is defined for 12 and 24 word phrases. Type this {n}-word seed on the signer.',
     safety: {
       cards: {
         countMany: '{n} cards ≈ {bits} bits.',

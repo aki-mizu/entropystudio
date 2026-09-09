@@ -26,6 +26,32 @@ fn mnemonic_to_entropy_returns_bip39_entropy() {
 }
 
 #[test]
+fn seed_qr_data_returns_numeric_and_compact_seedqr_payloads() {
+    let data = seed_qr_data(
+        "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+            .to_owned(),
+    )
+    .unwrap();
+
+    assert_eq!(data.word_count, 12);
+    assert_eq!(data.numeric, format!("{}0003", "0000".repeat(11)));
+    assert_eq!(data.compact, vec![0; 16]);
+}
+
+#[test]
+fn seed_qr_data_is_unavailable_for_non_seedqr_word_counts() {
+    let data = seed_qr_data(
+        "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon address"
+            .to_owned(),
+    )
+    .unwrap();
+
+    assert_eq!(data.word_count, 15);
+    assert!(data.numeric.is_empty());
+    assert!(data.compact.is_empty());
+}
+
+#[test]
 fn mnemonic_to_entropy_returns_typed_error() {
     assert!(matches!(
         mnemonic_to_entropy("not a valid mnemonic".to_owned()),

@@ -899,12 +899,11 @@ const styles = StyleSheet.create({
   advancedSummaryContent: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 7,
+    gap: 4,
   },
   advancedDisclosure: {
     fontSize: 16,
     lineHeight: 20,
-    width: 18,
   },
   advancedSummaryText: {
     fontSize: 14,

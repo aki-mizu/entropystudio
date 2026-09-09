@@ -2,6 +2,13 @@ use crate::error::EntropyStudioError;
 use crate::wipe::{wipe_bytes, wipe_string};
 use unicode_normalization::UnicodeNormalization;
 
+#[derive(Debug, uniffi::Record)]
+pub struct SeedQrData {
+    pub word_count: u8,
+    pub numeric: String,
+    pub compact: Vec<u8>,
+}
+
 #[uniffi::export]
 pub fn bip39_entropy_bits(target_words: u8) -> Result<u16, EntropyStudioError> {
     Ok((bip39_entropy_bytes(target_words)? * 8) as u16)
@@ -28,6 +35,50 @@ pub fn mnemonic_to_entropy(mut normalized_phrase: String) -> Result<Vec<u8>, Ent
     let result = entropy[..length as usize].to_vec();
     wipe_bytes(&mut entropy);
     Ok(result)
+}
+
+/// Returns the two SeedQR payloads defined for a validated 12- or 24-word
+/// BIP39 mnemonic. The numeric payload contains four zero-padded BIP39 word
+/// indices per word; the compact payload is the underlying BIP39 entropy.
+#[uniffi::export]
+pub fn seed_qr_data(mnemonic: String) -> Result<SeedQrData, EntropyStudioError> {
+    let mut compact = mnemonic_to_entropy(mnemonic)?;
+    let mut canonical_mnemonic = entropy_to_mnemonic(compact.clone())?;
+    let word_count = canonical_mnemonic.split_whitespace().count() as u8;
+
+    if word_count != 12 && word_count != 24 {
+        wipe_string(&mut canonical_mnemonic);
+        wipe_bytes(&mut compact);
+        return Ok(SeedQrData {
+            word_count,
+            numeric: String::new(),
+            compact: Vec::new(),
+        });
+    }
+
+    let words: Vec<String> = canonical_mnemonic
+        .split_whitespace()
+        .map(str::to_owned)
+        .collect();
+    let mut numeric = String::with_capacity(usize::from(word_count) * 4);
+    for word in words {
+        let Some(index) =
+            (0..2048).find(|index| bip39_word(*index).is_ok_and(|candidate| candidate == word))
+        else {
+            wipe_string(&mut canonical_mnemonic);
+            wipe_bytes(&mut compact);
+            return Err(EntropyStudioError::InvalidMnemonic);
+        };
+        use std::fmt::Write;
+        write!(&mut numeric, "{index:04}").expect("writing to String cannot fail");
+    }
+    wipe_string(&mut canonical_mnemonic);
+
+    Ok(SeedQrData {
+        word_count,
+        numeric,
+        compact,
+    })
 }
 
 #[uniffi::export]

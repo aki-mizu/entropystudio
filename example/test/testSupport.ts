@@ -75,6 +75,11 @@ export const mockMnemonicToMasterFingerprint = jest.fn<string, [string, string]>
 export const mockMnemonicToMasterXprv = jest.fn<string, [string, string]>(
   (phrase, passphrase) => MASTER_XPRV_FIXTURES[`${phrase}\u0000${passphrase}`] ?? '',
 );
+export const mockSeedQrData = jest.fn(() => ({
+  compact: new Uint8Array(16).buffer,
+  numeric: `${'0000'.repeat(11)}0003`,
+  wordCount: 12,
+}));
 export const mockNormalizeCardToken = jest.fn<string, [string]>();
 export const mockNormalizeDirectCardTranscript = jest.fn<string, [string]>();
 export const mockAnalyzeNumberBaseInput = jest.fn<NumberBaseAnalysis, [string, number, number]>();
@@ -371,6 +376,7 @@ jest.mock('entropystudio', () => ({
   seedPhraseSpaceAllowed: mockSeedPhraseSpaceAllowed,
   seedPhraseState: mockSeedPhraseState,
   seedPhraseWordsToNumbers: mockSeedPhraseWordsToNumbers,
+  seedQrData: mockSeedQrData,
   synchronizeEntropy: mockSynchronizeEntropy,
   translateSeedNumberIndices: mockTranslateSeedNumberIndices,
 }));

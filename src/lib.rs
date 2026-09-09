@@ -15,7 +15,7 @@ mod wipe;
 
 pub use bip39::{
 	bip39_entropy_bits, entropy_to_mnemonic, mnemonic_to_entropy, mnemonic_to_master_fingerprint,
-	mnemonic_to_master_xprv, mnemonic_to_seed,
+	mnemonic_to_master_xprv, mnemonic_to_seed, seed_qr_data, SeedQrData,
 };
 pub use cards::{
 	card_key_allowed, card_transcript_to_entropy, hashed_card_state, normalize_card_token,
