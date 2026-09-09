@@ -77,6 +77,7 @@ export const DirectDiceMethod = {
   D8D16: GeneratedDirectDiceMethod.D8d16,
 } as const;
 export const AccountScriptType = GeneratedAccountScriptType;
+export type AccountScriptType = GeneratedAccountScriptType;
 
 export const DiceInputMethod = {
   Bitbox: GeneratedDiceInputMethod.Bitbox,

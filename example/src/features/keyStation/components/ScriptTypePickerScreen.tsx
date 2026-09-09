@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   type LayoutChangeEvent,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -51,15 +52,16 @@ const SCRIPT_TYPE_OPTIONS: readonly NativeSelectOption<KeyStationScriptType>[] =
     value: id,
   }));
 
-type AddressTableColumn = 'index' | 'path' | 'address' | 'wif';
+type AddressTableColumn = 'index' | 'path' | 'address';
 type AddressTableColumnWidths = Readonly<Record<AddressTableColumn, number>>;
 
 const EMPTY_ADDRESS_TABLE_COLUMN_WIDTHS: AddressTableColumnWidths = {
   address: 0,
   index: 0,
   path: 0,
-  wif: 0,
 };
+
+const ADDRESS_TABLE_MONOSPACE_FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 
 function watchOnlyBranchLabel(branch: number): string {
   return UPSTREAM_UI_FALLBACK_COPY.keys.advanced.branchLabel({
@@ -479,13 +481,11 @@ export function ScriptTypePickerScreen({
                         <Text numberOfLines={1} onLayout={measureAddressTableColumn('index')} style={styles.addressTableMeasureText}>#</Text>
                         <Text numberOfLines={1} onLayout={measureAddressTableColumn('path')} style={styles.addressTableMeasureText}>{UPSTREAM_TEXT.result.path}</Text>
                         <Text numberOfLines={1} onLayout={measureAddressTableColumn('address')} style={styles.addressTableMeasureText}>{UPSTREAM_TEXT.result.address}</Text>
-                        <Text numberOfLines={1} onLayout={measureAddressTableColumn('wif')} style={styles.addressTableMeasureText}>{UPSTREAM_TEXT.result.wif}</Text>
                         {privateMaterial.watchOnlyAddresses.map(item => (
                           <View key={`measure-${item.branch}-${item.index}`}>
                             <Text numberOfLines={1} onLayout={measureAddressTableColumn('index')} style={styles.addressTableMeasureText}>{item.index}</Text>
                             <Text numberOfLines={1} onLayout={measureAddressTableColumn('path')} style={[styles.addressTableMeasureText, styles.addressTableValue]}>{item.path}</Text>
                             <Text numberOfLines={1} onLayout={measureAddressTableColumn('address')} style={[styles.addressTableMeasureText, styles.addressTableValue]}>{item.address}</Text>
-                            <Text numberOfLines={1} onLayout={measureAddressTableColumn('wif')} style={[styles.addressTableMeasureText, styles.addressTableValue]}>{item.wif}</Text>
                           </View>
                         ))}
                       </View>
@@ -495,7 +495,7 @@ export function ScriptTypePickerScreen({
                             <Text numberOfLines={1} style={[styles.addressTableCell, styles.addressIndexCell, addressTableColumnStyle('index'), { color: colors.muted }]}>#</Text>
                             <Text numberOfLines={1} style={[styles.addressTableCell, styles.addressPathCell, addressTableColumnStyle('path'), { color: colors.muted }]}>{UPSTREAM_TEXT.result.path}</Text>
                             <Text numberOfLines={1} style={[styles.addressTableCell, styles.addressValueCell, addressTableColumnStyle('address'), { color: colors.muted }]}>{UPSTREAM_TEXT.result.address}</Text>
-                            <Text numberOfLines={1} style={[styles.addressTableCell, styles.addressWifCell, addressTableColumnStyle('wif'), { color: colors.muted }]}>{UPSTREAM_TEXT.result.wif}</Text>
+                            <Text numberOfLines={1} style={[styles.addressTableCell, styles.addressWifCell, { color: colors.muted }]}>{UPSTREAM_TEXT.result.wif}</Text>
                           </View>
                           {privateMaterial.watchOnlyAddresses.map(item => (
                             <View key={`${item.branch}-${item.index}`} style={[styles.addressTableRow, styles.addressTableDataRow, { borderTopColor: colors.border }]}>
@@ -508,7 +508,7 @@ export function ScriptTypePickerScreen({
                               <Text numberOfLines={1} selectable style={[styles.addressTableCell, styles.addressValueCell, styles.addressTableValue, addressTableColumnStyle('address'), { color: colors.text }]}>
                                 {item.address}
                               </Text>
-                              <Text numberOfLines={1} selectable style={[styles.addressTableCell, styles.addressWifCell, styles.addressTableValue, addressTableColumnStyle('wif'), { color: colors.text }]}>
+                              <Text numberOfLines={1} selectable style={[styles.addressTableCell, styles.addressWifCell, styles.addressTableValue, { color: colors.text }]}>
                                 {item.wif}
                               </Text>
                             </View>
@@ -618,8 +618,8 @@ const styles = StyleSheet.create({
   addressTableMeasureText: { alignSelf: 'flex-start', flexShrink: 0, fontSize: 12, lineHeight: 18 },
   addressTableRow: { flexDirection: 'row' },
   addressTableTitle: { fontSize: 14, fontWeight: '700', lineHeight: 20, marginTop: 20, marginBottom: 6 },
-  addressTableValue: { fontFamily: 'monospace' },
-  addressValueCell: { marginRight: 4 },
+  addressTableValue: { fontFamily: ADDRESS_TABLE_MONOSPACE_FONT, fontVariant: ['tabular-nums'] },
+  addressValueCell: { marginRight: 8 },
   addressWifCell: {},
   content: { paddingBottom: 28, paddingHorizontal: 24, paddingTop: 22 },
   description: { fontSize: 14, lineHeight: 21, marginTop: 4 },
