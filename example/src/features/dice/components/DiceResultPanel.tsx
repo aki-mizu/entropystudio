@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { DiceColors } from '../diceTheme';
 
@@ -22,6 +23,7 @@ export type EntropyResult =
     };
 
 type Props = {
+  readonly afterMnemonic?: ReactNode;
   readonly colors: DiceColors;
   readonly entropyLabel: string;
   readonly masterSeedLabel?: string;
@@ -33,6 +35,7 @@ type Props = {
 };
 
 export function DiceResultPanel({
+  afterMnemonic,
   colors,
   entropyLabel,
   masterSeedLabel,
@@ -108,6 +111,7 @@ export function DiceResultPanel({
               </Text>
             </>
           ) : null}
+          {mnemonicLabel && result.mnemonic ? afterMnemonic : null}
           <Text
             style={[
               styles.label,

@@ -190,6 +190,15 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
                   {UPSTREAM_TEXT.result.privateRecoveryMaterialSafety}
                 </Text>
                 <DiceResultPanel
+                  afterMnemonic={
+                    seedQr ? (
+                      <SeedQrPanel
+                        colors={colors}
+                        data={seedQr}
+                        passphraseUsed={Boolean(derivation.passphrase)}
+                      />
+                    ) : undefined
+                  }
                   colors={colors}
                   entropyLabel={UPSTREAM_TEXT.result.entropyHex}
                   masterSeedLabel={UPSTREAM_UI_FALLBACK_COPY.result.masterSeedHex}
@@ -204,9 +213,6 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
                   }}
                   rootXprvLabel={formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xprv' })}
                 />
-                {seedQr ? (
-                  <SeedQrPanel colors={colors} data={seedQr} passphraseUsed={Boolean(derivation.passphrase)} />
-                ) : null}
               </>
             ) : null}
           </View>
