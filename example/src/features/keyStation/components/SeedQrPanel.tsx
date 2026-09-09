@@ -25,16 +25,20 @@ type Props = {
 
 export function QrCode({
   accessibilityLabel,
+  border = 4,
   data,
+  ecc = 'L',
   size,
   testID,
 }: {
   readonly accessibilityLabel: string;
+  readonly border?: number;
   readonly data: string | readonly number[];
+  readonly ecc?: 'L' | 'M' | 'Q' | 'H';
   readonly size: number;
   readonly testID: string;
 }) {
-  const qr = encode(data, { border: 4, ecc: 'L' });
+  const qr = encode(data, { border, ecc });
 
   return (
     <View
@@ -195,7 +199,9 @@ export function SeedQrPanel({ colors, data, passphraseUsed }: Props) {
               <>
                 <QrCode
                   accessibilityLabel={UPSTREAM_TEXT.result.seedQrNumeric}
+                  border={4}
                   data={data.numeric}
+                  ecc="L"
                   size={qrWidth}
                   testID="seed-qr-numeric-code"
                 />
@@ -214,7 +220,9 @@ export function SeedQrPanel({ colors, data, passphraseUsed }: Props) {
               <>
                 <QrCode
                   accessibilityLabel={UPSTREAM_TEXT.result.compactSeedQr}
+                  border={4}
                   data={Array.from(new Uint8Array(data.compact))}
+                  ecc="L"
                   size={qrWidth}
                   testID="compact-seed-qr-code"
                 />

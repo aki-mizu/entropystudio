@@ -456,7 +456,9 @@ export function ScriptTypePickerScreen({
                       </Text>
                       <QrCode
                         accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.result.watchOnlyWalletDescriptor}
+                        border={4}
                         data={privateMaterial.watchOnlyChangeDescriptor}
+                        ecc="M"
                         size={qrWidth}
                         testID="watch-only-descriptor-qr-code"
                       />
@@ -488,7 +490,9 @@ export function ScriptTypePickerScreen({
                         watchOnlyBranchLabel(privateMaterial.firstWatchOnlyAddress.branch),
                         privateMaterial.firstWatchOnlyAddress.index,
                       )}
+                      border={2}
                       data={privateMaterial.firstWatchOnlyAddress.address}
+                      ecc="M"
                       size={qrWidth}
                       testID="first-watch-only-address-qr-code"
                     />
