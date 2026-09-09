@@ -1595,6 +1595,8 @@ test('keeps derived keys in removable Key Station tabs', async () => {
     "m/84'/0'/0'",
     '73c5da0a',
     3,
+    false,
+    false,
   );
   expect(app!.root.findByProps({ testID: 'private-account-material' })).toBeDefined();
   await ReactTestRenderer.act(async () => {

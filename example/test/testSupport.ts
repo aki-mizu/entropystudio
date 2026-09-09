@@ -60,6 +60,7 @@ export const mockAccountPrivateMaterial = jest.fn(() => ({
     'wpkh([73c5da0a/84h/0h/0h]xprv9ypBANFCsoi3cKAup1JcTb8apefb337JTxyuUq3htnm1EvknF8xnN6PGpseChsZaT7pQaJCZufhpQiwbGELGWnAUghw8Z3Z4w3qv3ahvtRU/1/*)#wj5e6ypv',
   slip132Private:
     'zprvAdG4iTXWBoARxY7s6VrBxzUQ3BYKkrAnMtGnz4uQkH2UPnBqiKRQKyEErmEHEcfmR6KuwqXzA1UDjZogejvWknQCRgc5sDLbvpDNvYgCwp',
+  slip132PrivateLabel: 'zprv',
 }));
 const MASTER_SEED_FIXTURE = new Uint8Array(64).buffer;
 const BIP39_MNEMONIC_FIXTURE =

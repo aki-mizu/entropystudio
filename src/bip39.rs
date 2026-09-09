@@ -16,11 +16,12 @@ pub enum AccountScriptType { Legacy, NestedSegwit, NativeSegwit, Taproot }
 pub struct AccountPrivateMaterial {
     pub bitcoin_core_xprv: String,
     pub slip132_private: Option<String>,
+    pub slip132_private_label: Option<String>,
     pub spending_change_descriptor: String,
 }
 
 #[uniffi::export]
-pub fn account_private_material(phrase: String, passphrase: String, account_path: String, master_fingerprint: String, script_type: AccountScriptType) -> Result<AccountPrivateMaterial, EntropyStudioError> {
+pub fn account_private_material(phrase: String, passphrase: String, account_path: String, master_fingerprint: String, script_type: AccountScriptType, branch_hardened: bool, address_hardened: bool) -> Result<AccountPrivateMaterial, EntropyStudioError> {
     let mut components = parse_account_path(&account_path)?;
     let mut seed = mnemonic_to_seed(phrase, passphrase);
     let mut node = [0u8; 78];
@@ -44,16 +45,23 @@ pub fn account_private_material(phrase: String, passphrase: String, account_path
     let testnet = components.get(1).is_some_and(|(index, _)| *index == 1);
     node[..4].copy_from_slice(if testnet { &[0x04, 0x35, 0x83, 0x94] } else { &[0x04, 0x88, 0xad, 0xe4] });
     let bitcoin_core_xprv = base58check_node(&node)?;
-    let slip132_private = match script_type {
-        AccountScriptType::NestedSegwit => Some(([0x04, 0x4a, 0x4e, 0x28], [0x04, 0x9d, 0x78, 0x78])),
-        AccountScriptType::NativeSegwit => Some(([0x04, 0x5f, 0x18, 0xbc], [0x04, 0xb2, 0x43, 0x0c])),
-        AccountScriptType::Legacy | AccountScriptType::Taproot => None,
-    }.map(|(testnet_version, mainnet_version)| {
+    // Upstream only assigns the y/z SLIP-132 family if both the selected
+    // policy and the retained account purpose agree. Result policy selection
+    // intentionally does not rewrite a custom purpose.
+    let slip132_config = match (script_type, components.first()) {
+        (AccountScriptType::NestedSegwit, Some((49, _))) => Some(([0x04, 0x4a, 0x4e, 0x28], [0x04, 0x9d, 0x78, 0x78], if testnet { "uprv" } else { "yprv" })),
+        (AccountScriptType::NativeSegwit, Some((84, _))) => Some(([0x04, 0x5f, 0x18, 0xbc], [0x04, 0xb2, 0x43, 0x0c], if testnet { "vprv" } else { "zprv" })),
+        (AccountScriptType::Legacy | AccountScriptType::Taproot, _) => None,
+        _ => None,
+    };
+    let slip132_private = slip132_config.map(|(testnet_version, mainnet_version, _)| {
         node[..4].copy_from_slice(if testnet { &testnet_version } else { &mainnet_version });
         base58check_node(&node)
     }).transpose()?;
     let origin_path = components.iter().map(|(index, hardened)| format!("{index}{}", if *hardened { "h" } else { "" })).collect::<Vec<_>>().join("/");
-    let key = format!("[{master_fingerprint}/{origin_path}]{bitcoin_core_xprv}/1/*");
+    let branch_step = if branch_hardened { "1h" } else { "1" };
+    let wildcard = if address_hardened { "*'" } else { "*" };
+    let key = format!("[{master_fingerprint}/{origin_path}]{bitcoin_core_xprv}/{branch_step}/{wildcard}");
     let body = match script_type {
         AccountScriptType::Legacy => format!("pkh({key})"),
         AccountScriptType::NestedSegwit => format!("sh(wpkh({key}))"),
@@ -61,7 +69,12 @@ pub fn account_private_material(phrase: String, passphrase: String, account_path
         AccountScriptType::Taproot => format!("tr({key})"),
     };
     wipe_bytes(&mut node);
-    Ok(AccountPrivateMaterial { bitcoin_core_xprv, slip132_private, spending_change_descriptor: format!("{body}#{}", descriptor_checksum(&body)?) })
+    Ok(AccountPrivateMaterial {
+        bitcoin_core_xprv,
+        slip132_private,
+        slip132_private_label: slip132_config.map(|(_, _, label)| label.to_owned()),
+        spending_change_descriptor: format!("{body}#{}", descriptor_checksum(&body)?),
+    })
 }
 
 fn parse_account_path(path: &str) -> Result<Vec<(u32, bool)>, EntropyStudioError> {

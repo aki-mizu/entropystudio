@@ -183,6 +183,8 @@ export function KeyStationResultScreen({
           derivation.kind === 'bip39'
             ? {
                 accountPath: tab.derivationSettings.accountPath,
+                addressHardened: tab.derivationSettings.advancedHardening.address,
+                branchHardened: tab.derivationSettings.advancedHardening.branch,
                 masterFingerprint: tab.masterFingerprint,
                 mnemonic: derivation.mnemonic,
                 passphrase: derivation.passphrase,

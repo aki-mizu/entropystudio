@@ -26,6 +26,8 @@ type Props = {
     readonly masterFingerprint: string;
     readonly mnemonic: string;
     readonly passphrase: string;
+    readonly addressHardened: boolean;
+    readonly branchHardened: boolean;
   };
   readonly scriptType: KeyStationScriptType;
 };
@@ -63,6 +65,8 @@ export function ScriptTypePickerScreen({
           privateAccountMaterialInput.accountPath,
           privateAccountMaterialInput.masterFingerprint,
           nativeScriptType(scriptType),
+          privateAccountMaterialInput.branchHardened,
+          privateAccountMaterialInput.addressHardened,
         ),
       );
     }
@@ -135,7 +139,7 @@ export function ScriptTypePickerScreen({
                   <>
                     <Text style={[styles.privateMaterialLabel, { color: colors.muted }]}>
                       {UPSTREAM_UI_FALLBACK_COPY.result.slip132(
-                        scriptType === 'bip49' ? 'yprv' : 'zprv',
+                        privateMaterial.slip132PrivateLabel ?? '',
                       )}
                     </Text>
                     <Text selectable style={[styles.privateMaterialValue, { color: colors.text }]}>
