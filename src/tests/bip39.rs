@@ -99,6 +99,17 @@ fn mnemonic_to_master_xprv_matches_entropylab_bip32() {
 }
 
 #[test]
+fn mnemonic_to_master_xpub_returns_a_mainnet_watch_only_root_key() {
+    let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let xpub = mnemonic_to_master_xpub(phrase.to_owned(), String::new()).unwrap();
+
+    assert_eq!(
+        xpub,
+        "xpub661MyMwAqRbcFkPHucMnrGNzDwb6teAX1RbKQmqtEF8kK3Z7LZ59qafCjB9eCRLiTVG3uxBxgKvRgbubRhqSKXnGGb1aoaqLrpMBDrVxga8"
+    );
+}
+
+#[test]
 fn mnemonic_to_seed_nfkd_normalizes_the_passphrase() {
     let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let composed = mnemonic_to_seed(phrase.to_owned(), "\u{00e9}".to_owned());

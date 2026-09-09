@@ -13,6 +13,7 @@ import {
   mockLifehashFromFingerprint,
   mockMnemonicToEntropy,
   mockMnemonicToMasterFingerprint,
+  mockMnemonicToMasterXpub,
   mockSeedQrData,
   mockMnemonicToSeed,
   React,
@@ -497,6 +498,28 @@ describe('Seed Phrase / Words', () => {
     await ReactTestRenderer.act(async () => {
       app!.root.findByProps({ testID: 'open-wallet-data' }).props.onPress();
     });
+    expect(
+      app!.root.findByProps({ testID: 'toggle-watch-only-wallet-data' }).props
+        .accessibilityState,
+    ).toEqual({ expanded: false });
+    await ReactTestRenderer.act(async () => {
+      app!.root
+        .findByProps({ testID: 'toggle-watch-only-wallet-data' })
+        .props.onPress();
+    });
+    expect(
+      app!.root.findByProps({ testID: 'watch-only-wallet-data' }),
+    ).toBeDefined();
+    expect(
+      app!.root.findByProps({ testID: 'watch-only-master-fingerprint' }).props
+        .children,
+    ).toBe('73c5da0a');
+    expect(
+      app!.root.findByProps({ testID: 'watch-only-root-xpub' }).props.children,
+    ).toBe(
+      'xpub661MyMwAqRbcFkPHucMnrGNzDwb6teAX1RbKQmqtEF8kK3Z7LZ59qafCjB9eCRLiTVG3uxBxgKvRgbubRhqSKXnGGb1aoaqLrpMBDrVxga8',
+    );
+    expect(mockMnemonicToMasterXpub).toHaveBeenLastCalledWith(mnemonic, '');
     await ReactTestRenderer.act(async () => {
       app!.root
         .findByProps({ testID: 'toggle-private-recovery-material' })

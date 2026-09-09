@@ -315,6 +315,9 @@ export const UPSTREAM_TEXT = {
     privateRecoveryMaterialSafety:
       'These values can recreate or spend from the wallet. Reveal them only while this file is running offline on an air-gapped computer.',
     rootXprv: 'Root {name}',
+    watchOnlyWalletData: 'Watch-only wallet data',
+    watchOnlyWalletDataSafety:
+      'These values identify the wallet or enable watch-only use, but do not authorize spending. Treat them as privacy-sensitive because extended public keys and descriptors can reveal wallet addresses, balances, and transaction history.',
     safetyNotes: 'Safety notes',
     seedQr: 'SeedQR',
     seedQrCompatible: 'Compatible with: SeedSigner, Krux, Jade, Passport, Coldcard Q.',

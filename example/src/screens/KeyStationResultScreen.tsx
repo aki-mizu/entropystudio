@@ -97,10 +97,12 @@ function SafetyNotes({ colors, notes, testIDPrefix }: SafetyNotesProps) {
 
 export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturnToStation, tab }: Props) {
   const [showingPrivateRecoveryMaterial, setShowingPrivateRecoveryMaterial] = useState(false);
+  const [showingWatchOnlyWalletData, setShowingWatchOnlyWalletData] = useState(false);
   const [showingWalletData, setShowingWalletData] = useState(false);
 
   useEffect(() => {
     setShowingPrivateRecoveryMaterial(false);
+    setShowingWatchOnlyWalletData(false);
     setShowingWalletData(false);
   }, [tab?.id]);
 
@@ -114,6 +116,10 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
         setShowingPrivateRecoveryMaterial(false);
         return true;
       }
+      if (showingWatchOnlyWalletData) {
+        setShowingWatchOnlyWalletData(false);
+        return true;
+      }
       if (showingWalletData) {
         setShowingWalletData(false);
         return true;
@@ -122,7 +128,7 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
       return true;
     });
     return () => subscription.remove();
-  }, [isActive, onReturnToStation, showingPrivateRecoveryMaterial, showingWalletData]);
+  }, [isActive, onReturnToStation, showingPrivateRecoveryMaterial, showingWalletData, showingWatchOnlyWalletData]);
 
   if (!tab) {
     return null;
@@ -214,6 +220,40 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
                   rootXprvLabel={formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xprv' })}
                 />
               </>
+            ) : null}
+            <Pressable
+              accessibilityLabel={UPSTREAM_TEXT.result.watchOnlyWalletData}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showingWatchOnlyWalletData }}
+              onPress={() => setShowingWatchOnlyWalletData(value => !value)}
+              style={({ pressed }) => [
+                styles.walletDataSectionButton,
+                { borderColor: colors.border, opacity: pressed ? 0.72 : 1 },
+              ]}
+              testID="toggle-watch-only-wallet-data"
+            >
+              <Text style={[styles.walletDataSectionTitle, { color: colors.text }]}>
+                {UPSTREAM_TEXT.result.watchOnlyWalletData}
+              </Text>
+            </Pressable>
+            {showingWatchOnlyWalletData ? (
+              <View testID="watch-only-wallet-data">
+                <Text style={[styles.privateRecoveryMaterialSafety, { color: colors.muted }]}>
+                  {UPSTREAM_TEXT.result.watchOnlyWalletDataSafety}
+                </Text>
+                <Text style={[styles.watchOnlyLabel, { color: colors.muted }]}>
+                  {UPSTREAM_TEXT.fingerprint.master}
+                </Text>
+                <Text selectable style={[styles.watchOnlyValue, { color: colors.text }]} testID="watch-only-master-fingerprint">
+                  {tab.masterFingerprint}
+                </Text>
+                <Text style={[styles.watchOnlyLabel, { color: colors.muted }]}>
+                  {formatCopy(UPSTREAM_TEXT.result.rootXprv, { name: 'xpub' })}
+                </Text>
+                <Text selectable style={[styles.watchOnlyValue, { color: colors.text }]} testID="watch-only-root-xpub">
+                  {tab.rootXpub}
+                </Text>
+              </View>
             ) : null}
           </View>
         ) : derivation.kind === 'private-key' ? (
@@ -487,5 +527,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 28,
     marginBottom: 8,
+  },
+  watchOnlyLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  watchOnlyValue: {
+    fontFamily: 'monospace',
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: 16,
   },
 });

@@ -75,6 +75,10 @@ export const mockMnemonicToMasterFingerprint = jest.fn<string, [string, string]>
 export const mockMnemonicToMasterXprv = jest.fn<string, [string, string]>(
   (phrase, passphrase) => MASTER_XPRV_FIXTURES[`${phrase}\u0000${passphrase}`] ?? '',
 );
+export const mockMnemonicToMasterXpub = jest.fn<string, [string, string]>(
+  () =>
+    'xpub661MyMwAqRbcFkPHucMnrGNzDwb6teAX1RbKQmqtEF8kK3Z7LZ59qafCjB9eCRLiTVG3uxBxgKvRgbubRhqSKXnGGb1aoaqLrpMBDrVxga8',
+);
 export const mockSeedQrData = jest.fn(() => ({
   compact: new Uint8Array(16).buffer,
   numeric: `${'0000'.repeat(11)}0003`,
@@ -361,6 +365,7 @@ jest.mock('entropystudio', () => ({
   mnemonicToEntropy: mockMnemonicToEntropy,
   mnemonicToMasterFingerprint: mockMnemonicToMasterFingerprint,
   mnemonicToMasterXprv: mockMnemonicToMasterXprv,
+  mnemonicToMasterXpub: mockMnemonicToMasterXpub,
   mnemonicToSeed: mockMnemonicToSeed,
   normalizeCardToken: mockNormalizeCardToken,
   normalizeDirectCardTranscript: mockNormalizeDirectCardTranscript,

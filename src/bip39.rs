@@ -162,6 +162,66 @@ pub fn mnemonic_to_master_xprv(
     result
 }
 
+#[uniffi::export]
+pub fn mnemonic_to_master_xpub(
+    phrase: String,
+    passphrase: String,
+) -> Result<String, EntropyStudioError> {
+    let mut seed = mnemonic_to_seed(phrase, passphrase);
+    let mut master = [0u8; 78];
+    let mut public_key = [0u8; 65];
+    let mut xpub = [0u8; 78];
+    let mut encoded = [0u8; 112];
+    let master_length = unsafe {
+        entropylab_wasm::el_hd_master(seed.as_ptr(), seed.len(), master.as_mut_ptr())
+    };
+    wipe_bytes(&mut seed);
+    if master_length != 78 {
+        wipe_bytes(&mut master);
+        wipe_bytes(&mut public_key);
+        wipe_bytes(&mut xpub);
+        wipe_bytes(&mut encoded);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+
+    let public_key_status = unsafe {
+        entropylab_wasm::secp_pubkey_create(master[46..].as_ptr(), public_key.as_mut_ptr(), 1)
+    };
+    // `secp_pubkey_create` returns the number of serialized bytes, rather
+    // than a boolean. We request compressed SEC encoding for BIP32 xpubs.
+    if public_key_status != 33 {
+        wipe_bytes(&mut master);
+        wipe_bytes(&mut public_key);
+        wipe_bytes(&mut xpub);
+        wipe_bytes(&mut encoded);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    xpub[..4].copy_from_slice(&[0x04, 0x88, 0xb2, 0x1e]);
+    xpub[4..45].copy_from_slice(&master[4..45]);
+    xpub[45..].copy_from_slice(&public_key[..33]);
+    wipe_bytes(&mut master);
+    wipe_bytes(&mut public_key);
+
+    let encoded_length = unsafe {
+        entropylab_wasm::el_b58check_encode(
+            xpub.as_ptr(),
+            xpub.len(),
+            encoded.as_mut_ptr(),
+            encoded.len(),
+        )
+    };
+    wipe_bytes(&mut xpub);
+    if encoded_length < 0 || encoded_length as usize > encoded.len() {
+        wipe_bytes(&mut encoded);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    let result = std::str::from_utf8(&encoded[..encoded_length as usize])
+        .map(str::to_owned)
+        .map_err(|_| EntropyStudioError::InvalidMasterKey);
+    wipe_bytes(&mut encoded);
+    result
+}
+
 fn master_fingerprint_from_seed(seed: &[u8]) -> Result<String, EntropyStudioError> {
     let mut master = [0u8; 78];
     let mut child = [0u8; 78];
