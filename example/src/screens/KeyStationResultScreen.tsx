@@ -7,7 +7,11 @@ import { RecoveryMaterialPanel } from '../features/keyStation/components/Recover
 import { SeedQrPanel } from '../features/keyStation/components/SeedQrPanel';
 import { ScriptTypePickerScreen } from '../features/keyStation/components/ScriptTypePickerScreen';
 import { keyStationSafetyNotes } from '../features/keyStation/keyStation';
-import { seedQrData } from '../native/entropyStudio';
+import {
+  KeyDerivationNetworkKind,
+  keyDerivationAdvancedState,
+  seedQrData,
+} from '../native/entropyStudio';
 import type {
   KeyStationSafetyNote,
   KeyStationScriptType,
@@ -27,7 +31,7 @@ type Props = {
   readonly isActive: boolean;
   readonly onEditInput: () => void;
   readonly onReturnToStation: () => void;
-  readonly onSetScriptType: (scriptType: KeyStationScriptType) => void;
+  readonly onSetResultScriptType: (scriptType: KeyStationScriptType) => void;
   readonly tab: KeyStationTab | null;
 };
 
@@ -106,7 +110,7 @@ export function KeyStationResultScreen({
   isActive,
   onEditInput,
   onReturnToStation,
-  onSetScriptType,
+  onSetResultScriptType,
   tab,
 }: Props) {
   const [showingPrivateRecoveryMaterial, setShowingPrivateRecoveryMaterial] = useState(false);
@@ -155,6 +159,14 @@ export function KeyStationResultScreen({
 
   const { derivation } = tab;
   const safetyNotes = keyStationSafetyNotes(tab);
+  const derivationState = keyDerivationAdvancedState(tab.derivationSettings.advancedInput);
+  const resultPurpose = derivationState.purpose.valid
+    ? `${derivationState.purpose.value}${derivationState.purpose.hardened ? "'" : ''}`
+    : tab.derivationSettings.advancedInput.purpose;
+  // EntropyLab derives testnet only for coin type 1; every other valid coin
+  // type uses its mainnet address family.
+  const resultNetwork =
+    derivationState.networkKind === KeyDerivationNetworkKind.Testnet ? 'testnet' : 'mainnet';
   const seedQr =
     derivation.kind === 'bip39' && showingWalletData && showingPrivateRecoveryMaterial
       ? seedQrData(derivation.mnemonic)
@@ -165,8 +177,10 @@ export function KeyStationResultScreen({
       <ScriptTypePickerScreen
         colors={colors}
         onBack={() => setShowingScriptType(false)}
-        onSetScriptType={onSetScriptType}
-        scriptType={tab.scriptType}
+        onSetScriptType={onSetResultScriptType}
+        network={resultNetwork}
+        purpose={resultPurpose}
+        scriptType={tab.resultScriptType}
       />
     );
   }

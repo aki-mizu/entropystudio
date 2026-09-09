@@ -1,6 +1,7 @@
 import {
   hodlHexFormatLabels,
   hodlKeyModeLabels,
+  hodlScriptBeginnerTexts,
 } from '../../../entropylab/src/js/i18n-labels.js';
 
 /** Exact current-upstream UI text used by Studio. */
@@ -496,6 +497,7 @@ function formatKeyDerivationNumber(value: number): string {
 export const UPSTREAM_UI_LABELS = {
   hexFormat: hodlHexFormatLabels,
   keyMode: hodlKeyModeLabels,
+  scriptBeginner: hodlScriptBeginnerTexts,
 } as const;
 
 export const UPSTREAM_UI_FALLBACK_COPY = {
@@ -568,6 +570,7 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
     spaceButton: 'space',
   },
   keys: {
+    scriptTypeKicker: (purpose: string, network: string) => `Purpose ${purpose} · ${network}`,
     advanced: (() => {
       const hardeningLabel = (hardened: boolean) =>
         hardened ? 'Hardened' : 'Unhardened';

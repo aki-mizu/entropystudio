@@ -226,6 +226,11 @@ describe('Upstream UI copy provenance', () => {
         template:
           /Purpose index · \$\{hardening\.purpose \? "Hardened" : "Unhardened"\} · 0 to 2,147,483,647/,
       },
+      'keys.scriptTypeKicker': {
+        source: upstreamAppJs,
+        template:
+          /purposeLabel = account\.imported \? account\.def\.bip : `Purpose \$\{hodlPathComponent\(account\.def\.purpose, account\.def\.purposeHardened !== false\)\}`[\s\S]*?\$\{hodlEscapeHtml\(purposeLabel\)\} \\xB7 \$\{hodlEscapeHtml\(hodlWalletResult\.network\)\}/,
+      },
       'numberBases.coinNext': {
         source: upstreamAppJs,
         template:

@@ -2,13 +2,19 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { NativeSelect, type NativeSelectOption } from '../../../components/NativeSelect';
 import type { DiceColors } from '../../dice/diceTheme';
-import { UPSTREAM_TEXT, UPSTREAM_UI_FALLBACK_COPY } from '../../upstreamUiCopy';
+import {
+  UPSTREAM_TEXT,
+  UPSTREAM_UI_FALLBACK_COPY,
+  UPSTREAM_UI_LABELS,
+} from '../../upstreamUiCopy';
 import { KEY_STATION_SCRIPT_TYPES, type KeyStationScriptType } from '../keyStation';
 
 type Props = {
   readonly colors: DiceColors;
+  readonly network: string;
   readonly onBack: () => void;
   readonly onSetScriptType: (scriptType: KeyStationScriptType) => void;
+  readonly purpose: string;
   readonly scriptType: KeyStationScriptType;
 };
 
@@ -19,7 +25,14 @@ const SCRIPT_TYPE_OPTIONS: readonly NativeSelectOption<KeyStationScriptType>[] =
   }));
 
 /** A focused, native-picker screen matching EntropyLab's Script type control. */
-export function ScriptTypePickerScreen({ colors, onBack, onSetScriptType, scriptType }: Props) {
+export function ScriptTypePickerScreen({
+  colors,
+  network,
+  onBack,
+  onSetScriptType,
+  purpose,
+  scriptType,
+}: Props) {
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]} testID="key-station-script-type-screen">
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -45,6 +58,15 @@ export function ScriptTypePickerScreen({ colors, onBack, onSetScriptType, script
           options={SCRIPT_TYPE_OPTIONS}
           selectedValue={scriptType}
         />
+        <Text
+          style={[styles.descriptionKicker, { color: colors.muted }]}
+          testID="key-station-script-type-kicker"
+        >
+          {UPSTREAM_UI_FALLBACK_COPY.keys.scriptTypeKicker(purpose, network)}
+        </Text>
+        <Text style={[styles.description, { color: colors.muted }]} testID="key-station-script-type-description">
+          {UPSTREAM_UI_LABELS.scriptBeginner[scriptType]}
+        </Text>
       </View>
     </View>
   );
@@ -54,6 +76,8 @@ const styles = StyleSheet.create({
   backButton: { paddingVertical: 6 },
   backButtonText: { fontSize: 14, fontWeight: '700' },
   content: { paddingHorizontal: 24, paddingTop: 22 },
+  description: { fontSize: 14, lineHeight: 21, marginTop: 4 },
+  descriptionKicker: { fontSize: 14, fontWeight: '700', lineHeight: 21, marginTop: 12 },
   header: {
     alignItems: 'center',
     borderBottomWidth: 1,

@@ -1577,11 +1577,17 @@ test('keeps derived keys in removable Key Station tabs', async () => {
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'key-station-script-type-picker-done' }).props.onPress();
   });
+  expect(app!.root.findByProps({ testID: 'key-station-script-type-kicker' }).props.children).toBe(
+    UPSTREAM_UI_FALLBACK_COPY.keys.scriptTypeKicker("84'", 'mainnet'),
+  );
+  expect(app!.root.findByProps({ testID: 'key-station-script-type-description' }).props.children).toBe(
+    UPSTREAM_UI_LABELS.scriptBeginner.bip86,
+  );
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'close-key-station-script-type' }).props.onPress();
   });
   expect(app!.root.findByProps({ testID: 'key-station-script-value' }).props.children).toBe(
-    UPSTREAM_TEXT.keys.scriptTypes.bip86,
+    UPSTREAM_TEXT.keys.scriptTypes.bip84,
   );
   expect(
     app!.root.findByProps({ testID: 'key-station-master-fingerprint-lifehash' }).props.source,

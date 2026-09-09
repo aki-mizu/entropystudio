@@ -163,6 +163,9 @@ export type KeyStationTab = {
   readonly method: KeyStationMethod;
   readonly name: string;
   readonly number: number;
+  /** The account-policy view selected on the derived-key result screen. */
+  readonly resultScriptType: KeyStationScriptType;
+  /** The Script type preset used with the Key Station input and path. */
   readonly scriptType: KeyStationScriptType;
   readonly derivationPath: string;
   readonly derivationSettings: KeyStationDerivationSettings;
@@ -459,6 +462,7 @@ export function createKeyStationTab(
     name:
       masterFingerprint || formatCopy(UPSTREAM_TEXT.keys.defaultTab, { n: number }),
     number,
+    resultScriptType: scriptType,
     scriptType,
     derivationPath: derivationSettings.visiblePath,
     derivationSettings,

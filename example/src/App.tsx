@@ -218,20 +218,13 @@ function App() {
     );
   }
 
-  function selectActiveKeyStationScriptType(scriptType: KeyStationScriptType) {
-    if (!activeKeyStationTab) {
+  function selectActiveKeyStationResultScriptType(scriptType: KeyStationScriptType) {
+    if (activeKeyStationTabId === null) {
       return;
     }
-    const defaults = defaultKeyStationDerivationSettings(scriptType);
-    const derivationSettings = projectAdvancedSettings(activeKeyStationTab.derivationSettings, {
-      ...activeKeyStationTab.derivationSettings.advancedInput,
-      purpose: defaults.advancedInput.purpose,
-    });
     setKeyStationTabs(tabs =>
       tabs.map(tab =>
-        tab.id === activeKeyStationTab.id
-          ? { ...tab, derivationPath: derivationSettings.visiblePath, derivationSettings, scriptType }
-          : tab,
+        tab.id === activeKeyStationTabId ? { ...tab, resultScriptType: scriptType } : tab,
       ),
     );
   }
@@ -403,7 +396,7 @@ function App() {
             isActive={activeTab === 'method' && activeKeyStationTab !== null}
             onEditInput={() => (activeKeyStationTab ? editKeyStationInput(activeKeyStationTab) : undefined)}
             onReturnToStation={() => setActiveKeyStationTabId(null)}
-            onSetScriptType={selectActiveKeyStationScriptType}
+            onSetResultScriptType={selectActiveKeyStationResultScriptType}
             tab={activeKeyStationTab}
           />
         </View>
