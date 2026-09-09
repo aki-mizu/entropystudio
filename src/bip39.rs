@@ -9,6 +9,95 @@ pub struct SeedQrData {
     pub compact: Vec<u8>,
 }
 
+#[derive(Debug, Clone, Copy, uniffi::Enum)]
+pub enum AccountScriptType { Legacy, NestedSegwit, NativeSegwit, Taproot }
+
+#[derive(Debug, uniffi::Record)]
+pub struct AccountPrivateMaterial {
+    pub bitcoin_core_xprv: String,
+    pub slip132_private: Option<String>,
+    pub spending_change_descriptor: String,
+}
+
+#[uniffi::export]
+pub fn account_private_material(phrase: String, passphrase: String, account_path: String, master_fingerprint: String, script_type: AccountScriptType) -> Result<AccountPrivateMaterial, EntropyStudioError> {
+    let mut components = parse_account_path(&account_path)?;
+    let mut seed = mnemonic_to_seed(phrase, passphrase);
+    let mut node = [0u8; 78];
+    if unsafe { entropylab_wasm::el_hd_master(seed.as_ptr(), seed.len(), node.as_mut_ptr()) } != 78 {
+        wipe_bytes(&mut seed); wipe_bytes(&mut node);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    wipe_bytes(&mut seed);
+    for (index, hardened) in &mut components {
+        let mut child = [0u8; 78];
+        loop {
+            let child_index = *index | if *hardened { 1 << 31 } else { 0 };
+            match unsafe { entropylab_wasm::el_hd_ckd_priv(node.as_ptr(), child_index, child.as_mut_ptr()) } {
+                78 => break,
+                1 => *index = index.checked_add(1).filter(|next| *next < (1 << 31)).ok_or(EntropyStudioError::InvalidMasterKey)?,
+                _ => { wipe_bytes(&mut node); wipe_bytes(&mut child); return Err(EntropyStudioError::InvalidMasterKey); }
+            }
+        }
+        wipe_bytes(&mut node); node = child;
+    }
+    let testnet = components.get(1).is_some_and(|(index, _)| *index == 1);
+    node[..4].copy_from_slice(if testnet { &[0x04, 0x35, 0x83, 0x94] } else { &[0x04, 0x88, 0xad, 0xe4] });
+    let bitcoin_core_xprv = base58check_node(&node)?;
+    let slip132_private = match script_type {
+        AccountScriptType::NestedSegwit => Some(([0x04, 0x4a, 0x4e, 0x28], [0x04, 0x9d, 0x78, 0x78])),
+        AccountScriptType::NativeSegwit => Some(([0x04, 0x5f, 0x18, 0xbc], [0x04, 0xb2, 0x43, 0x0c])),
+        AccountScriptType::Legacy | AccountScriptType::Taproot => None,
+    }.map(|(testnet_version, mainnet_version)| {
+        node[..4].copy_from_slice(if testnet { &testnet_version } else { &mainnet_version });
+        base58check_node(&node)
+    }).transpose()?;
+    let origin_path = components.iter().map(|(index, hardened)| format!("{index}{}", if *hardened { "h" } else { "" })).collect::<Vec<_>>().join("/");
+    let key = format!("[{master_fingerprint}/{origin_path}]{bitcoin_core_xprv}/1/*");
+    let body = match script_type {
+        AccountScriptType::Legacy => format!("pkh({key})"),
+        AccountScriptType::NestedSegwit => format!("sh(wpkh({key}))"),
+        AccountScriptType::NativeSegwit => format!("wpkh({key})"),
+        AccountScriptType::Taproot => format!("tr({key})"),
+    };
+    wipe_bytes(&mut node);
+    Ok(AccountPrivateMaterial { bitcoin_core_xprv, slip132_private, spending_change_descriptor: format!("{body}#{}", descriptor_checksum(&body)?) })
+}
+
+fn parse_account_path(path: &str) -> Result<Vec<(u32, bool)>, EntropyStudioError> {
+    let mut parts = path.split('/');
+    if parts.next() != Some("m") { return Err(EntropyStudioError::InvalidMasterKey); }
+    parts.map(|part| {
+        let hardened = part.ends_with(['\'', 'h', 'H']);
+        let digits = if hardened { &part[..part.len() - 1] } else { part };
+        digits.parse::<u32>().ok().filter(|index| *index < (1 << 31)).map(|index| (index, hardened))
+    }).collect::<Option<Vec<_>>>().filter(|parts| !parts.is_empty()).ok_or(EntropyStudioError::InvalidMasterKey)
+}
+
+fn base58check_node(node: &[u8; 78]) -> Result<String, EntropyStudioError> {
+    let mut encoded = [0u8; 112];
+    let length = unsafe { entropylab_wasm::el_b58check_encode(node.as_ptr(), node.len(), encoded.as_mut_ptr(), encoded.len()) };
+    let result = if length >= 0 && length as usize <= encoded.len() { std::str::from_utf8(&encoded[..length as usize]).map(str::to_owned).map_err(|_| EntropyStudioError::InvalidMasterKey) } else { Err(EntropyStudioError::InvalidMasterKey) };
+    wipe_bytes(&mut encoded); result
+}
+
+fn descriptor_checksum(descriptor: &str) -> Result<String, EntropyStudioError> {
+    const INPUT: &str = "0123456789()[],'/*abcdefgh@:$%{}IJKLMNOPQRSTUVWXYZ&+-.;<=>?!^_|~ijklmnopqrstuvwxyzABCDEFGH`JKLMNOPQRSTUVWXYZ";
+    const OUTPUT: &[u8] = b"qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+    const GEN: [u64; 5] = [0xf5dee51989, 0xa9fdca3312, 0x1bab10e32d, 0x3706b1677a, 0x644d626ffd];
+    let mut symbols = Vec::new(); let mut classes = Vec::new();
+    for character in descriptor.chars() {
+        let value = INPUT.find(character).ok_or(EntropyStudioError::InvalidMasterKey)? as u8;
+        classes.push(value >> 5); symbols.push(value & 31);
+        if classes.len() == 3 { symbols.push(classes[0] * 9 + classes[1] * 3 + classes[2]); classes.clear(); }
+    }
+    if classes.len() == 1 { symbols.push(classes[0]); } else if classes.len() == 2 { symbols.push(classes[0] * 3 + classes[1]); }
+    symbols.extend([0; 8]); let mut polymod = 1u64;
+    for value in symbols { let top = polymod >> 35; polymod = ((polymod & 0x7ffffffff) << 5) ^ u64::from(value); for (bit, generator) in GEN.iter().enumerate() { if ((top >> bit) & 1) != 0 { polymod ^= generator; } } }
+    polymod ^= 1;
+    Ok((0..8).map(|offset| OUTPUT[((polymod >> (5 * (7 - offset))) & 31) as usize] as char).collect())
+}
+
 #[uniffi::export]
 pub fn bip39_entropy_bits(target_words: u8) -> Result<u16, EntropyStudioError> {
     Ok((bip39_entropy_bytes(target_words)? * 8) as u16)

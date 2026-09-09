@@ -1,4 +1,6 @@
 import {
+  AccountScriptType as GeneratedAccountScriptType,
+  accountPrivateMaterial,
   Bip39PassphraseState,
   CardHashMethod,
   CardInputMethod,
@@ -74,6 +76,7 @@ export const DirectDiceMethod = {
   Bitbox: GeneratedDirectDiceMethod.Bitbox,
   D8D16: GeneratedDirectDiceMethod.D8d16,
 } as const;
+export const AccountScriptType = GeneratedAccountScriptType;
 
 export const DiceInputMethod = {
   Bitbox: GeneratedDiceInputMethod.Bitbox,
@@ -202,6 +205,7 @@ export const KeyDerivationVisiblePathValidationKind = {
 } as const;
 
 export {
+  accountPrivateMaterial,
   CardHashMethod,
   CardInputMethod,
   GeneratedDirectDiceCalculationTermKind as DirectDiceCalculationTermKind,
@@ -259,6 +263,7 @@ export {
 };
 
 export type {
+  AccountPrivateMaterial,
   Bip39PassphraseState,
   DiceMethodInfo,
   DirectCardState,

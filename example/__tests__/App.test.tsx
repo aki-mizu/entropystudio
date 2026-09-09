@@ -12,6 +12,7 @@ import {
   KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
   KEY_DERIVATION_VISIBLE_PATH_DEFAULT_FIXTURE,
   mockCardTranscriptToEntropy,
+  mockAccountPrivateMaterial,
   mockDiceRollsToEntropy,
   mockEntropyToMnemonic,
   mockKeyDerivationAddressBenchmarkMilliseconds,
@@ -1583,6 +1584,19 @@ test('keeps derived keys in removable Key Station tabs', async () => {
   expect(app!.root.findByProps({ testID: 'key-station-script-type-description' }).props.children).toBe(
     UPSTREAM_UI_LABELS.scriptBeginner.bip86,
   );
+  const privateAccountMaterial = app!.root.findByProps({ testID: 'toggle-private-account-material' });
+  expect(privateAccountMaterial.props.accessibilityState).toEqual({ expanded: false });
+  await ReactTestRenderer.act(async () => {
+    privateAccountMaterial.props.onPress();
+  });
+  expect(mockAccountPrivateMaterial).toHaveBeenCalledWith(
+    expect.any(String),
+    '',
+    "m/84'/0'/0'",
+    '73c5da0a',
+    3,
+  );
+  expect(app!.root.findByProps({ testID: 'private-account-material' })).toBeDefined();
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'close-key-station-script-type' }).props.onPress();
   });

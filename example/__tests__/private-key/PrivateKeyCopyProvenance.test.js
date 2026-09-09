@@ -342,6 +342,22 @@ describe('Upstream UI copy provenance', () => {
         template:
           /Your seed phrase \\xB7 \$\{wallet\.mnemonic\.trim\(\)\.split\(\/\\s\+\/\)\.length\} words/,
       },
+      'result.bitcoinCore': {
+        source: upstreamAppJs,
+        template: /field\(`Bitcoin Core \$\{coreLabel\}`, core\)/,
+      },
+      'result.genericDescriptorCompatibility': {
+        source: upstreamAppJs,
+        template: /hodlPrivateFieldHtml\("Generic \{name\} for descriptor compatibility", account\.genericPrivate, \{ name: account\.genericPrivateLabel \}\)/,
+      },
+      'result.spendingDescriptor': {
+        source: upstreamAppJs,
+        template: /let label = `\$\{isPrivate \? "Spending" : "Watch-only"\} \$\{hodlAddressBranchLabel\(branch\.branch\)\.toLowerCase\(\)\} descriptor`/,
+      },
+      'result.slip132': {
+        source: upstreamAppJs,
+        template: /field\(`SLIP-132 \$\{slipLabel\}`, slip\)/,
+      },
       'seedPhrase.placeholder': {
         source: upstreamAppJs,
         template: /placeholder="Enter exactly \$\{config\.words\} BIP39 words"/,

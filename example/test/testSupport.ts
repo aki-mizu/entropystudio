@@ -53,6 +53,14 @@ export const mockEntropyToMnemonic = jest.fn<string, [ArrayBuffer]>();
 export const mockHashedCardState = jest.fn<HashedCardState, [string, number]>();
 export const mockLifehashFromFingerprint = jest.fn<string, [string]>(() => '');
 export const mockMnemonicToEntropy = jest.fn<ArrayBuffer, [string]>();
+export const mockAccountPrivateMaterial = jest.fn(() => ({
+  bitcoinCoreXprv:
+    'xprv9ypBANFCsoi3cKAup1JcTb8apefb337JTxyuUq3htnm1EvknF8xnN6PGpseChsZaT7pQaJCZufhpQiwbGELGWnAUghw8Z3Z4w3qv3ahvtRU',
+  spendingChangeDescriptor:
+    'wpkh([73c5da0a/84h/0h/0h]xprv9ypBANFCsoi3cKAup1JcTb8apefb337JTxyuUq3htnm1EvknF8xnN6PGpseChsZaT7pQaJCZufhpQiwbGELGWnAUghw8Z3Z4w3qv3ahvtRU/1/*)#wj5e6ypv',
+  slip132Private:
+    'zprvAdG4iTXWBoARxY7s6VrBxzUQ3BYKkrAnMtGnz4uQkH2UPnBqiKRQKyEErmEHEcfmR6KuwqXzA1UDjZogejvWknQCRgc5sDLbvpDNvYgCwp',
+}));
 const MASTER_SEED_FIXTURE = new Uint8Array(64).buffer;
 const BIP39_MNEMONIC_FIXTURE =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
@@ -165,6 +173,12 @@ export const mockSynchronizeEntropy = jest.fn<
 >();
 
 jest.mock('entropystudio', () => ({
+  AccountScriptType: {
+    Legacy: 0,
+    NestedSegwit: 1,
+    NativeSegwit: 2,
+    Taproot: 3,
+  },
   CardHashMethod: {
     Ascii: 0,
     Coleman: 1,
@@ -339,6 +353,7 @@ jest.mock('entropystudio', () => ({
     AddressRange: 8,
   },
   cardTranscriptToEntropy: mockCardTranscriptToEntropy,
+  accountPrivateMaterial: mockAccountPrivateMaterial,
   cardKeyAllowed: mockCardKeyAllowed,
   analyzeNumberBaseInput: mockAnalyzeNumberBaseInput,
   bip39EntropyBits: mockBip39EntropyBits,

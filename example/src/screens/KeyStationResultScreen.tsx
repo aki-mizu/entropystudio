@@ -179,6 +179,16 @@ export function KeyStationResultScreen({
         onBack={() => setShowingScriptType(false)}
         onSetScriptType={onSetResultScriptType}
         network={resultNetwork}
+        privateAccountMaterialInput={
+          derivation.kind === 'bip39'
+            ? {
+                accountPath: tab.derivationSettings.accountPath,
+                masterFingerprint: tab.masterFingerprint,
+                mnemonic: derivation.mnemonic,
+                passphrase: derivation.passphrase,
+              }
+            : undefined
+        }
         purpose={resultPurpose}
         scriptType={tab.resultScriptType}
       />

@@ -305,6 +305,13 @@ export const UPSTREAM_TEXT = {
     wordsNote: '(lowercase words separated by single spaces)',
   },
   result: {
+    privateAccountMaterial: 'Private account material',
+    privateAccountMaterialIntro:
+      'These exports can spend from this account. They are shown only for a seed or extended private-key source.',
+    privateAccountMaterialWarningLead:
+      'Keep these exports together only in secure offline backups.',
+    privateAccountMaterialWarningTail:
+      "An account extended public key combined with any non-hardened descendant private key, including a WIF shown in the address tables below, can reconstruct that account's extended private key.",
     compactSeedQr: 'CompactSeedQR. Same seed, smaller binary code.',
     compactSeedQrCompatible: 'Compatible with: SeedSigner, Krux, Jade, Passport.',
     entropyHex: 'BIP39 entropy hex',
@@ -808,8 +815,13 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
     },
   },
   result: {
+    bitcoinCore: (label: string) => `Bitcoin Core ${label}`,
+    genericDescriptorCompatibility: (label: string) =>
+      `Generic ${label} for descriptor compatibility`,
     masterSeedHex: 'Master seed hex',
     seedPhrase: (wordCount: number) => `Your seed phrase · ${wordCount} words`,
+    spendingDescriptor: (branch: string) => `Spending ${branch.toLowerCase()} descriptor`,
+    slip132: (label: string) => `SLIP-132 ${label}`,
   },
   seedPhrase: {
     autocomplete: 'Autocomplete BIP39 words',
