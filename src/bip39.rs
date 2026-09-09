@@ -14,6 +14,12 @@ pub struct SeedQrData {
 pub enum AccountScriptType { Legacy, NestedSegwit, NativeSegwit, Taproot }
 
 #[derive(Debug, uniffi::Record)]
+pub struct AccountWatchOnlyBranchDescriptor {
+    pub branch: u32,
+    pub descriptor: String,
+}
+
+#[derive(Debug, uniffi::Record)]
 pub struct AccountPrivateMaterial {
     pub bitcoin_core_xprv: String,
     pub bitcoin_core_xpub: String,
@@ -23,6 +29,7 @@ pub struct AccountPrivateMaterial {
     pub slip132_public_label: Option<String>,
     pub spending_change_descriptor: String,
     pub watch_only_change_descriptor: String,
+    pub watch_only_branch_descriptors: Vec<AccountWatchOnlyBranchDescriptor>,
     pub multisig_cosigner_xpub: Option<String>,
 }
 
@@ -48,9 +55,9 @@ pub fn account_private_material(phrase: String, passphrase: String, account_path
         wipe_bytes(&mut cosigner_public);
         Some(output)
     } else { None };
-    let mut public_node = public_node(&node)?;
-    public_node[..4].copy_from_slice(if testnet { &[0x04, 0x35, 0x87, 0xcf] } else { &[0x04, 0x88, 0xb2, 0x1e] });
-    let bitcoin_core_xpub = base58check_node(&public_node)?;
+    let mut account_public_node = public_node(&node)?;
+    account_public_node[..4].copy_from_slice(if testnet { &[0x04, 0x35, 0x87, 0xcf] } else { &[0x04, 0x88, 0xb2, 0x1e] });
+    let bitcoin_core_xpub = base58check_node(&account_public_node)?;
     node[..4].copy_from_slice(if testnet { &[0x04, 0x35, 0x83, 0x94] } else { &[0x04, 0x88, 0xad, 0xe4] });
     let bitcoin_core_xprv = base58check_node(&node)?;
     // Upstream only assigns the y/z SLIP-132 family if both the selected
@@ -72,22 +79,46 @@ pub fn account_private_material(phrase: String, passphrase: String, account_path
             "vprv" | "zprv" => ([0x04, 0x5f, 0x1c, 0xf6], [0x04, 0xb2, 0x47, 0x46]),
             _ => unreachable!("only supported SLIP-132 families are configured"),
         };
-        public_node[..4].copy_from_slice(if testnet { &testnet_version } else { &mainnet_version });
-        base58check_node(&public_node)
+        account_public_node[..4].copy_from_slice(if testnet { &testnet_version } else { &mainnet_version });
+        base58check_node(&account_public_node)
     }).transpose()?;
     let origin_path = components.iter().map(|(index, hardened)| format!("{index}{}", if *hardened { "h" } else { "" })).collect::<Vec<_>>().join("/");
     let branch_step = descriptor_branch_step(&branches, branch_hardened)?;
     let wildcard = if address_hardened { "*'" } else { "*" };
     let key = format!("[{master_fingerprint}/{origin_path}]{bitcoin_core_xprv}/{branch_step}/{wildcard}");
-    let body = match script_type {
-        AccountScriptType::Legacy => format!("pkh({key})"),
-        AccountScriptType::NestedSegwit => format!("sh(wpkh({key}))"),
-        AccountScriptType::NativeSegwit => format!("wpkh({key})"),
-        AccountScriptType::Taproot => format!("tr({key})"),
-    };
+    let body = script_descriptor(script_type, &key);
     let watch_only_body = body.replace(&bitcoin_core_xprv, &bitcoin_core_xpub);
+    let watch_only_branch_descriptors = if address_hardened {
+        Vec::new()
+    } else if branch_hardened {
+        branches.iter().map(|branch| {
+            let mut component = [(*branch, true)];
+            let mut child = derive_private_path(node, &mut component)?;
+            let mut child_public = public_node(&child)?;
+            child_public[..4].copy_from_slice(if testnet { &[0x04, 0x35, 0x87, 0xcf] } else { &[0x04, 0x88, 0xb2, 0x1e] });
+            let child_xpub = base58check_node(&child_public)?;
+            wipe_bytes(&mut child);
+            wipe_bytes(&mut child_public);
+            let branch = component[0].0;
+            let key = format!("[{master_fingerprint}/{origin_path}/{branch}h]{child_xpub}/*");
+            let body = script_descriptor(script_type, &key);
+            Ok(AccountWatchOnlyBranchDescriptor {
+                branch,
+                descriptor: format!("{body}#{}", descriptor_checksum(&body)?),
+            })
+        }).collect::<Result<Vec<_>, EntropyStudioError>>()?
+    } else {
+        branches.iter().map(|branch| {
+            let key = format!("[{master_fingerprint}/{origin_path}]{bitcoin_core_xpub}/{branch}/*");
+            let body = script_descriptor(script_type, &key);
+            Ok(AccountWatchOnlyBranchDescriptor {
+                branch: *branch,
+                descriptor: format!("{body}#{}", descriptor_checksum(&body)?),
+            })
+        }).collect::<Result<Vec<_>, EntropyStudioError>>()?
+    };
     wipe_bytes(&mut node);
-    wipe_bytes(&mut public_node);
+    wipe_bytes(&mut account_public_node);
     Ok(AccountPrivateMaterial {
         bitcoin_core_xprv,
         bitcoin_core_xpub,
@@ -97,8 +128,18 @@ pub fn account_private_material(phrase: String, passphrase: String, account_path
         slip132_public_label: slip132_config.map(|(_, _, label)| match label { "uprv" => "upub", "yprv" => "ypub", "vprv" => "vpub", "zprv" => "zpub", _ => unreachable!() }.to_owned()),
         spending_change_descriptor: format!("{body}#{}", descriptor_checksum(&body)?),
         watch_only_change_descriptor: format!("{watch_only_body}#{}", descriptor_checksum(&watch_only_body)?),
+        watch_only_branch_descriptors,
         multisig_cosigner_xpub,
     })
+}
+
+fn script_descriptor(script_type: AccountScriptType, key: &str) -> String {
+    match script_type {
+        AccountScriptType::Legacy => format!("pkh({key})"),
+        AccountScriptType::NestedSegwit => format!("sh(wpkh({key}))"),
+        AccountScriptType::NativeSegwit => format!("wpkh({key})"),
+        AccountScriptType::Taproot => format!("tr({key})"),
+    }
 }
 
 /// Formats precisely the currently selected upstream address-branch window:

@@ -40,6 +40,13 @@ const SCRIPT_TYPE_OPTIONS: readonly NativeSelectOption<KeyStationScriptType>[] =
     value: id,
   }));
 
+function watchOnlyBranchLabel(branch: number): string {
+  return UPSTREAM_UI_FALLBACK_COPY.keys.advanced.branchLabel({
+    index: branch,
+    role: branch === 0 ? 'receive' : branch === 1 ? 'change' : 'custom',
+  });
+}
+
 /** A focused, native-picker screen matching EntropyLab's Script type control. */
 export function ScriptTypePickerScreen({
   colors,
@@ -54,6 +61,7 @@ export function ScriptTypePickerScreen({
   const [showingPrivateMaterial, setShowingPrivateMaterial] = useState(false);
   const [showingWatchOnlyMaterial, setShowingWatchOnlyMaterial] = useState(false);
   const [showingWatchOnlyDescriptorQr, setShowingWatchOnlyDescriptorQr] = useState(false);
+  const [showingBranchDescriptors, setShowingBranchDescriptors] = useState(false);
   const { width } = useWindowDimensions();
   const qrWidth = Math.max(0, width - 72);
 
@@ -62,6 +70,7 @@ export function ScriptTypePickerScreen({
     setShowingPrivateMaterial(false);
     setShowingWatchOnlyMaterial(false);
     setShowingWatchOnlyDescriptorQr(false);
+    setShowingBranchDescriptors(false);
   }, [scriptType, privateAccountMaterialInput?.accountPath]);
 
   const revealPrivateMaterial = () => {
@@ -273,6 +282,44 @@ export function ScriptTypePickerScreen({
                     </Text>
                   </View>
                 </Pressable>
+                {privateMaterial.watchOnlyBranchDescriptors.length ? (
+                  <>
+                    <Pressable
+                      accessibilityLabel={UPSTREAM_TEXT.result.addressBranchDescriptors}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: showingBranchDescriptors }}
+                      onPress={() => setShowingBranchDescriptors(value => !value)}
+                      style={({ pressed }) => [styles.branchDescriptorsHeader, { opacity: pressed ? 0.72 : 1 }]}
+                      testID="toggle-watch-only-branch-descriptors"
+                    >
+                      <View style={styles.branchDescriptorsHeaderContent}>
+                        <Text
+                          accessibilityElementsHidden
+                          style={[styles.branchDescriptorsIndicator, { color: showingBranchDescriptors ? colors.text : colors.muted }]}
+                        >
+                          {showingBranchDescriptors ? '▼' : '▶'}
+                        </Text>
+                        <Text style={[styles.branchDescriptorsTitle, { color: showingBranchDescriptors ? colors.text : colors.muted }]}>
+                          {UPSTREAM_TEXT.result.addressBranchDescriptors}
+                        </Text>
+                      </View>
+                    </Pressable>
+                    {showingBranchDescriptors
+                      ? privateMaterial.watchOnlyBranchDescriptors.map(item => (
+                          <View key={item.branch} style={styles.branchDescriptorRow}>
+                            <Text style={[styles.privateMaterialLabel, { color: colors.muted }]}>
+                              {UPSTREAM_UI_FALLBACK_COPY.result.watchOnlyDescriptor(
+                                watchOnlyBranchLabel(item.branch),
+                              )}
+                            </Text>
+                            <Text selectable style={[styles.branchDescriptorValue, { color: colors.text }]}>
+                              {item.descriptor}
+                            </Text>
+                          </View>
+                        ))
+                      : null}
+                  </>
+                ) : null}
               </View>
             ) : null}
             <Modal
@@ -368,6 +415,12 @@ const styles = StyleSheet.create({
   },
   modalDismissArea: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
   modalCard: { alignItems: 'center', borderRadius: 8, maxWidth: '100%', padding: 12 },
+  branchDescriptorValue: { fontFamily: 'monospace', fontSize: 12, lineHeight: 18, marginBottom: 12 },
+  branchDescriptorRow: { alignSelf: 'stretch' },
+  branchDescriptorsHeader: { alignSelf: 'flex-start', justifyContent: 'center', marginTop: 16, minHeight: 36 },
+  branchDescriptorsHeaderContent: { alignItems: 'center', flexDirection: 'row', gap: 4 },
+  branchDescriptorsIndicator: { fontSize: 16, lineHeight: 20 },
+  branchDescriptorsTitle: { fontSize: 14, fontWeight: '700', lineHeight: 20 },
   qrImportNote: { fontSize: 12, lineHeight: 18, marginTop: 8, textAlign: 'center' },
   watchOnlyButton: { marginTop: 16 },
   screen: { flex: 1 },

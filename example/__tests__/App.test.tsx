@@ -1617,6 +1617,16 @@ test('keeps derived keys in removable Key Station tabs', async () => {
   expect(app!.root.findByProps({ testID: 'watch-only-descriptor-qr-code' }).props.accessibilityLabel).toBe(
     UPSTREAM_UI_FALLBACK_COPY.result.watchOnlyWalletDescriptor,
   );
+  const branchDescriptors = app!.root.findByProps({
+    testID: 'toggle-watch-only-branch-descriptors',
+  });
+  expect(branchDescriptors.props.accessibilityState).toEqual({ expanded: false });
+  await ReactTestRenderer.act(async () => {
+    branchDescriptors.props.onPress();
+  });
+  expect(
+    app!.root.findByProps({ testID: 'toggle-watch-only-branch-descriptors' }).props.accessibilityState,
+  ).toEqual({ expanded: true });
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'close-key-station-script-type' }).props.onPress();
   });
