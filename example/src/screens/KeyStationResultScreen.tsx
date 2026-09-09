@@ -5,9 +5,14 @@ import type { DiceColors } from '../features/dice/diceTheme';
 import { KeyStationLifeHash } from '../features/keyStation/components/KeyStationLifeHash';
 import { RecoveryMaterialPanel } from '../features/keyStation/components/RecoveryMaterialPanel';
 import { SeedQrPanel } from '../features/keyStation/components/SeedQrPanel';
+import { ScriptTypePickerScreen } from '../features/keyStation/components/ScriptTypePickerScreen';
 import { keyStationSafetyNotes } from '../features/keyStation/keyStation';
 import { seedQrData } from '../native/entropyStudio';
-import type { KeyStationSafetyNote, KeyStationTab } from '../features/keyStation/keyStation';
+import type {
+  KeyStationSafetyNote,
+  KeyStationScriptType,
+  KeyStationTab,
+} from '../features/keyStation/keyStation';
 import {
   formatCopy,
   UPSTREAM_TEXT,
@@ -22,6 +27,7 @@ type Props = {
   readonly isActive: boolean;
   readonly onEditInput: () => void;
   readonly onReturnToStation: () => void;
+  readonly onSetScriptType: (scriptType: KeyStationScriptType) => void;
   readonly tab: KeyStationTab | null;
 };
 
@@ -95,15 +101,24 @@ function SafetyNotes({ colors, notes, testIDPrefix }: SafetyNotesProps) {
   );
 }
 
-export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturnToStation, tab }: Props) {
+export function KeyStationResultScreen({
+  colors,
+  isActive,
+  onEditInput,
+  onReturnToStation,
+  onSetScriptType,
+  tab,
+}: Props) {
   const [showingPrivateRecoveryMaterial, setShowingPrivateRecoveryMaterial] = useState(false);
   const [showingWatchOnlyWalletData, setShowingWatchOnlyWalletData] = useState(false);
   const [showingWalletData, setShowingWalletData] = useState(false);
+  const [showingScriptType, setShowingScriptType] = useState(false);
 
   useEffect(() => {
     setShowingPrivateRecoveryMaterial(false);
     setShowingWatchOnlyWalletData(false);
     setShowingWalletData(false);
+    setShowingScriptType(false);
   }, [tab?.id]);
 
   useEffect(() => {
@@ -124,11 +139,15 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
         setShowingWalletData(false);
         return true;
       }
+      if (showingScriptType) {
+        setShowingScriptType(false);
+        return true;
+      }
       onReturnToStation();
       return true;
     });
     return () => subscription.remove();
-  }, [isActive, onReturnToStation, showingPrivateRecoveryMaterial, showingWalletData, showingWatchOnlyWalletData]);
+  }, [isActive, onReturnToStation, showingPrivateRecoveryMaterial, showingScriptType, showingWalletData, showingWatchOnlyWalletData]);
 
   if (!tab) {
     return null;
@@ -140,6 +159,17 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
     derivation.kind === 'bip39' && showingWalletData && showingPrivateRecoveryMaterial
       ? seedQrData(derivation.mnemonic)
       : null;
+
+  if (showingScriptType) {
+    return (
+      <ScriptTypePickerScreen
+        colors={colors}
+        onBack={() => setShowingScriptType(false)}
+        onSetScriptType={onSetScriptType}
+        scriptType={tab.scriptType}
+      />
+    );
+  }
 
   return (
     <View
@@ -289,6 +319,9 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
               </Pressable>
             </View>
             <SafetyNotes colors={colors} notes={safetyNotes} testIDPrefix="private-key-safety" />
+            <View style={styles.scriptTypeButtonSpacing}>
+              <ScriptTypeButton colors={colors} onPress={() => setShowingScriptType(true)} />
+            </View>
             <Pressable
               accessibilityLabel={UPSTREAM_TEXT.result.privateKey}
               accessibilityRole="button"
@@ -361,6 +394,9 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
                 {UPSTREAM_TEXT.result.walletData}
               </Text>
             </Pressable>
+            <View style={styles.scriptTypeButtonSpacing}>
+              <ScriptTypeButton colors={colors} onPress={() => setShowingScriptType(true)} />
+            </View>
           </>
         ) : derivation.kind === 'private-key' && showingPrivateRecoveryMaterial ? (
           <>
@@ -385,6 +421,31 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
         ) : null}
       </ScrollView>
     </View>
+  );
+}
+
+function ScriptTypeButton({
+  colors,
+  onPress,
+}: {
+  readonly colors: DiceColors;
+  readonly onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={UPSTREAM_TEXT.keys.scriptType}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.walletDataButton,
+        { borderColor: colors.border, opacity: pressed ? 0.72 : 1 },
+      ]}
+      testID="open-key-station-script-type"
+    >
+      <Text style={[styles.walletDataButtonText, { color: colors.accent }]}>
+        {UPSTREAM_TEXT.keys.scriptType}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -451,6 +512,9 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
+  },
+  scriptTypeButtonSpacing: {
+    marginTop: 12,
   },
   safetyNotes: {
     borderLeftWidth: 3,

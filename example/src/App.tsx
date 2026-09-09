@@ -218,6 +218,24 @@ function App() {
     );
   }
 
+  function selectActiveKeyStationScriptType(scriptType: KeyStationScriptType) {
+    if (!activeKeyStationTab) {
+      return;
+    }
+    const defaults = defaultKeyStationDerivationSettings(scriptType);
+    const derivationSettings = projectAdvancedSettings(activeKeyStationTab.derivationSettings, {
+      ...activeKeyStationTab.derivationSettings.advancedInput,
+      purpose: defaults.advancedInput.purpose,
+    });
+    setKeyStationTabs(tabs =>
+      tabs.map(tab =>
+        tab.id === activeKeyStationTab.id
+          ? { ...tab, derivationPath: derivationSettings.visiblePath, derivationSettings, scriptType }
+          : tab,
+      ),
+    );
+  }
+
   function setKeyStationDerivationPath(path: string) {
     setKeyStationDerivationSettings(current => {
       const visiblePathState = keyDerivationVisiblePathState({
@@ -385,6 +403,7 @@ function App() {
             isActive={activeTab === 'method' && activeKeyStationTab !== null}
             onEditInput={() => (activeKeyStationTab ? editKeyStationInput(activeKeyStationTab) : undefined)}
             onReturnToStation={() => setActiveKeyStationTabId(null)}
+            onSetScriptType={selectActiveKeyStationScriptType}
             tab={activeKeyStationTab}
           />
         </View>

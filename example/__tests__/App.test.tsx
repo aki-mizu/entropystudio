@@ -1556,6 +1556,33 @@ test('keeps derived keys in removable Key Station tabs', async () => {
   expect(app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.accessibilityLabel).toBe(
     UPSTREAM_TEXT.keys.editInput,
   );
+  const scriptTypeButton = app!.root.findByProps({ testID: 'open-key-station-script-type' });
+  expect(scriptTypeButton.props.accessibilityLabel).toBe(UPSTREAM_TEXT.keys.scriptType);
+  await ReactTestRenderer.act(async () => {
+    scriptTypeButton.props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'key-station-script-type-screen' })).toBeDefined();
+  const scriptTypePicker = app!.root.findByProps({ testID: 'key-station-script-type-picker' });
+  expect(scriptTypePicker.props.accessibilityValue).toEqual({
+    text: UPSTREAM_TEXT.keys.scriptTypes.bip84,
+  });
+  await ReactTestRenderer.act(async () => {
+    scriptTypePicker.props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root
+      .findByProps({ testID: 'key-station-script-type-picker-wheel' })
+      .props.onValueChange('bip86', 3);
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'key-station-script-type-picker-done' }).props.onPress();
+  });
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'close-key-station-script-type' }).props.onPress();
+  });
+  expect(app!.root.findByProps({ testID: 'key-station-script-value' }).props.children).toBe(
+    UPSTREAM_TEXT.keys.scriptTypes.bip86,
+  );
   expect(
     app!.root.findByProps({ testID: 'key-station-master-fingerprint-lifehash' }).props.source,
   ).toEqual({ uri: 'data:image/png;base64,lifehash' });
