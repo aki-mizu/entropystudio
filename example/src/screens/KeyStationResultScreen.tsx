@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { DiceResultPanel } from '../features/dice/components/DiceResultPanel';
 import type { DiceColors } from '../features/dice/diceTheme';
 import { KeyStationLifeHash } from '../features/keyStation/components/KeyStationLifeHash';
+import { RecoveryMaterialPanel } from '../features/keyStation/components/RecoveryMaterialPanel';
 import { SeedQrPanel } from '../features/keyStation/components/SeedQrPanel';
 import { keyStationSafetyNotes } from '../features/keyStation/keyStation';
 import { seedQrData } from '../native/entropyStudio';
@@ -189,7 +189,7 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
                 >
                   {UPSTREAM_TEXT.result.privateRecoveryMaterialSafety}
                 </Text>
-                <DiceResultPanel
+                <RecoveryMaterialPanel
                   afterMnemonic={
                     seedQr ? (
                       <SeedQrPanel
@@ -330,7 +330,7 @@ export function KeyStationResultScreen({ colors, isActive, onEditInput, onReturn
             >
               {UPSTREAM_TEXT.result.privateKeyMaterialSafety}
             </Text>
-          <DiceResultPanel
+          <RecoveryMaterialPanel
             colors={colors}
             entropyLabel={UPSTREAM_TEXT.result.hexPrivateKey}
             result={{

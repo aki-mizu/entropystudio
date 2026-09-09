@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import type { DiceColors } from '../diceTheme';
+import type { DiceColors } from '../../dice/diceTheme';
 
 export type EntropyResult =
   | {
@@ -34,7 +34,7 @@ type Props = {
   readonly result: EntropyResult | null;
 };
 
-export function DiceResultPanel({
+export function RecoveryMaterialPanel({
   afterMnemonic,
   colors,
   entropyLabel,
