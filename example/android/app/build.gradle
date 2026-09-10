@@ -75,6 +75,12 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 def appVersionName = project.findProperty("versionName") ?: "1.0"
 def appVersionCode = (project.findProperty("versionCode") ?: "1").toInteger()
 def metroHost = (project.findProperty("metroHost") ?: System.getenv("METRO_HOST") ?: "").toString()
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -97,6 +103,24 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            def requiredProperties = [
+                "ENTROPYSTUDIO_UPLOAD_STORE_FILE",
+                "ENTROPYSTUDIO_UPLOAD_KEY_ALIAS",
+                "ENTROPYSTUDIO_UPLOAD_STORE_PASSWORD",
+                "ENTROPYSTUDIO_UPLOAD_KEY_PASSWORD",
+            ]
+            def missingProperties = requiredProperties.findAll { !keystoreProperties.getProperty(it) }
+
+            if (!missingProperties.isEmpty()) {
+                throw new GradleException("Missing release signing properties in ${keystorePropertiesFile}: ${missingProperties.join(', ')}")
+            }
+
+            storeFile rootProject.file(keystoreProperties.getProperty("ENTROPYSTUDIO_UPLOAD_STORE_FILE"))
+            storePassword keystoreProperties.getProperty("ENTROPYSTUDIO_UPLOAD_STORE_PASSWORD")
+            keyAlias keystoreProperties.getProperty("ENTROPYSTUDIO_UPLOAD_KEY_ALIAS")
+            keyPassword keystoreProperties.getProperty("ENTROPYSTUDIO_UPLOAD_KEY_PASSWORD")
+        }
     }
     buildTypes {
         debug {
@@ -104,9 +128,7 @@ android {
             buildConfigField "String", "METRO_HOST", "\"${metroHost}\""
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
