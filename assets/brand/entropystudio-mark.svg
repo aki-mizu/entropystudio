@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  EntropyStudio brand mark — original artwork.
+  The centered faceted die keeps the mark connected to the app's randomness
+  tools without copying EntropyLab's sprout-and-vessel composition.
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="1024"
+  height="1024"
+  viewBox="0 0 256 256"
+  role="img"
+  aria-labelledby="title description"
+>
+  <title id="title">EntropyStudio</title>
+  <desc id="description">An orange isometric die centered on a deep green rounded square.</desc>
+
+  <rect x="12" y="12" width="232" height="232" rx="64" fill="#173B31"/>
+
+  <!-- A centered, three-faced die. -->
+  <g stroke="#173B31" stroke-linejoin="round" stroke-width="3">
+    <path d="M64 91L128 54L192 91L128 128Z" fill="#FFAD35"/>
+    <path d="M64 91L128 128V202L64 165Z" fill="#F47A20"/>
+    <path d="M192 91L128 128V202L192 165Z" fill="#D9531E"/>
+  </g>
+
+  <!--
+    A shared 25%/75% face-local grid is projected onto every face, giving
+    every pip the same visual inset and perspective-correct dimensions.
+  -->
+  <g fill="#FFF7E8">
+    <g transform="matrix(64 37 -64 37 128 54)">
+      <circle cx=".5" cy=".5" r=".11"/>
+    </g>
+    <g transform="matrix(64 37 0 74 64 91)">
+      <circle cx=".25" cy=".25" r=".11"/>
+      <circle cx=".75" cy=".25" r=".11"/>
+      <circle cx=".25" cy=".75" r=".11"/>
+      <circle cx=".75" cy=".75" r=".11"/>
+    </g>
+    <g transform="matrix(-64 37 0 74 192 91)">
+      <circle cx=".25" cy=".25" r=".11"/>
+      <circle cx=".75" cy=".75" r=".11"/>
+    </g>
+  </g>
+</svg>
