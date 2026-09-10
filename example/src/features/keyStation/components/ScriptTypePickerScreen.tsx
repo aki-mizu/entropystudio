@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -22,7 +23,9 @@ import {
 import { KEY_STATION_SCRIPT_TYPES, type KeyStationScriptType } from '../keyStation';
 import {
   AccountScriptType,
+  accountAddressCheck,
   accountPrivateMaterial,
+  type AccountAddressCheck,
   type AccountPrivateMaterial,
 } from '../../../native/entropyStudio';
 
@@ -88,6 +91,8 @@ export function ScriptTypePickerScreen({
   const [showingAdvancedWatchOnlyExport, setShowingAdvancedWatchOnlyExport] = useState(false);
   const [showingAddresses, setShowingAddresses] = useState(false);
   const [showingFirstAddressPopup, setShowingFirstAddressPopup] = useState(false);
+  const [addressToCheck, setAddressToCheck] = useState('');
+  const [addressCheck, setAddressCheck] = useState<AccountAddressCheck | null>(null);
   const [addressTableColumnWidths, setAddressTableColumnWidths] = useState<AddressTableColumnWidths>(
     EMPTY_ADDRESS_TABLE_COLUMN_WIDTHS,
   );
@@ -112,6 +117,8 @@ export function ScriptTypePickerScreen({
     setShowingAdvancedWatchOnlyExport(false);
     setShowingAddresses(false);
     setShowingFirstAddressPopup(false);
+    setAddressToCheck('');
+    setAddressCheck(null);
   }, [scriptType, privateAccountMaterialInput?.accountPath]);
 
   useEffect(() => {
@@ -136,6 +143,31 @@ export function ScriptTypePickerScreen({
       );
     }
     setShowingPrivateMaterial(value => !value);
+  };
+
+  const checkAddress = (address: string) => {
+    setAddressToCheck(address);
+    if (!privateAccountMaterialInput) {
+      return;
+    }
+    try {
+      setAddressCheck(
+        accountAddressCheck(
+          privateAccountMaterialInput.mnemonic,
+          privateAccountMaterialInput.passphrase,
+          privateAccountMaterialInput.accountPath,
+          nativeScriptType(scriptType),
+          [...privateAccountMaterialInput.branches],
+          privateAccountMaterialInput.addressIndex,
+          privateAccountMaterialInput.addressCount,
+          privateAccountMaterialInput.branchHardened,
+          privateAccountMaterialInput.addressHardened,
+          address,
+        ),
+      );
+    } catch {
+      setAddressCheck(null);
+    }
   };
 
   return (
@@ -307,7 +339,7 @@ export function ScriptTypePickerScreen({
                     <Text style={[styles.privateMaterialLabel, { color: colors.muted }]}>
                       {UPSTREAM_UI_FALLBACK_COPY.result.multisigCosigner(
                         'xpub',
-                        UPSTREAM_TEXT.result.nativeSegwitBip48,
+                        UPSTREAM_UI_FALLBACK_COPY.result.nativeSegwitBip48,
                       )}
                     </Text>
                     <Text selectable style={[styles.privateMaterialValue, { color: colors.text }]}>
@@ -516,6 +548,53 @@ export function ScriptTypePickerScreen({
                         </View>
                       </ScrollView>
                     </View>
+                    <View style={styles.addressCheckSection}>
+                      <Text style={[styles.privateMaterialTitle, { color: colors.text }]}>
+                        {UPSTREAM_UI_FALLBACK_COPY.result.checkAnAddress}
+                      </Text>
+                      <TextInput
+                        accessibilityLabel={UPSTREAM_UI_FALLBACK_COPY.result.checkAnAddress}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        onChangeText={checkAddress}
+                        placeholder={UPSTREAM_UI_FALLBACK_COPY.result.checkAnAddressPlaceholder}
+                        placeholderTextColor={colors.muted}
+                        spellCheck={false}
+                        style={[styles.addressCheckInput, { borderColor: colors.border, color: colors.text }]}
+                        testID="check-an-address-input"
+                        value={addressToCheck}
+                      />
+                      <Text style={[styles.addressCheckHelp, { color: colors.muted }]}>
+                        {UPSTREAM_UI_FALLBACK_COPY.result.checkAnAddressHelp}
+                      </Text>
+                      {addressCheck && !addressCheck.isEmpty ? (
+                        <Text
+                          accessibilityLiveRegion="polite"
+                          style={[
+                            styles.addressCheckStatus,
+                            { color: addressCheck.isMatch ? colors.accent : colors.error },
+                          ]}
+                          testID="check-an-address-status"
+                        >
+                          {addressCheck.isMatch && addressCheck.branch !== undefined &&
+                          addressCheck.index !== undefined && addressCheck.path !== undefined
+                            ? UPSTREAM_UI_FALLBACK_COPY.result.addressCheckMatch(
+                                watchOnlyBranchLabel(addressCheck.branch),
+                                addressCheck.index,
+                                addressCheck.path,
+                                addressCheck.beyondShown,
+                                addressCheck.shownCount,
+                              )
+                            : UPSTREAM_UI_FALLBACK_COPY.result.addressCheckMiss(
+                                privateAccountMaterialInput.branches
+                                  .map(watchOnlyBranchLabel)
+                                  .join(' and '),
+                                privateAccountMaterialInput.addressIndex,
+                                addressCheck.searchedTo,
+                              )}
+                        </Text>
+                      ) : null}
+                    </View>
                   </>
                 ) : null}
               </View>
@@ -608,6 +687,10 @@ const styles = StyleSheet.create({
   addressesButton: { marginTop: 16 },
   addressPath: { fontFamily: 'monospace', fontSize: 14, lineHeight: 21, marginBottom: 16 },
   addressIndexCell: { marginRight: 4 },
+  addressCheckHelp: { fontSize: 12, lineHeight: 18, marginTop: 8 },
+  addressCheckInput: { borderRadius: 6, borderWidth: 1, fontSize: 14, marginTop: 12, minHeight: 44, paddingHorizontal: 12 },
+  addressCheckSection: { marginTop: 20 },
+  addressCheckStatus: { fontSize: 12, lineHeight: 18, marginTop: 8 },
   addressPathCell: { marginRight: 4 },
   addressTable: { borderRadius: 9, borderWidth: 1, marginTop: 6, overflow: 'hidden' },
   addressTableCell: { alignSelf: 'flex-start', flexShrink: 0, fontSize: 12, lineHeight: 18, paddingVertical: 4 },

@@ -11,6 +11,7 @@ import {
   KEY_DERIVATION_ADVANCED_DEFAULT_FIXTURE,
   KEY_DERIVATION_PATH_PROJECTION_DEFAULT_FIXTURE,
   KEY_DERIVATION_VISIBLE_PATH_DEFAULT_FIXTURE,
+  mockAccountAddressCheck,
   mockCardTranscriptToEntropy,
   mockAccountPrivateMaterial,
   mockDiceRollsToEntropy,
@@ -1634,6 +1635,30 @@ test('keeps derived keys in removable Key Station tabs', async () => {
     app!.root.findByProps({ testID: 'toggle-addresses' }).props.onPress();
   });
   expect(app!.root.findByProps({ testID: 'open-first-watch-only-address-popup' })).toBeDefined();
+  await ReactTestRenderer.act(async () => {
+    app!.root.findByProps({ testID: 'check-an-address-input' }).props.onChangeText('bitcoin:1PXNDrQ1LGeGDeyJHSjrF4kBrkqCEtmMX1?amount=1');
+  });
+  expect(mockAccountAddressCheck).toHaveBeenCalledWith(
+    expect.any(String),
+    '',
+    "m/84'/0'/0'",
+    3,
+    [0],
+    0,
+    1,
+    false,
+    false,
+    'bitcoin:1PXNDrQ1LGeGDeyJHSjrF4kBrkqCEtmMX1?amount=1',
+  );
+  expect(app!.root.findByProps({ testID: 'check-an-address-status' }).props.children).toBe(
+    UPSTREAM_UI_FALLBACK_COPY.result.addressCheckMatch(
+      UPSTREAM_TEXT.keys.branchLabels.receive,
+      0,
+      "m/84'/0'/0'/0/0",
+      false,
+      1,
+    ),
+  );
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'open-first-watch-only-address-popup' }).props.onPress();
   });

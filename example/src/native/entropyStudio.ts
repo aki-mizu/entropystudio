@@ -1,7 +1,7 @@
 import {
   AccountScriptType as GeneratedAccountScriptType,
+  accountAddressCheck,
   accountPrivateMaterial,
-  Bip39PassphraseState,
   CardHashMethod,
   CardInputMethod,
   DirectCardStep as GeneratedDirectCardStep,
@@ -206,6 +206,7 @@ export const KeyDerivationVisiblePathValidationKind = {
 } as const;
 
 export {
+  accountAddressCheck,
   accountPrivateMaterial,
   CardHashMethod,
   CardInputMethod,
@@ -264,6 +265,7 @@ export {
 };
 
 export type {
+  AccountAddressCheck,
   AccountPrivateMaterial,
   Bip39PassphraseState,
   DiceMethodInfo,

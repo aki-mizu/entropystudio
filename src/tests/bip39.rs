@@ -122,6 +122,24 @@ fn account_private_material_uses_the_selected_branch_in_its_descriptors() {
 }
 
 #[test]
+fn account_address_check_matches_shown_and_further_selected_branch_addresses() {
+    let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    let material = account_private_material(phrase.to_owned(), String::new(), "m/84'/0'/0'".to_owned(), "73c5da0a".to_owned(), AccountScriptType::NativeSegwit, vec![0, 1], 0, 1, false, false).unwrap();
+    let shown = account_address_check(phrase.to_owned(), String::new(), "m/84'/0'/0'".to_owned(), AccountScriptType::NativeSegwit, vec![0, 1], 0, 1, false, false, format!("bitcoin:{}?amount=1", material.first_watch_only_address.unwrap().address.to_uppercase())).unwrap();
+    assert!(shown.is_match);
+    assert!(!shown.beyond_shown);
+    assert_eq!(shown.shown_count, 1);
+    assert_eq!(shown.index, Some(0));
+    let later = account_private_material(phrase.to_owned(), String::new(), "m/84'/0'/0'".to_owned(), "73c5da0a".to_owned(), AccountScriptType::NativeSegwit, vec![1], 2, 1, false, false).unwrap();
+    let checked = account_address_check(phrase.to_owned(), String::new(), "m/84'/0'/0'".to_owned(), AccountScriptType::NativeSegwit, vec![0, 1], 0, 1, false, false, later.first_watch_only_address.unwrap().address).unwrap();
+    assert!(checked.is_match);
+    assert!(checked.beyond_shown);
+    assert_eq!(checked.branch, Some(1));
+    assert_eq!(checked.index, Some(2));
+    assert_eq!(checked.path.as_deref(), Some("m/84'/0'/0'/1/2"));
+}
+
+#[test]
 fn mnemonic_to_master_xpub_returns_a_mainnet_watch_only_root_key() {
     let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     let xpub = mnemonic_to_master_xpub(phrase.to_owned(), String::new()).unwrap();

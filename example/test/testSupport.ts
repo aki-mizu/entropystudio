@@ -53,6 +53,16 @@ export const mockEntropyToMnemonic = jest.fn<string, [ArrayBuffer]>();
 export const mockHashedCardState = jest.fn<HashedCardState, [string, number]>();
 export const mockLifehashFromFingerprint = jest.fn<string, [string]>(() => '');
 export const mockMnemonicToEntropy = jest.fn<ArrayBuffer, [string]>();
+export const mockAccountAddressCheck = jest.fn(() => ({
+  beyondShown: false,
+  branch: 0,
+  index: 0,
+  isEmpty: false,
+  isMatch: true,
+  path: "m/84'/0'/0'/0/0",
+  searchedTo: 0,
+  shownCount: 1,
+}));
 export const mockAccountPrivateMaterial = jest.fn(() => ({
   bitcoinCoreXprv:
     'xprv9ypBANFCsoi3cKAup1JcTb8apefb337JTxyuUq3htnm1EvknF8xnN6PGpseChsZaT7pQaJCZufhpQiwbGELGWnAUghw8Z3Z4w3qv3ahvtRU',
@@ -387,6 +397,7 @@ jest.mock('entropystudio', () => ({
     AddressRange: 8,
   },
   cardTranscriptToEntropy: mockCardTranscriptToEntropy,
+  accountAddressCheck: mockAccountAddressCheck,
   accountPrivateMaterial: mockAccountPrivateMaterial,
   cardKeyAllowed: mockCardKeyAllowed,
   analyzeNumberBaseInput: mockAnalyzeNumberBaseInput,

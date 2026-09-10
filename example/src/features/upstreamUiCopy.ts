@@ -312,6 +312,10 @@ export const UPSTREAM_TEXT = {
       'Keep these exports together only in secure offline backups.',
     privateAccountMaterialWarningTail:
       "An account extended public key combined with any non-hardened descendant private key, including a WIF shown in the address tables below, can reconstruct that account's extended private key.",
+    genericDescriptorCompatibility: 'Generic {name} for descriptor compatibility',
+    multisigCosigner: 'Multisig co-signer {prefix} · {label}',
+    addressCheckSearching: 'Not in the {n} shown addresses. Checking further indices',
+    addressesWithWif: '{label} with WIF private keys',
     slip132PrefixNote: 'Prefix swap only (same payload, new version bytes and checksum). Script lives in the descriptor, not the prefix. x = legacy, y = nested BIP49, z = native BIP84, Y = nested BIP48 nested-msig, Z = native BIP48 native-msig. Testnet: t / u / v / U / V. No Taproot SLIP prefix.',
     watchOnlyAccountWarningLead: 'Cannot spend:',
     watchOnlyAccountWarningTail:
@@ -338,7 +342,6 @@ export const UPSTREAM_TEXT = {
     address: 'Address',
     path: 'Path',
     wif: 'WIF',
-    nativeSegwitBip48: 'Native SegWit · BIP48',
     watchOnlyWalletDataSafety:
       'These values identify the wallet or enable watch-only use, but do not authorize spending. Treat them as privacy-sensitive because extended public keys and descriptors can reveal wallet addresses, balances, and transaction history.',
     safetyNotes: 'Safety notes',
@@ -830,13 +833,33 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
     },
   },
   result: {
+    checkAnAddress: 'Check an address',
+    checkAnAddressPlaceholder: 'Paste bc1… or a 1… / 3… address',
+    checkAnAddressHelp:
+      'Paste an address shown by another wallet. A match means that wallet computed the same selected branch and derivation, even if the index is beyond the table above.',
+    nativeSegwitBip48: 'Native SegWit · BIP48',
     bitcoinCore: (label: string) => `Bitcoin Core ${label}`,
     genericDescriptorCompatibility: (label: string) =>
-      `Generic ${label} for descriptor compatibility`,
+      formatCopy(UPSTREAM_TEXT.result.genericDescriptorCompatibility, { name: label }),
     multisigCosigner: (prefix: string, label: string) =>
-      `Multisig co-signer ${prefix} · ${label}`,
+      formatCopy(UPSTREAM_TEXT.result.multisigCosigner, { prefix, label }),
     address: (label: string, index: number) => `${label} address #${index}`,
-    addressesWithWif: (label: string) => `${label} with WIF private keys`,
+    addressCheckMatch: (
+      label: string,
+      index: number,
+      path: string,
+      beyondShown: boolean,
+      shownCount: number,
+    ) =>
+      `${label} address #${index} of this wallet · ${path}${
+        beyondShown ? ` (beyond the ${shownCount} shown)` : ''
+      }`,
+    addressCheckSearching: (shownCount: number) =>
+      formatCopy(UPSTREAM_TEXT.result.addressCheckSearching, { n: shownCount }),
+    addressCheckMiss: (branchSummary: string, start: number, end: number) =>
+      `No match in ${branchSummary.toLowerCase()} indices ${start}–${end} of this derivation.`,
+    addressesWithWif: (label: string) =>
+      formatCopy(UPSTREAM_TEXT.result.addressesWithWif, { label }),
     watchOnlyWalletDescriptor: 'Watch-only wallet descriptor',
     masterSeedHex: 'Master seed hex',
     seedPhrase: (wordCount: number) => `Your seed phrase · ${wordCount} words`,

@@ -45,6 +45,51 @@ pub struct AccountPrivateMaterial {
     pub multisig_cosigner_xpub: Option<String>,
 }
 
+#[derive(Debug, uniffi::Record)]
+pub struct AccountAddressCheck {
+    pub is_empty: bool, pub is_match: bool, pub branch: Option<u32>, pub index: Option<u32>, pub path: Option<String>, pub beyond_shown: bool, pub shown_count: u32, pub searched_to: u32,
+}
+
+#[uniffi::export]
+pub fn account_address_check(phrase: String, passphrase: String, account_path: String, script_type: AccountScriptType, branches: Vec<u32>, address_index: u32, address_count: u32, branch_hardened: bool, address_hardened: bool, address: String) -> Result<AccountAddressCheck, EntropyStudioError> {
+    let address = normalize_address_check(address);
+    if address.is_empty() { return Ok(AccountAddressCheck { is_empty: true, is_match: false, branch: None, index: None, path: None, beyond_shown: false, shown_count: 0, searched_to: address_index }); }
+    let mut components = parse_account_path(&account_path)?;
+    let display_account_path = components.iter().map(|(index, hardened)| format!("{index}{}", if *hardened { "'" } else { "" })).collect::<Vec<_>>().join("/");
+    let mut seed = mnemonic_to_seed(phrase, passphrase);
+    let mut node = [0u8; 78];
+    if unsafe { entropylab_wasm::el_hd_master(seed.as_ptr(), seed.len(), node.as_mut_ptr()) } != 78 { wipe_bytes(&mut seed); wipe_bytes(&mut node); return Err(EntropyStudioError::InvalidMasterKey); }
+    wipe_bytes(&mut seed);
+    let testnet = components.get(1).is_some_and(|(index, _)| *index == 1);
+    let mut account_node = derive_private_path(node, &mut components)?;
+    wipe_bytes(&mut node);
+    let shown_end = address_index.checked_add(address_count).filter(|index| *index < (1 << 31)).ok_or(EntropyStudioError::InvalidMasterKey)?;
+    let search_end = shown_end.saturating_add(1000).min(1 << 31);
+    for index in address_index..search_end {
+        for branch in &branches {
+            let mut derived = derive_account_address(account_node, *branch, index, script_type, testnet, branch_hardened, address_hardened, &display_account_path)?;
+            let matches = addresses_equal(&address, &derived.address);
+            wipe_string(&mut derived.wif);
+            if matches { wipe_bytes(&mut account_node); return Ok(AccountAddressCheck { is_empty: false, is_match: true, branch: Some(*branch), index: Some(index), path: Some(derived.path), beyond_shown: index >= shown_end, shown_count: address_count, searched_to: index }); }
+        }
+    }
+    wipe_bytes(&mut account_node);
+    Ok(AccountAddressCheck { is_empty: false, is_match: false, branch: None, index: None, path: None, beyond_shown: false, shown_count: address_count, searched_to: search_end.saturating_sub(1) })
+}
+
+fn normalize_address_check(value: String) -> String {
+    let mut text = value.trim().to_owned();
+    if text.is_empty() { return text; }
+    if text.get(..8).is_some_and(|prefix| prefix.eq_ignore_ascii_case("bitcoin:")) { text = text[8..].to_owned(); }
+    if let Some(query) = text.find('?') { text.truncate(query); }
+    text = text.trim().to_owned();
+    if is_bech32_address(&text) && !(text.bytes().any(|byte| byte.is_ascii_lowercase()) && text.bytes().any(|byte| byte.is_ascii_uppercase())) { text.make_ascii_lowercase(); }
+    text
+}
+
+fn addresses_equal(left: &str, right: &str) -> bool { if is_bech32_address(left) || is_bech32_address(right) { left.eq_ignore_ascii_case(right) } else { left == right } }
+fn is_bech32_address(value: &str) -> bool { value.get(..3).is_some_and(|prefix| prefix.eq_ignore_ascii_case("bc1") || prefix.eq_ignore_ascii_case("tb1")) || value.get(..5).is_some_and(|prefix| prefix.eq_ignore_ascii_case("bcrt1")) }
+
 #[uniffi::export]
 pub fn account_private_material(phrase: String, passphrase: String, account_path: String, master_fingerprint: String, script_type: AccountScriptType, branches: Vec<u32>, address_index: u32, address_count: u32, branch_hardened: bool, address_hardened: bool) -> Result<AccountPrivateMaterial, EntropyStudioError> {
     let mut components = parse_account_path(&account_path)?;

@@ -358,6 +358,18 @@ describe('Upstream UI copy provenance', () => {
         source: upstreamAppJs,
         template: /\$\{hodlEscapeHtml\(firstLabel\)\} address #\$\{hodlAddressIndexHtml\(firstIndex\)\}/,
       },
+      'result.addressCheckMatch': {
+        source: upstreamAppJs,
+        template: /\$\{chain\} address #\$\{hit\.index\} of this wallet \\xB7 \$\{hodlDisplayDerivationPath\(hit\.path\)\}\$\{extra\}/,
+      },
+      'result.addressCheckSearching': {
+        source: upstreamAppJs,
+        template: /hodlTText\("Not in the \{n\} shown addresses\. Checking further indices", \{ n: shown \}\)/,
+      },
+      'result.addressCheckMiss': {
+        source: upstreamAppJs,
+        template: /No match in \$\{hodlAddressBranchSummary\(rows\.branches\.map\(\(branch\) => branch\.branch\)\)\.toLowerCase\(\)\} indices \$\{Number\.isFinite\(firstShown\) \? firstShown : 0\}\\u2013\$\{beyond\.searchedTo \?\? lastShown\} of this derivation\./,
+      },
       'result.addressesWithWif': {
         source: upstreamAppJs,
         template: /hodlTText\("\{label\} with WIF private keys", \{ label \}\)/,
