@@ -14,12 +14,15 @@ execFileSync('git', ['submodule', 'update', '--init', '--remote', '--checkout', 
 });
 
 const updatedRevision = currentRevision();
+const hasUncommittedUpstreamRevision = hasUncommittedRevision();
 
-if (previousRevision === updatedRevision) {
+if (previousRevision === updatedRevision && !hasUncommittedUpstreamRevision) {
   console.log(`EntropyLab is unchanged at ${updatedRevision}; skipped upstream UI copy check.`);
 } else {
   console.log(
-    previousRevision
+    previousRevision === updatedRevision
+      ? `EntropyLab remains updated at ${updatedRevision}; checking upstream UI copy until the revision is committed.`
+      : previousRevision
       ? `EntropyLab updated from ${previousRevision} to ${updatedRevision}; checking upstream UI copy.`
       : `EntropyLab initialized at ${updatedRevision}; checking upstream UI copy.`,
   );
@@ -37,6 +40,20 @@ function currentRevision() {
     }).trim();
   } catch {
     return undefined;
+  }
+}
+
+function hasUncommittedRevision() {
+  try {
+    execFileSync('git', ['diff', '--quiet', '--ignore-submodules=dirty', 'HEAD', '--', 'entropylab'], {
+      cwd: root,
+    });
+    return false;
+  } catch (error) {
+    if (error.status === 1) {
+      return true;
+    }
+    throw error;
   }
 }
 
