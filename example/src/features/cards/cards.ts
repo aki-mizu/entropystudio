@@ -302,17 +302,23 @@ export function directCardProgressCopy(
   const entered = state.enteredDraws;
   const needed = state.requiredDraws;
   if (state.complete) {
-    return UPSTREAM_UI_FALLBACK_COPY.cards.directComplete(entered, needed, wordCount);
+    return formatCopy(UPSTREAM_TEXT.cards.meta.directComplete, { n: entered, words: wordCount });
   }
   if (state.extraCount > 0) {
-    return state.extraCount === 1
-      ? UPSTREAM_UI_FALLBACK_COPY.cards.extraCard(state.extraCount)
-      : UPSTREAM_UI_FALLBACK_COPY.cards.extraCards(state.extraCount);
+    return formatCopy(
+      state.extraCount === 1
+        ? UPSTREAM_TEXT.cards.meta.extraCard
+        : UPSTREAM_TEXT.cards.meta.extraCards,
+      { n: state.extraCount },
+    );
   }
   if (state.invalidCount > 0) {
-    return state.invalidCount === 1
-      ? UPSTREAM_UI_FALLBACK_COPY.cards.invalidRank(state.invalidCount)
-      : UPSTREAM_UI_FALLBACK_COPY.cards.invalidRanks(state.invalidCount);
+    return formatCopy(
+      state.invalidCount === 1
+        ? UPSTREAM_TEXT.cards.meta.invalidRank
+        : UPSTREAM_TEXT.cards.meta.invalidRanks,
+      { n: state.invalidCount },
+    );
   }
 
   const set = directRankSet(state.activeMax);
@@ -336,7 +342,7 @@ export function directCardProgressCopy(
             set,
           })
         : UPSTREAM_UI_FALLBACK_COPY.cards.checksumError;
-  return UPSTREAM_UI_FALLBACK_COPY.cards.directProgress(entered, needed, step);
+  return `${entered} of ${needed} rank draws entered · ${step}`;
 }
 
 export function cardInstruction(
