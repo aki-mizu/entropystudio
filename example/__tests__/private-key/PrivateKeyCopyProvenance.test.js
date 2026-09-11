@@ -97,34 +97,14 @@ describe('Upstream UI copy provenance', () => {
         source: upstreamAppJs,
         template: /deal \$\{needed\.first\} unique cards without putting them back/,
       },
-      'cards.directComplete': {
-        source: upstreamAppJs,
-        template:
-          /\$\{parsed\.entries\.length\} of \$\{parsed\.steps\.length\} rank draws entered \\xB7 checksum-valid \$\{parsed\.config\.words\}-word seed ready to derive/,
-      },
       'cards.directHelp': {
         source: upstreamAppJs,
         template:
           /For each of the first \$\{config\.partialWords\} words, shuffle and draw from A\\u20138 three times, then A\\u20134 once\./,
       },
-      'cards.directProgress': {
-        source: upstreamAppJs,
-        template:
-          /\$\{parsed\.entries\.length\} of \$\{parsed\.steps\.length\} rank draws entered \\xB7 \$\{hodlDirectCardStepStatus\(parsed\)\}/,
-      },
       'cards.duplicateError': {
         source: upstreamAppJs,
         template: /Do not repeat a card in the same shuffle\. Repeated: \{card\}\./,
-      },
-      'cards.extraCard': {
-        source: upstreamAppJs,
-        template:
-          /\$\{parsed\.extraEntries\.length\} extra card\$\{parsed\.extraEntries\.length === 1 \? "" : "s"\} highlighted/,
-      },
-      'cards.extraCards': {
-        source: upstreamAppJs,
-        template:
-          /\$\{parsed\.extraEntries\.length\} extra card\$\{parsed\.extraEntries\.length === 1 \? "" : "s"\} highlighted/,
       },
       'cards.formatError': {
         source: upstreamAppJs,
@@ -136,25 +116,6 @@ describe('Upstream UI copy provenance', () => {
           template:
             /Each valid card updates a deterministic test seed\. For real security, \$\{config\.words === 24 \? "deal all 52 unique cards, shuffle again, then deal 6 more" : `deal \$\{needed\.first\} unique cards without putting them back`\}\. SHA-256 hashes the ASCII transcript \(As 2c Td\)\./,
         },
-      'cards.invalidRank': {
-        source: upstreamAppJs,
-        template:
-          /\$\{parsed\.invalidEntries\.length\} invalid rank\$\{parsed\.invalidEntries\.length === 1 \? "" : "s"\} highlighted/,
-      },
-      'cards.invalidRanks': {
-        source: upstreamAppJs,
-        template:
-          /\$\{parsed\.invalidEntries\.length\} invalid rank\$\{parsed\.invalidEntries\.length === 1 \? "" : "s"\} highlighted/,
-      },
-      'dice.d8d16.groups': {
-        source: upstreamAppJs,
-        template:
-          /Group \$\{result\.completedGroups\} of \$\{config\.partialWords\} \\xB7 word \$\{result\.activeGroupIndex\+1\}/,
-      },
-      'dice.d8d16.rollsComplete': {
-        source: upstreamAppJs,
-        template: /\$\{config\.partialWords\} of \$\{config\.partialWords\} word rolls complete/,
-      },
       'dice.errors.invalidFaces': {
         source: upstreamAppJs,
         template: /Dice must be faces 1(?:\\u2013|–)6\. Ignored characters: \{chars\}/,

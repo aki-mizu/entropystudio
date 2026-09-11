@@ -309,7 +309,7 @@ export const UPSTREAM_TEXT = {
     wordsEnteredOne: '{n} lowercase BIP39 passphrase word entered',
     wordsEnteredMany: '{n} lowercase BIP39 passphrase words entered',
     wordsHelp: 'Use complete lowercase English BIP39 words separated by single spaces.',
-    wordsNote: '(lowercase words separated by single spaces)',
+    wordsNote: 'lowercase words separated by single spaces',
   },
   result: {
     privateAccountMaterial: 'Private account material',
@@ -623,15 +623,11 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
     word: (number: number) => `Word ${number}`,
   },
   cards: {
-    colemanNote: '(show and hash A♠ 2♣ instead of As 2c)',
+    colemanNote: 'show and hash A♠ 2♣ instead of As 2c',
     deal24: 'deal all 52 unique cards, shuffle again, then deal 6 more',
     dealN: (needed: number) => `deal ${needed} unique cards without putting them back`,
-    directComplete: (entered: number, needed: number, wordCount: number) =>
-      `${entered} of ${needed} rank draws entered · checksum-valid ${wordCount}-word seed ready to derive`,
     directHelp: (partialWords: number) =>
       `For each of the first ${partialWords} words, shuffle and draw from A–8 three times, then A–4 once. Each four-character group selects one word; spaces separate the groups. The shorter final group supplies the remaining entropy bits, and EntropyLab calculates the BIP39 checksum bits.`,
-    directProgress: (entered: number, needed: number, step: string) =>
-      `${entered} of ${needed} rank draws entered · ${step}`,
     directTranscript: 'Rank-only draw transcript',
     duplicateError: (card: string) =>
       `Do not repeat a card in the same shuffle. Repeated: ${card}.`,
@@ -640,10 +636,6 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
       `Cards use rank then suit, like AS, 10H, or TD. Ignored: ${ignored}`,
     hashedInputHelp: (deal: string) =>
       `Each valid card updates a deterministic test seed. For real security, ${deal}. SHA-256 hashes the ASCII transcript (As 2c Td).`,
-    invalidRank: (count: number) => `${count} invalid rank highlighted`,
-    invalidRanks: (count: number) => `${count} invalid ranks highlighted`,
-    extraCard: (count: number) => `${count} extra card highlighted`,
-    extraCards: (count: number) => `${count} extra cards highlighted`,
     checksumError: 'The direct card sequence did not produce a valid BIP39 checksum.',
     placeholders: {
       direct: 'A284 37A2 …',
@@ -658,12 +650,6 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
     },
   },
   dice: {
-    d8d16: {
-      groups: (completedGroups: number, partialWords: number, activeWord: number) =>
-        `Group ${completedGroups} of ${partialWords} · word ${activeWord}`,
-      rollsComplete: (partialWords: number) =>
-        `${partialWords} of ${partialWords} word rolls complete`,
-    },
     errors: {
       empty: 'Enter at least one dice roll (faces 1–6).',
       invalidFaces: (characters: string) =>
