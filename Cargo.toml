@@ -12,10 +12,12 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 [dependencies]
 base64 = "=0.22.1"
 bc-lifehash = "0.1.0"
+bitcoin = "=0.32.11"
 entropylab-wasm = { path = "entropylab/entropylab-wasm" }
 vanity-wasm = { path = "entropylab/vanity-wasm" }
 hex = "=0.4.3"
 miniscript = { version = "=13.1.0", default-features = false, features = ["std"] }
+num-bigint = "=0.4.6"
 png = "=0.17.16"
 uniffi = "=0.31.2"
 unicode-normalization = "=0.1.24"

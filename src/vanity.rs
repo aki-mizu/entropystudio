@@ -9,6 +9,12 @@
 
 use crate::error::EntropyStudioError;
 use crate::wipe::{wipe_bytes, wipe_string};
+use bitcoin::bech32::{Bech32m, ByteIterExt, Fe32, Fe32IterExt, Hrp};
+use bitcoin::{
+    hashes::Hash, Address, KnownHrp, Network, PubkeyHash, ScriptBuf, WPubkeyHash, WitnessProgram,
+    WitnessVersion,
+};
+use num_bigint::BigUint;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
@@ -1302,7 +1308,7 @@ fn expected_candidates(prefix: &str, script: VanityScript) -> String {
     if free == 0 {
         return "1".to_owned();
     }
-    let mut value = Decimal::from_u32(if metadata.first_variable_characters.is_empty() {
+    let value = BigUint::from(if metadata.first_variable_characters.is_empty() {
         1
     } else {
         metadata.first_variable_characters.len() as u32
@@ -1312,55 +1318,9 @@ fn expected_candidates(prefix: &str, script: VanityScript) -> String {
     } else {
         free.saturating_sub(1)
     };
-    let factor = if metadata.bech32 { 32 } else { 58 };
-    for _ in 0..exponent {
-        value.multiply(factor);
-    }
+    let factor: u32 = if metadata.bech32 { 32 } else { 58 };
+    let value = value * BigUint::from(factor).pow(exponent as u32);
     value.to_string()
-}
-
-/// A tiny unsigned decimal implementation avoids a new arbitrary-precision
-/// dependency solely for UI estimate text (a 116-character prefix exceeds
-/// primitive integer widths by a large margin).
-struct Decimal {
-    digits: Vec<u32>,
-}
-
-impl Decimal {
-    const BASE: u64 = 1_000_000_000;
-
-    fn from_u32(value: u32) -> Self {
-        Self {
-            digits: vec![value],
-        }
-    }
-
-    fn multiply(&mut self, factor: u32) {
-        let mut carry = 0u64;
-        for digit in &mut self.digits {
-            let product = u64::from(*digit) * u64::from(factor) + carry;
-            *digit = (product % Self::BASE) as u32;
-            carry = product / Self::BASE;
-        }
-        while carry > 0 {
-            self.digits.push((carry % Self::BASE) as u32);
-            carry /= Self::BASE;
-        }
-    }
-}
-
-impl std::fmt::Display for Decimal {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut digits = self.digits.iter().rev();
-        let Some(first) = digits.next() else {
-            return formatter.write_str("0");
-        };
-        write!(formatter, "{first}")?;
-        for digit in digits {
-            write!(formatter, "{digit:09}")?;
-        }
-        Ok(())
-    }
 }
 
 fn seed_from_normalized(
@@ -1703,139 +1663,54 @@ fn address_from_upstream_payload(
     payload: &[u8],
 ) -> Result<String, EntropyStudioError> {
     match script {
-        VanityScript::P2pkh => address_from_script(&p2pkh_script(payload)?),
-        VanityScript::P2shP2wpkh => address_from_script(&p2sh_p2wpkh_script(payload)?),
-        VanityScript::P2wpkh => address_from_script(&p2wpkh_script(payload)?),
-        VanityScript::P2tr => address_from_script(&p2tr_script(payload)?),
+        VanityScript::P2pkh => {
+            let hash = PubkeyHash::from_byte_array(payload_prefix(payload)?);
+            Ok(Address::p2pkh(hash, Network::Bitcoin).to_string())
+        }
+        VanityScript::P2shP2wpkh => {
+            let hash = WPubkeyHash::from_byte_array(payload_prefix(payload)?);
+            let redeem = ScriptBuf::new_p2wpkh(&hash);
+            Address::p2sh(redeem.as_script(), Network::Bitcoin)
+                .map(|address| address.to_string())
+                .map_err(|_| EntropyStudioError::InvalidMasterKey)
+        }
+        VanityScript::P2wpkh => {
+            let hash = WPubkeyHash::from_byte_array(payload_prefix(payload)?);
+            address_from_script(&ScriptBuf::new_p2wpkh(&hash))
+        }
+        VanityScript::P2tr => {
+            let program = WitnessProgram::new(WitnessVersion::V1, &payload_prefix::<32>(payload)?)
+                .map_err(|_| EntropyStudioError::InvalidMasterKey)?;
+            Ok(Address::from_witness_program(program, KnownHrp::Mainnet).to_string())
+        }
         VanityScript::SilentPayments => silent_payment_address_from_payload(payload),
     }
 }
 
-fn p2pkh_script(payload: &[u8]) -> Result<[u8; 25], EntropyStudioError> {
-    let hash = payload
-        .get(..20)
-        .ok_or(EntropyStudioError::InvalidMasterKey)?;
-    let mut script = [0u8; 25];
-    script[..3].copy_from_slice(&[0x76, 0xa9, 0x14]);
-    script[3..23].copy_from_slice(hash);
-    script[23..].copy_from_slice(&[0x88, 0xac]);
-    Ok(script)
+fn payload_prefix<const N: usize>(payload: &[u8]) -> Result<[u8; N], EntropyStudioError> {
+    payload
+        .get(..N)
+        .and_then(|bytes| bytes.try_into().ok())
+        .ok_or(EntropyStudioError::InvalidMasterKey)
 }
 
-fn p2sh_p2wpkh_script(payload: &[u8]) -> Result<[u8; 23], EntropyStudioError> {
-    let pubkey_hash = payload
-        .get(..20)
-        .ok_or(EntropyStudioError::InvalidMasterKey)?;
-    let mut redeem = [0u8; 22];
-    redeem[..2].copy_from_slice(&[0, 20]);
-    redeem[2..].copy_from_slice(pubkey_hash);
-    let mut script_hash = [0u8; 20];
-    let status = unsafe {
-        entropylab_wasm::el_hash160(redeem.as_ptr(), redeem.len(), script_hash.as_mut_ptr())
-    };
-    wipe_bytes(&mut redeem);
-    if status != 20 {
-        wipe_bytes(&mut script_hash);
-        return Err(EntropyStudioError::InvalidMasterKey);
-    }
-    let mut script = [0u8; 23];
-    script[..2].copy_from_slice(&[0xa9, 0x14]);
-    script[2..22].copy_from_slice(&script_hash);
-    script[22] = 0x87;
-    wipe_bytes(&mut script_hash);
-    Ok(script)
-}
-
-fn p2wpkh_script(payload: &[u8]) -> Result<[u8; 22], EntropyStudioError> {
-    let hash = payload
-        .get(..20)
-        .ok_or(EntropyStudioError::InvalidMasterKey)?;
-    let mut script = [0u8; 22];
-    script[..2].copy_from_slice(&[0, 20]);
-    script[2..].copy_from_slice(hash);
-    Ok(script)
-}
-
-fn p2tr_script(payload: &[u8]) -> Result<[u8; 34], EntropyStudioError> {
-    let key = payload
-        .get(..32)
-        .ok_or(EntropyStudioError::InvalidMasterKey)?;
-    let mut script = [0u8; 34];
-    script[..2].copy_from_slice(&[0x51, 0x20]);
-    script[2..].copy_from_slice(key);
-    Ok(script)
-}
-
-fn address_from_script(script: &[u8]) -> Result<String, EntropyStudioError> {
-    let mut address = [0u8; 128];
-    let length = unsafe {
-        entropylab_wasm::el_addr_from_script(
-            script.as_ptr(),
-            script.len(),
-            0,
-            address.as_mut_ptr(),
-            address.len(),
-        )
-    };
-    let result = if length > 0 && (length as usize) <= address.len() {
-        std::str::from_utf8(&address[..length as usize])
-            .map(str::to_owned)
-            .map_err(|_| EntropyStudioError::InvalidMasterKey)
-    } else {
-        Err(EntropyStudioError::InvalidMasterKey)
-    };
-    wipe_bytes(&mut address);
-    result
+fn address_from_script(script: &ScriptBuf) -> Result<String, EntropyStudioError> {
+    Address::from_script(script.as_script(), Network::Bitcoin)
+        .map(|address| address.to_string())
+        .map_err(|_| EntropyStudioError::InvalidMasterKey)
 }
 
 fn silent_payment_address_from_payload(payload: &[u8]) -> Result<String, EntropyStudioError> {
     let payload = payload
         .get(..UPSTREAM_GRIND_PAYLOAD_BYTES)
         .ok_or(EntropyStudioError::InvalidMasterKey)?;
-    let mut words = [0u8; 107];
-    let mut encoded = [0u8; 128];
-    let word_count = bytes_to_bech32_words(payload, &mut words);
-    let length = unsafe {
-        entropylab_wasm::el_bech32m_encode(
-            b"sp".as_ptr(),
-            2,
-            words.as_ptr(),
-            word_count,
-            encoded.as_mut_ptr(),
-            encoded.len(),
-        )
-    };
-    wipe_bytes(&mut words);
-    let result = if length > 0 && (length as usize) <= encoded.len() {
-        std::str::from_utf8(&encoded[..length as usize])
-            .map(str::to_owned)
-            .map_err(|_| EntropyStudioError::InvalidMasterKey)
-    } else {
-        Err(EntropyStudioError::InvalidMasterKey)
-    };
-    wipe_bytes(&mut encoded);
-    result
-}
-
-/// Writes BIP173 convertbits output with a leading witness/version word zero,
-/// matching upstream's `[0, ...toWords(scan || spend)]` BIP-352 encoding.
-fn bytes_to_bech32_words(bytes: &[u8], output: &mut [u8; 107]) -> usize {
-    output[0] = 0;
-    let mut written = 1usize;
-    let mut accumulator = 0u16;
-    let mut bits = 0u8;
-    for byte in bytes {
-        accumulator = (accumulator << 8) | u16::from(*byte);
-        bits += 8;
-        while bits >= 5 {
-            bits -= 5;
-            output[written] = ((accumulator >> bits) & 31) as u8;
-            written += 1;
-        }
-    }
-    if bits > 0 {
-        output[written] = ((accumulator << (5 - bits)) & 31) as u8;
-        written += 1;
-    }
-    written
+    let hrp = Hrp::parse("sp").map_err(|_| EntropyStudioError::InvalidMasterKey)?;
+    Ok(payload
+        .iter()
+        .copied()
+        .bytes_to_fes()
+        .with_checksum::<Bech32m>(&hrp)
+        .with_witness_version(Fe32::Q)
+        .chars()
+        .collect())
 }
