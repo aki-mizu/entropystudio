@@ -10,7 +10,7 @@ type Props = {
 export function KeyStationIntroduction({ colors }: Props) {
   return (
     <View style={styles.container} testID="key-station-introduction">
-      <Text style={[styles.title, { color: colors.text }]}>
+      <Text style={[styles.title, { color: colors.accent }]}>
         {UPSTREAM_TEXT.keys.stationIntroduction.title}
       </Text>
       <Text style={[styles.heading, { color: colors.text }]}>
