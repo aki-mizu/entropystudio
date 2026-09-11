@@ -265,6 +265,12 @@ export const UPSTREAM_TEXT = {
       'First receive and change index to derive · Unhardened · 0 to 2,147,483,647',
     addressBranchRangeReceiveAndChangeHelp: 'Derives Receive and Change branches · Max 2',
     station: 'Key Station',
+    stationIntroduction: {
+      description:
+        'Turn entropy you bring — dice rolls, playing cards, a number in any base, a seed phrase, or a private key — into a BIP-39 seed, then derive its master fingerprint, extended public keys, and receive addresses. The dice methods match COLDCARD, SeedSigner, Keystone, and BitBox, so the same rolls reproduce the same seed on those signers. This does not invent entropy — it is a calculator, and nothing leaves this page.',
+      heading: 'Create. Derive. Verify.',
+      title: 'Your entropy enters the lab',
+    },
     tabLabel: 'Keys',
   },
   mode: {

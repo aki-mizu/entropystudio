@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
+import { KeyStationIntroduction } from '../components/KeyStationIntroduction';
 import { DirectDiceFinalWordPicker } from '../features/dice/components/DirectDiceFinalWordPicker';
 import { DiceGrid } from '../features/dice/components/DiceGrid';
 import { DiceWordList, DirectDicePreview } from '../features/dice/components/DirectDicePreview';
@@ -305,21 +306,7 @@ export function DiceRollsScreen({
     >
       {activeView === 'setup' ? (
         <View style={styles.setupContent} testID="dice-setup-view">
-          <View style={styles.header}>
-            <View style={styles.headerCopy}>
-              <Text style={[styles.title, { color: colors.text }]} testID="dice-screen-title">
-                {copy.mode}
-              </Text>
-              <Text
-                numberOfLines={1}
-                style={[styles.subtitle, { color: colors.muted }]}
-                testID="dice-screen-how"
-              >
-                {copy.how}
-              </Text>
-            </View>
-          </View>
-
+          <KeyStationIntroduction colors={colors} />
           <EntropyMethodList
             activeTool={activeTool}
             colors={colors}
@@ -328,6 +315,13 @@ export function DiceRollsScreen({
           />
 
           <View style={styles.setupSettings} testID="dice-setup-settings">
+            <Text
+              numberOfLines={1}
+              style={[styles.subtitle, styles.optionsHeading, { color: colors.muted }]}
+              testID="dice-screen-how"
+            >
+              {copy.how}
+            </Text>
             <DiceMethodSelector
               copies={{
                 bitbox: bitboxCopy,
@@ -706,7 +700,10 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   setupSettings: {
-    marginTop: 16,
+    marginTop: 8,
+  },
+  optionsHeading: {
+    marginBottom: 8,
   },
   startButton: {
     alignItems: 'center',

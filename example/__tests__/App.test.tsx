@@ -173,6 +173,19 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
   expect(appTabBar(app!).props.navigationState.routes[2].title).toBe(
     STUDIO_UI_TEXT.navigation.settings,
   );
+  const stationIntroductions = app!.root.findAllByProps({ testID: 'key-station-introduction' });
+  expect(stationIntroductions.length).toBeGreaterThan(0);
+  stationIntroductions.forEach(stationIntroduction => {
+    expect(stationIntroduction.props.children[0].props.children).toBe(
+      UPSTREAM_TEXT.keys.stationIntroduction.title,
+    );
+    expect(stationIntroduction.props.children[1].props.children).toBe(
+      UPSTREAM_TEXT.keys.stationIntroduction.heading,
+    );
+    expect(stationIntroduction.props.children[2].props.children).toBe(
+      UPSTREAM_TEXT.keys.stationIntroduction.description,
+    );
+  });
   const diceMethodList = activeMethodList(app!);
   expect(diceMethodList.findByProps({ testID: 'key-method-label' }).props.children).toBe(
     UPSTREAM_TEXT.keys.methodLabel,
@@ -184,7 +197,6 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
 
   await selectDiceMethod(app!, 'dice-method-coleman');
   await selectEntropyTool(app!, 'cards');
-  expect(app!.root.findByProps({ testID: 'cards-screen-title' })).toBeDefined();
   expect(app!.root.findByProps({ testID: 'cards-setup-view' })).toBeDefined();
   expectStartAction(app!, 'open-cards-entry');
   expect(app!.root.findAllByProps({ testID: 'cards-entry-view' })).toHaveLength(0);

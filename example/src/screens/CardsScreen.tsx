@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
+import { KeyStationIntroduction } from '../components/KeyStationIntroduction';
 import {
   CARD_METHODS,
   CARD_RANKS,
@@ -357,11 +358,9 @@ export function CardsScreen({
     >
       {activeView === 'setup' ? (
         <View style={styles.setupContent} testID="cards-setup-view">
+        <KeyStationIntroduction colors={colors} />
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <Text style={[styles.title, { color: colors.text }]} testID="cards-screen-title">
-              {copy.mode}
-            </Text>
             <Text style={[styles.subtitle, { color: colors.muted }]} testID="cards-screen-how">
               {copy.how}
             </Text>

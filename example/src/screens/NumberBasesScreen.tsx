@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackspaceIconButton } from '../components/BackspaceKey';
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
+import { KeyStationIntroduction } from '../components/KeyStationIntroduction';
 import { entropyToMnemonic, mnemonicToSeed } from '../native/entropyStudio';
 import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import { NumberBaseCalculationsScreen } from './CalculationsScreen';
@@ -408,14 +409,7 @@ export function NumberBasesScreen({
     >
       {activeView === 'setup' ? (
         <View style={styles.setupContent} testID="number-bases-setup-view">
-          <View style={styles.header}>
-            <View style={styles.headerCopy}>
-              <Text style={[styles.title, { color: colors.text }]} testID="number-bases-screen-title">
-                {UPSTREAM_UI_LABELS.keyMode.hex}
-              </Text>
-            </View>
-          </View>
-
+          <KeyStationIntroduction colors={colors} />
           <EntropyMethodList
             activeTool={activeTool}
             colors={colors}

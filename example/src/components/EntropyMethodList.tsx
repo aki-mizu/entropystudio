@@ -52,7 +52,7 @@ export function EntropyMethodList({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 16,
+    marginTop: 8,
   },
   label: {
     fontSize: 12,

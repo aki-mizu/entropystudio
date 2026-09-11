@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
+import { KeyStationIntroduction } from '../components/KeyStationIntroduction';
 import { DiceWordList } from '../features/dice/components/DirectDicePreview';
 import type { WordCount } from '../features/dice/dice';
 import { diceColors } from '../features/dice/diceTheme';
@@ -375,11 +376,9 @@ export function SeedPhraseScreen({
     >
       {activeView === 'setup' ? (
         <View style={styles.setupContent} testID="seed-phrase-setup-view">
+          <KeyStationIntroduction colors={colors} />
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text style={[styles.title, { color: colors.text }]} testID="seed-phrase-screen-title">
-                {UPSTREAM_UI_LABELS.keyMode.seed}
-              </Text>
               <Text style={[styles.subtitle, { color: colors.muted }]}>
                 {SEED_METHOD_COPY[seedMethod].description}
               </Text>

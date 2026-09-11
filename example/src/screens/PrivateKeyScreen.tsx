@@ -11,6 +11,7 @@ import type { TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EntropyMethodList } from '../components/EntropyMethodList';
 import type { EntropyTool } from '../components/EntropyMethodList';
+import { KeyStationIntroduction } from '../components/KeyStationIntroduction';
 import { NativeSheet } from '../features/dice/components/NativeSheet';
 import { diceColors } from '../features/dice/diceTheme';
 import {
@@ -428,11 +429,9 @@ export function PrivateKeyScreen({
     >
       {activeView === 'setup' ? (
         <View style={styles.setupContent} testID="private-key-setup-view">
+          <KeyStationIntroduction colors={colors} />
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text style={[styles.title, { color: colors.text }]} testID="private-key-screen-title">
-                {UPSTREAM_TEXT.mode.key}
-              </Text>
               <Text style={[styles.subtitle, { color: colors.muted }]}>
                 {UPSTREAM_TEXT.key.inputHelp}
               </Text>
