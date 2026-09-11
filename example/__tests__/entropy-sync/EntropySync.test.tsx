@@ -68,8 +68,8 @@ test('starts entropy synchronization disabled', async () => {
   ).toHaveLength(0);
   await selectAppTab(app!, 'settings');
 
-  expect(appTabBar(app!).props.navigationState.index).toBe(1);
-  expect(appTabBar(app!).props.navigationState.routes[1].title).toBe(
+  expect(appTabBar(app!).props.navigationState.index).toBe(2);
+  expect(appTabBar(app!).props.navigationState.routes[2].title).toBe(
     STUDIO_UI_TEXT.navigation.settings,
   );
   expect(app!.root.findByProps({ testID: 'dice-screen-safe-area' }).props.pointerEvents).toBe(

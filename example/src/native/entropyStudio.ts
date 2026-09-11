@@ -22,6 +22,10 @@ import {
   PrivateKeyInputStatus as GeneratedPrivateKeyInputStatus,
   SeedPhraseInputMethod as GeneratedSeedPhraseInputMethod,
   SeedPhraseStatus as GeneratedSeedPhraseStatus,
+  VanityMethod as GeneratedVanityMethod,
+  VanityRun,
+  VanityScript as GeneratedVanityScript,
+  VanityValidationKind as GeneratedVanityValidationKind,
   analyzeNumberBaseInput,
   bip39EntropyBits,
   bip39PassphraseAutocomplete,
@@ -70,6 +74,8 @@ import {
   seedQrData,
   synchronizeEntropy,
   translateSeedNumberIndices,
+  vanityFilterPrefix,
+  vanityInputState,
 } from 'entropystudio';
 
 export const DirectDiceMethod = {
@@ -141,6 +147,15 @@ export const SeedPhraseStatus = {
   InvalidNumber: GeneratedSeedPhraseStatus.InvalidNumber,
   ChecksumInvalid: GeneratedSeedPhraseStatus.ChecksumInvalid,
 } as const;
+
+export const VanityMethod = GeneratedVanityMethod;
+export type VanityMethod = GeneratedVanityMethod;
+
+export const VanityScript = GeneratedVanityScript;
+export type VanityScript = GeneratedVanityScript;
+
+export const VanityValidationKind = GeneratedVanityValidationKind;
+export type VanityValidationKind = GeneratedVanityValidationKind;
 
 export const DirectCardStep = {
   Word: GeneratedDirectCardStep.Word,
@@ -262,6 +277,9 @@ export {
   seedQrData,
   synchronizeEntropy,
   translateSeedNumberIndices,
+  VanityRun,
+  vanityFilterPrefix,
+  vanityInputState,
 };
 
 export type {
@@ -294,4 +312,8 @@ export type {
   SeedPhraseAutocompleteResult,
   SeedQrData,
   SeedPhraseState,
+  VanityChunk,
+  VanityInputState,
+  VanityMatch,
+  VanityRunInput,
 } from 'entropystudio';

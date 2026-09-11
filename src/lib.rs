@@ -11,6 +11,7 @@ mod lifehash;
 mod number_bases;
 mod private_key;
 mod seed_phrase;
+mod vanity;
 mod wipe;
 
 pub use bip39::{
@@ -61,6 +62,10 @@ pub use seed_phrase::{
 	seed_phrase_numbers_to_words, seed_phrase_space_allowed, seed_phrase_state,
 	seed_phrase_words_to_numbers, translate_seed_number_indices, Bip39PassphraseState,
 	SeedPhraseAutocompleteResult, SeedPhraseInputMethod, SeedPhraseState, SeedPhraseStatus,
+};
+pub use vanity::{
+    vanity_filter_prefix, vanity_input_state, VanityChunk, VanityInputState, VanityMatch,
+    VanityMethod, VanityRun, VanityRunInput, VanityScript, VanityValidationKind,
 };
 
 #[cfg(test)]

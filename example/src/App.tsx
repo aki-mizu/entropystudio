@@ -25,6 +25,7 @@ import {
   keyDerivationAdvancedState,
   keyDerivationProjectAdvancedPath,
   keyDerivationVisiblePathState,
+  mnemonicToSeed,
 } from './native/entropyStudio';
 import { STUDIO_UI_TEXT } from './features/studioUiCopy';
 import { UPSTREAM_TEXT } from './features/upstreamUiCopy';
@@ -41,6 +42,7 @@ import { PrivateKeyScreen } from './screens/PrivateKeyScreen';
 import { EntropySyncSettingsScreen } from './screens/EntropySyncSettingsScreen';
 import { KeyStationResultScreen } from './screens/KeyStationResultScreen';
 import { SeedPhraseScreen } from './screens/SeedPhraseScreen';
+import { VanityScreen } from './screens/VanityScreen';
 
 function pathComponentDraft({ index, hardened }: KeyDerivationPathComponent): string {
   return `${index}${hardened ? "'" : ''}`;
@@ -145,7 +147,27 @@ function projectAdvancedSettings(
   };
 }
 
-type AppTab = 'method' | 'settings';
+function arrayBufferToHex(value: ArrayBuffer): string {
+  return Array.from(new Uint8Array(value), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * The original Key Station input is the durable source of a BIP39
+ * passphrase. A brain-wallet HD result has no such input field, so its
+ * derivation-only Vanity mode must not apply a passphrase result.
+ */
+function inputWithVanityPassphrase(
+  input: KeyStationInput,
+  passphrase: string,
+): KeyStationInput | null {
+  if (input.kind === 'private-key') {
+    return null;
+  }
+
+  return { ...input, passphrase };
+}
+
+type AppTab = 'method' | 'vanity' | 'settings';
 
 type AppTabRoute = {
   readonly focusedIcon?: AppleIcon;
@@ -160,6 +182,12 @@ const APP_TAB_ROUTES: AppTabRoute[] = [
     key: 'method',
     testID: 'app-tab-method',
     title: UPSTREAM_TEXT.keys.tabLabel,
+  },
+  {
+    focusedIcon: Platform.OS === 'ios' ? { sfSymbol: 'sparkles' } : undefined,
+    key: 'vanity',
+    testID: 'app-tab-vanity',
+    title: UPSTREAM_TEXT.vanity.tabLabel,
   },
   {
     focusedIcon: Platform.OS === 'ios' ? { sfSymbol: 'gearshape.fill' } : undefined,
@@ -302,6 +330,122 @@ function App() {
     setActiveKeyStationTabId(remainingTabs[Math.min(deletedIndex, remainingTabs.length - 1)]?.id ?? null);
   }
 
+  function selectKeyStationTab(id: number) {
+    // A tab selection explicitly leaves input editing. Without clearing the
+    // pending edit, a later derive would silently replace that old tab even
+    // though the user returned to it first.
+    setEditInputRequest(null);
+    setActiveKeyStationTabId(id);
+  }
+
+  /**
+   * A passphrase match changes the BIP39 seed, so rebuild the entire result
+   * through the same Key Station factory used for an edited input. Keeping
+   * the stable tab id and number means the Vanity result remains attached to
+   * its original tab even though its fingerprint changes.
+   */
+  function applyVanityPassphrase(
+    expectedSource: KeyStationTab,
+    passphrase: string,
+  ): string | null {
+    const source = keyStationTabs.find(tab => tab.id === expectedSource.id);
+    // Key Station retains tab IDs when a tab is edited or updated. Accept a
+    // Vanity result only when it still refers to this exact snapshot, so a
+    // stale match cannot alter replacement seed material or path settings.
+    if (
+      !source ||
+      source !== expectedSource ||
+      source.derivation.kind !== 'bip39'
+    ) {
+      return null;
+    }
+
+    const input = inputWithVanityPassphrase(source.input, passphrase);
+    if (!input) {
+      return null;
+    }
+
+    try {
+      const replacement = createKeyStationTab(
+        {
+          ...source.derivation,
+          masterSeed: arrayBufferToHex(mnemonicToSeed(source.derivation.mnemonic, passphrase)),
+          passphrase,
+        },
+        source.id,
+        source.number,
+        {
+          derivationSettings: source.derivationSettings,
+          input,
+          method: source.method,
+          scriptType: source.scriptType,
+        },
+      );
+      const updated = {
+        ...replacement,
+        // Result-policy selection is independent from the source preset.
+        resultScriptType: source.resultScriptType,
+        // Studio does not currently expose custom names, but retain one if a
+        // persisted tab supplies it rather than replacing it with a new
+        // fingerprint-derived label.
+        name: source.name === source.masterFingerprint ? replacement.name : source.name,
+      };
+
+      setKeyStationTabs(tabs =>
+        tabs.map(tab => (tab === expectedSource ? updated : tab)),
+      );
+      return updated.name;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * A derivation match keeps the seed untouched. Project the winning account
+   * through Rust so the retained account path, visible path, draft and
+   * hardening control all remain one coherent Key Station setting.
+   */
+  function applyVanityAccount(
+    expectedSource: KeyStationTab,
+    accountIndex: number,
+    accountHardened: boolean,
+  ): string | null {
+    const source = keyStationTabs.find(tab => tab.id === expectedSource.id);
+    if (
+      !source ||
+      source !== expectedSource ||
+      source.derivation.kind !== 'bip39'
+    ) {
+      return null;
+    }
+
+    const derivationSettings = projectAdvancedSettings(
+      source.derivationSettings,
+      {
+        ...source.derivationSettings.advancedInput,
+        account: `${accountIndex}${accountHardened ? "'" : ''}`,
+      },
+      {
+        ...source.derivationSettings.advancedHardening,
+        account: accountHardened,
+      },
+    );
+
+    if (!derivationSettings.accountPath) {
+      return null;
+    }
+
+    const updated: KeyStationTab = {
+      ...source,
+      derivationPath: derivationSettings.visiblePath,
+      derivationSettings,
+    };
+    setKeyStationTabs(tabs =>
+      tabs.map(tab => (tab === expectedSource ? updated : tab)),
+    );
+    return updated.name;
+  }
+
   function editKeyStationInput(tab: KeyStationTab) {
     setActiveTab('method');
     setActiveTool(tab.method);
@@ -319,7 +463,7 @@ function App() {
           colors={colors}
           onDeleteActiveTab={deleteActiveKeyStationTab}
           onOpenKeyStation={() => setActiveKeyStationTabId(null)}
-          onSelectTab={setActiveKeyStationTabId}
+          onSelectTab={selectKeyStationTab}
           tabs={keyStationTabs}
         />
         <View style={styles.content}>
@@ -418,6 +562,20 @@ function App() {
     );
   }
 
+  function renderVanityScene() {
+    return (
+      <TabScene>
+        <VanityScreen
+          isActive={activeTab === 'vanity'}
+          isDarkMode={isDarkMode}
+          onApplyAccount={applyVanityAccount}
+          onApplyPassphrase={applyVanityPassphrase}
+          tabs={keyStationTabs}
+        />
+      </TabScene>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <EntropySyncProvider>
@@ -432,13 +590,20 @@ function App() {
               <TabView
                 getTestID={({ route }) => route.testID}
                 navigationState={{
-                  index: activeTab === 'method' ? 0 : 1,
+                  index: APP_TAB_ROUTES.findIndex(route => route.key === activeTab),
                   routes: APP_TAB_ROUTES,
                 }}
-                onIndexChange={index => setActiveTab(index === 0 ? 'method' : 'settings')}
-                renderScene={({ route }) =>
-                  route.key === 'method' ? renderMethodScene() : renderSettingsScene()
-                }
+                onIndexChange={index => setActiveTab(APP_TAB_ROUTES[index]?.key ?? 'method')}
+                renderScene={({ route }) => {
+                  switch (route.key) {
+                    case 'method':
+                      return renderMethodScene();
+                    case 'vanity':
+                      return renderVanityScene();
+                    case 'settings':
+                      return renderSettingsScene();
+                  }
+                }}
                 tabBarActiveTintColor={colors.accent}
                 tabBarInactiveTintColor={colors.muted}
                 tabBarStyle={{ backgroundColor: colors.background }}

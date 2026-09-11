@@ -22,6 +22,8 @@ pub enum EntropyStudioError {
     InvalidPrivateKeyRange,
     EmptyBrainWallet,
     TrimmedBrainWalletEmpty,
+    InvalidVanityInput,
+    VanityRunCleared,
 }
 
 impl fmt::Display for EntropyStudioError {

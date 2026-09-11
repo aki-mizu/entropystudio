@@ -6,12 +6,12 @@ import { NativeSheet } from '../features/dice/components/NativeSheet';
 import type { DiceColors } from '../features/dice/diceTheme';
 import { UPSTREAM_TEXT } from '../features/upstreamUiCopy';
 
-export type NativeSelectOption<Value extends string> = {
+export type NativeSelectOption<Value extends string | number> = {
   readonly label: string;
   readonly value: Value;
 };
 
-type Props<Value extends string> = {
+type Props<Value extends string | number> = {
   readonly accessibilityLabel: string;
   readonly controlTestID: string;
   readonly colors: DiceColors;
@@ -25,7 +25,7 @@ type Props<Value extends string> = {
  * A platform-native select control. Android opens its native dropdown, while
  * iOS uses a compact field that opens the native wheel in a bottom sheet.
  */
-export function NativeSelect<Value extends string>({
+export function NativeSelect<Value extends string | number>({
   accessibilityLabel,
   controlTestID,
   colors,
@@ -36,7 +36,7 @@ export function NativeSelect<Value extends string>({
 }: Props<Value>) {
   const [iosPickerOpen, setIosPickerOpen] = useState(false);
   const [iosPendingValue, setIosPendingValue] = useState<Value>(selectedValue);
-  const selectedLabel = options.find(option => option.value === selectedValue)?.label ?? selectedValue;
+  const selectedLabel = options.find(option => option.value === selectedValue)?.label ?? String(selectedValue);
 
   function openIosPicker() {
     setIosPendingValue(selectedValue);

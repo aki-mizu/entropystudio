@@ -148,6 +148,12 @@ test('shows Dice, Cards, Number Bases, Seed Phrase, and Private Key workflows on
   expect(appTabBar(app!).props.navigationState.routes[0].title).toBe(
     UPSTREAM_TEXT.keys.tabLabel,
   );
+  expect(appTabBar(app!).props.navigationState.routes[1].title).toBe(
+    UPSTREAM_TEXT.vanity.tabLabel,
+  );
+  expect(appTabBar(app!).props.navigationState.routes[2].title).toBe(
+    STUDIO_UI_TEXT.navigation.settings,
+  );
   const diceMethodList = activeMethodList(app!);
   expect(diceMethodList.findByProps({ testID: 'key-method-label' }).props.children).toBe(
     UPSTREAM_TEXT.keys.methodLabel,
@@ -1757,7 +1763,7 @@ test('syncs entropy across methods through the native snapshot', async () => {
   await selectEntropyTool(app!, 'hex');
   await selectSeedPhraseLength(app!, 12);
   await ReactTestRenderer.act(async () => {
-    appTabBar(app!).props.onIndexChange(1);
+    appTabBar(app!).props.onIndexChange(2);
   });
   await ReactTestRenderer.act(async () => {
     app!

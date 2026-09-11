@@ -73,7 +73,7 @@ const HASHED_DICE_COPY = {
   },
   coleman: {
     help: UPSTREAM_TEXT.dice.help.coleman,
-    title: UPSTREAM_TEXT.dice.coleman.title,
+    title: UPSTREAM_TEXT.dice.method.coleman,
   },
 } as const;
 

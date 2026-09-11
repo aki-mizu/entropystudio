@@ -1,0 +1,1783 @@
+//! Native Vanity-address grinding for Studio's Key Station wallets.
+//!
+//! The upstream feature is deliberately a calculator rather than a source of
+//! entropy: a counter either extends a BIP39 passphrase with a base-62
+//! odometer or replaces the account component of the selected derivation
+//! path.  The sensitive key material and every BIP32/PBKDF2 operation live in
+//! Rust; React Native only schedules bounded chunks and renders their typed
+//! results.
+
+use crate::error::EntropyStudioError;
+use crate::wipe::{wipe_bytes, wipe_string};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
+use std::time::Instant;
+use unicode_normalization::UnicodeNormalization;
+
+const HARDENED: u32 = 1 << 31;
+const MAX_INDEX: u32 = HARDENED - 1;
+const MAX_PASSPHRASE_LENGTH: u8 = 32;
+const MAX_PASSPHRASE_BYTES: usize = 256;
+const MAX_MNEMONIC_BYTES: usize = 1024;
+const MAX_PATH_COMPONENTS: usize = 16;
+const PASSPHRASE_CHUNK_SIZE: u64 = 8;
+const DERIVATION_CHUNK_SIZE: u64 = 256;
+const VANITY_ALPHABET: &[u8; 62] =
+    b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const BASE58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+const BECH32_ALPHABET: &str = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+
+/// Which wallet dial the vanity counter turns.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum VanityMethod {
+    Passphrase,
+    Derivation,
+}
+
+/// The mainnet output encoded for each candidate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum VanityScript {
+    P2pkh,
+    P2shP2wpkh,
+    P2wpkh,
+    P2tr,
+    SilentPayments,
+}
+
+/// The first semantic condition which prevents a Vanity run.
+///
+/// The UI maps this typed state to upstream-rendered copy.  Keeping the
+/// condition separate from its message means the native layer remains the
+/// single authority for input admission without owning presentation strings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum VanityValidationKind {
+    Valid,
+    MissingMnemonic,
+    MnemonicTooLong,
+    InvalidMnemonic,
+    PassphraseTooLong,
+    /// The account path does not have the required `m` root / slash shape.
+    /// This maps to upstream's path-root error, rather than the distinct
+    /// invalid-index error below.
+    PathRoot,
+    /// A syntactically present path component is not a BIP32 child index.
+    PathIndex,
+    PathTooLong,
+    MissingAccountComponents,
+    NonMainnetCoinType,
+    InvalidBranchIndex,
+    InvalidAddressIndex,
+    InvalidPrefix,
+    PrefixTooShort,
+    PrefixTooLong,
+    PrefixAlphabet,
+    SilentPaymentParity,
+    InvalidPassphraseLength,
+    InvalidStart,
+    InvalidCount,
+    /// A passphrase range has zero candidates.
+    PassphraseRangeMinimum,
+    /// A passphrase counter begins beyond its fixed-width odometer space.
+    PassphraseStartBeyond,
+    /// A passphrase range runs past its fixed-width odometer space.
+    PassphraseRangePast,
+    /// A passphrase range exceeds the native 64-bit counter space.
+    PassphraseRangePast64Bit,
+    /// A derivation-account range has zero accounts.
+    DerivationRangeMinimum,
+    /// A derivation-account range begins after the final BIP32 child index.
+    DerivationStartBeyond,
+    /// A derivation-account range runs past the final BIP32 child index.
+    DerivationRangePast,
+    RunCleared,
+}
+
+/// Raw Studio drafts used to prepare one Vanity run.
+///
+/// Numeric fields intentionally cross as strings: this preserves temporary
+/// input states such as an empty field or a value beyond u64 so Rust can
+/// classify them without a TypeScript parser silently changing a counter.
+#[derive(Debug, uniffi::Record)]
+pub struct VanityRunInput {
+    pub method: VanityMethod,
+    pub script: VanityScript,
+    pub mnemonic: String,
+    pub starting_passphrase: String,
+    pub account_path: String,
+    pub branch_index: String,
+    pub branch_hardened: bool,
+    pub address_index: String,
+    pub address_hardened: bool,
+    pub prefix: String,
+    pub passphrase_length: String,
+    pub start: String,
+    pub count: String,
+}
+
+/// Native form state and static metadata for the selected script.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct VanityInputState {
+    pub valid: bool,
+    pub validation_kind: VanityValidationKind,
+    /// NFKD-normalized, boundary-trimmed mnemonic length in UTF-8 bytes.
+    /// No mnemonic text is retained in this presentation state.
+    pub normalized_mnemonic_byte_length: u32,
+    /// NFKD-normalized starting-passphrase length in UTF-8 bytes.  Unlike a
+    /// mnemonic, a BIP39 passphrase preserves boundary whitespace.
+    pub normalized_starting_passphrase_byte_length: u32,
+    /// The native vanity buffer limit for a normalized mnemonic.
+    pub maximum_mnemonic_byte_length: u32,
+    /// The native vanity buffer limit for a normalized starting passphrase.
+    pub maximum_starting_passphrase_byte_length: u32,
+    /// The largest accepted fixed-width base-62 suffix length.
+    pub maximum_passphrase_length: u8,
+    /// The deepest account path accepted by the native grinder.
+    pub maximum_path_components: u8,
+    /// The largest unhardened BIP32 child index accepted by the grinder.
+    pub maximum_bip32_index: u32,
+    /// The parsed coin-type component when the account path reaches it.
+    /// `None` keeps a missing component distinct from Bitcoin mainnet (0).
+    pub coin_type: Option<u32>,
+    /// The exclusive candidate-count limit for the selected method, rendered
+    /// exactly so presentation never needs to perform 64-bit arithmetic.
+    /// It is absent only while a passphrase-length draft is invalid.
+    pub counter_limit: Option<String>,
+    pub normalized_prefix: String,
+    pub fixed_prefix: String,
+    pub prefix_alphabet: String,
+    /// The constrained first free character for Silent Payment codes, or
+    /// empty for the other address types.
+    pub first_variable_characters: String,
+    pub maximum_prefix_length: u16,
+    /// The full selected path.  In derivation mode this retains the source
+    /// account value; each result carries its concrete replacement.
+    pub path: String,
+    /// BIP-352 paths are explicit so presentation never recreates protocol
+    /// path rules.  Both fields are empty outside Silent Payments.
+    pub silent_payment_scan_path: String,
+    pub silent_payment_spend_path: String,
+    pub account_hardened: bool,
+    pub passphrase_length: u8,
+    pub start: u64,
+    pub count: u64,
+    pub total_count: u64,
+    /// Exact decimal expected candidates per matching address, including the
+    /// constrained BIP-352 scan-key parity character.
+    pub expected_candidates: String,
+}
+
+/// One found candidate.  `candidate_passphrase` is sensitive for a
+/// passphrase grind and is returned only for a matching address.
+#[derive(Debug, Clone)]
+pub struct VanityMatch {
+    pub counter: u64,
+    pub account_index: Option<u32>,
+    pub candidate_passphrase: String,
+    pub path: String,
+    pub address: String,
+    /// A passphrase match changes the wallet's master fingerprint; a
+    /// derivation match retains the selected source fingerprint.
+    pub master_fingerprint: Option<String>,
+}
+
+// UniFFI's derived record writer moves each field out of its record.  That is
+// incompatible with `VanityMatch::Drop`, which needs to retain ownership long
+// enough to overwrite the passphrase after serializing it.  This wire-only
+// record preserves the public record metadata and decoding shape; the custom
+// writer below keeps sensitive owned strings available to `Drop`.
+#[derive(Debug, uniffi::Record)]
+#[uniffi(name = "VanityMatch")]
+struct VanityMatchWire {
+    counter: u64,
+    account_index: Option<u32>,
+    candidate_passphrase: String,
+    path: String,
+    address: String,
+    master_fingerprint: Option<String>,
+}
+
+impl Drop for VanityMatch {
+    fn drop(&mut self) {
+        // A matching passphrase must cross the FFI boundary so the user can
+        // copy or apply it, but its Rust-owned allocation should still be
+        // overwritten as soon as the record retires.  Keep this in step with
+        // Candidate's cleanup for a match moved out of that temporary.
+        wipe_string(&mut self.candidate_passphrase);
+        if let Some(fingerprint) = &mut self.master_fingerprint {
+            wipe_string(fingerprint);
+        }
+    }
+}
+
+fn write_match_string(value: &str, buf: &mut Vec<u8>) {
+    // This is the stable UniFFI String serialization: a big-endian i32 byte
+    // length followed by UTF-8 bytes.  Borrowing lets VanityMatch::Drop wipe
+    // the source allocation after the record has been written.
+    let length = i32::try_from(value.len()).expect("vanity match strings fit in i32");
+    buf.extend_from_slice(&length.to_be_bytes());
+    buf.extend_from_slice(value.as_bytes());
+}
+
+unsafe impl uniffi::FfiConverter<crate::UniFfiTag> for VanityMatch {
+    uniffi::ffi_converter_rust_buffer_lift_and_lower!(crate::UniFfiTag);
+
+    fn write(mut object: Self, buf: &mut Vec<u8>) {
+        <u64 as uniffi::Lower<crate::UniFfiTag>>::write(object.counter, buf);
+        <Option<u32> as uniffi::Lower<crate::UniFfiTag>>::write(object.account_index, buf);
+        write_match_string(&object.candidate_passphrase, buf);
+        <String as uniffi::Lower<crate::UniFfiTag>>::write(std::mem::take(&mut object.path), buf);
+        <String as uniffi::Lower<crate::UniFfiTag>>::write(
+            std::mem::take(&mut object.address),
+            buf,
+        );
+        match object.master_fingerprint.as_deref() {
+            None => buf.push(0),
+            Some(fingerprint) => {
+                buf.push(1);
+                write_match_string(fingerprint, buf);
+            }
+        }
+        // `object` retires here, wiping the two sensitive fields above.
+    }
+
+    fn try_read(buf: &mut &[u8]) -> uniffi::Result<Self> {
+        let wire = <VanityMatchWire as uniffi::Lift<crate::UniFfiTag>>::try_read(buf)?;
+        Ok(Self {
+            counter: wire.counter,
+            account_index: wire.account_index,
+            candidate_passphrase: wire.candidate_passphrase,
+            path: wire.path,
+            address: wire.address,
+            master_fingerprint: wire.master_fingerprint,
+        })
+    }
+
+    const TYPE_ID_META: uniffi::MetadataBuffer =
+        <VanityMatchWire as uniffi::TypeId<crate::UniFfiTag>>::TYPE_ID_META;
+}
+
+uniffi::derive_ffi_traits!(local VanityMatch);
+
+/// The result of one bounded native work step.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct VanityChunk {
+    /// Candidates tested in this call.
+    pub processed: u64,
+    pub total_processed: u64,
+    pub total_count: u64,
+    pub next_counter: u64,
+    pub progress_percent: f64,
+    pub elapsed_milliseconds: u64,
+    pub candidates_per_second: f64,
+    pub matches: Vec<VanityMatch>,
+    pub complete: bool,
+    pub stopped: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PathComponent {
+    index: u32,
+    hardened: bool,
+}
+
+impl PathComponent {
+    fn encoded(self) -> u32 {
+        self.index | if self.hardened { HARDENED } else { 0 }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct VanityScriptMetadata {
+    fixed_prefix: &'static str,
+    max_length: u16,
+    bech32: bool,
+    first_variable_characters: &'static str,
+}
+
+fn script_metadata(script: VanityScript) -> VanityScriptMetadata {
+    match script {
+        VanityScript::P2pkh => VanityScriptMetadata {
+            fixed_prefix: "1",
+            max_length: 34,
+            bech32: false,
+            first_variable_characters: "",
+        },
+        VanityScript::P2shP2wpkh => VanityScriptMetadata {
+            fixed_prefix: "3",
+            max_length: 34,
+            bech32: false,
+            first_variable_characters: "",
+        },
+        VanityScript::P2wpkh => VanityScriptMetadata {
+            fixed_prefix: "bc1q",
+            max_length: 42,
+            bech32: true,
+            first_variable_characters: "",
+        },
+        VanityScript::P2tr => VanityScriptMetadata {
+            fixed_prefix: "bc1p",
+            max_length: 62,
+            bech32: true,
+            first_variable_characters: "",
+        },
+        VanityScript::SilentPayments => VanityScriptMetadata {
+            fixed_prefix: "sp1qq",
+            max_length: 116,
+            bech32: true,
+            first_variable_characters: "gf2tvdw0",
+        },
+    }
+}
+
+/// Native counterpart of upstream's live prefix filter.  It intentionally
+/// filters only characters; it does not synthesize the required fixed prefix
+/// or turn an incomplete draft into a valid one.
+#[uniffi::export]
+pub fn vanity_filter_prefix(mut value: String, script: VanityScript) -> String {
+    let metadata = script_metadata(script);
+    let allowed = if metadata.bech32 {
+        format!("{}{}", metadata.fixed_prefix, BECH32_ALPHABET)
+    } else {
+        BASE58_ALPHABET.to_owned()
+    };
+    let mut filtered = String::with_capacity(value.len());
+    for character in value.chars() {
+        if character.is_whitespace() {
+            continue;
+        }
+        let character = if metadata.bech32 {
+            character.to_ascii_lowercase()
+        } else {
+            character
+        };
+        if character.is_ascii() && allowed.contains(character) {
+            filtered.push(character);
+        }
+    }
+    wipe_string(&mut value);
+    filtered
+}
+
+/// Validates a raw form without retaining its mnemonic or passphrase.
+#[uniffi::export]
+pub fn vanity_input_state(input: VanityRunInput) -> VanityInputState {
+    let presentation = InputPresentation::from_input(&input);
+    match validate_input(input) {
+        Ok(validated) => {
+            let state =
+                input_state_from_config(&validated.config, VanityValidationKind::Valid, true);
+            drop(validated);
+            state
+        }
+        Err(kind) => presentation.into_state(kind),
+    }
+}
+
+/// A String which reliably overwrites its owned UTF-8 allocation when it
+/// retires.  This is used for mnemonic and passphrase copies created during
+/// normalization as well as short-lived candidate text.
+struct SecretText(String);
+
+impl SecretText {
+    fn new(value: String) -> Self {
+        Self(value)
+    }
+
+    fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    fn into_inner(mut self) -> String {
+        std::mem::take(&mut self.0)
+    }
+}
+
+impl Drop for SecretText {
+    fn drop(&mut self) {
+        wipe_string(&mut self.0);
+    }
+}
+
+/// A wipeable BIP39 seed.  Keeping the seed in an owning wrapper ensures it
+/// is erased even if a fallible master-key operation returns early.
+struct SecretSeed([u8; 64]);
+
+impl SecretSeed {
+    fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl Drop for SecretSeed {
+    fn drop(&mut self) {
+        wipe_bytes(&mut self.0);
+    }
+}
+
+/// A wipeable BIP32 private serialization.  The upstream FFI uses this
+/// 78-byte xprv representation; its private key begins at byte 46.
+struct SecretNode([u8; 78]);
+
+impl Drop for SecretNode {
+    fn drop(&mut self) {
+        wipe_bytes(&mut self.0);
+    }
+}
+
+struct ValidatedInput {
+    config: VanityRunConfig,
+    mnemonic: SecretText,
+    starting_passphrase: SecretText,
+}
+
+impl ValidatedInput {
+    fn into_parts(self) -> (VanityRunConfig, SecretText, SecretText) {
+        (self.config, self.mnemonic, self.starting_passphrase)
+    }
+}
+
+#[derive(Debug, Clone)]
+struct VanityRunConfig {
+    method: VanityMethod,
+    script: VanityScript,
+    prefix: String,
+    path: Vec<PathComponent>,
+    account_hardened: bool,
+    passphrase_length: u8,
+    start: u64,
+    count: u64,
+    expected_candidates: String,
+    presentation: VanityValidationMetadata,
+}
+
+impl VanityRunConfig {
+    fn end(&self) -> u64 {
+        // Validation establishes this invariant without an overflow.
+        self.start + self.count
+    }
+}
+
+/// Non-secret facts needed to describe a validated (or rejected) form.
+///
+/// The source mnemonic and passphrase never cross this type: their
+/// normalized byte lengths are enough for the upstream error copy, while the
+/// sensitive text remains inside the wipeable validation/run types.
+#[derive(Debug, Clone, Copy)]
+struct VanityValidationMetadata {
+    normalized_mnemonic_byte_length: u32,
+    normalized_starting_passphrase_byte_length: u32,
+    coin_type: Option<u32>,
+    counter_limit: Option<u64>,
+}
+
+enum RunSecrets {
+    Passphrase {
+        mnemonic: SecretText,
+        starting_passphrase: SecretText,
+    },
+    Derivation {
+        parent: Option<SecretNode>,
+    },
+    Cleared,
+}
+
+impl RunSecrets {
+    fn clear(&mut self) {
+        // Replacing the enum drops SecretText/SecretNode values immediately;
+        // both own their wipe-on-drop behavior.
+        drop(std::mem::replace(self, Self::Cleared));
+    }
+}
+
+struct VanityRunState {
+    config: VanityRunConfig,
+    secrets: RunSecrets,
+    source_fingerprint: String,
+    cursor: u64,
+    total_processed: u64,
+    complete: bool,
+    stopped: bool,
+    cleared: bool,
+    started_at: Instant,
+}
+
+impl VanityRunState {
+    fn from_validated(input: ValidatedInput) -> Result<Self, EntropyStudioError> {
+        let (config, mnemonic, starting_passphrase) = input.into_parts();
+        let cursor = config.start;
+        let result = match config.method {
+            VanityMethod::Passphrase => Self {
+                config,
+                secrets: RunSecrets::Passphrase {
+                    mnemonic,
+                    starting_passphrase,
+                },
+                source_fingerprint: String::new(),
+                cursor,
+                total_processed: 0,
+                complete: false,
+                stopped: false,
+                cleared: false,
+                started_at: Instant::now(),
+            },
+            VanityMethod::Derivation => {
+                let seed = seed_from_normalized(mnemonic.as_str(), starting_passphrase.as_str())?;
+                // The derivation run retains the fixed parent node, not the
+                // source passphrase.  It is only needed to make the seed.
+                drop(starting_passphrase);
+                let master = master_node(seed.as_bytes())?;
+                drop(seed);
+                drop(mnemonic);
+                let source_fingerprint = node_fingerprint(&master)?;
+                let Some(parent) = derive_path_strict(master, &config.path[..2])? else {
+                    return Err(EntropyStudioError::InvalidMasterKey);
+                };
+                Self {
+                    config,
+                    secrets: RunSecrets::Derivation {
+                        parent: Some(parent),
+                    },
+                    source_fingerprint,
+                    cursor,
+                    total_processed: 0,
+                    complete: false,
+                    stopped: false,
+                    cleared: false,
+                    started_at: Instant::now(),
+                }
+            }
+        };
+        Ok(result)
+    }
+
+    fn clear(&mut self) {
+        self.secrets.clear();
+        wipe_string(&mut self.source_fingerprint);
+        self.stopped = true;
+        self.complete = true;
+        self.cleared = true;
+    }
+
+    fn input_state(&self) -> VanityInputState {
+        input_state_from_config(
+            &self.config,
+            if self.cleared {
+                VanityValidationKind::RunCleared
+            } else {
+                VanityValidationKind::Valid
+            },
+            !self.cleared,
+        )
+    }
+
+    fn chunk(&mut self, stop_requested: &AtomicBool) -> Result<VanityChunk, EntropyStudioError> {
+        if self.cleared {
+            return Err(EntropyStudioError::VanityRunCleared);
+        }
+
+        let elapsed_milliseconds = self
+            .started_at
+            .elapsed()
+            .as_millis()
+            .min(u128::from(u64::MAX)) as u64;
+        if self.complete || self.stopped || stop_requested.load(Ordering::Acquire) {
+            self.stopped |= stop_requested.load(Ordering::Acquire);
+            self.complete = true;
+            return Ok(self.chunk_result(0, Vec::new(), elapsed_milliseconds));
+        }
+
+        let remaining = self.config.end() - self.cursor;
+        let budget = match self.config.method {
+            VanityMethod::Passphrase => PASSPHRASE_CHUNK_SIZE,
+            VanityMethod::Derivation => DERIVATION_CHUNK_SIZE,
+        }
+        .min(remaining);
+        let mut matches = Vec::new();
+        let mut processed = 0u64;
+
+        while processed < budget {
+            if stop_requested.load(Ordering::Acquire) {
+                self.stopped = true;
+                break;
+            }
+            let counter = self.cursor;
+            if let Some(candidate) = self.candidate(counter)? {
+                if candidate.address.starts_with(&self.config.prefix) {
+                    matches.push(candidate.into_match(
+                        counter,
+                        self.config.method,
+                        &self.source_fingerprint,
+                    ));
+                }
+            }
+            self.cursor += 1;
+            self.total_processed += 1;
+            processed += 1;
+        }
+
+        if self.cursor == self.config.end() || self.stopped {
+            self.complete = true;
+        }
+        let elapsed_milliseconds = self
+            .started_at
+            .elapsed()
+            .as_millis()
+            .min(u128::from(u64::MAX)) as u64;
+        Ok(self.chunk_result(processed, matches, elapsed_milliseconds))
+    }
+
+    fn chunk_result(
+        &self,
+        processed: u64,
+        matches: Vec<VanityMatch>,
+        elapsed_milliseconds: u64,
+    ) -> VanityChunk {
+        let candidates_per_second = if elapsed_milliseconds == 0 {
+            0.0
+        } else {
+            self.total_processed as f64 / (elapsed_milliseconds as f64 / 1000.0)
+        };
+        VanityChunk {
+            processed,
+            total_processed: self.total_processed,
+            total_count: self.config.count,
+            next_counter: self.cursor,
+            progress_percent: if self.config.count == 0 {
+                100.0
+            } else {
+                self.total_processed as f64 * 100.0 / self.config.count as f64
+            },
+            elapsed_milliseconds,
+            candidates_per_second,
+            matches,
+            complete: self.complete,
+            stopped: self.stopped,
+        }
+    }
+
+    fn candidate(&mut self, counter: u64) -> Result<Option<Candidate>, EntropyStudioError> {
+        match &mut self.secrets {
+            RunSecrets::Passphrase {
+                mnemonic,
+                starting_passphrase,
+            } => candidate_from_passphrase(
+                mnemonic,
+                starting_passphrase,
+                &self.config.path,
+                self.config.script,
+                self.config.passphrase_length,
+                counter,
+            ),
+            RunSecrets::Derivation { parent } => {
+                let Some(parent) = parent.as_ref() else {
+                    return Err(EntropyStudioError::VanityRunCleared);
+                };
+                candidate_from_derivation(parent, &self.config.path, self.config.script, counter)
+            }
+            RunSecrets::Cleared => Err(EntropyStudioError::VanityRunCleared),
+        }
+    }
+}
+
+impl Drop for VanityRunState {
+    fn drop(&mut self) {
+        self.clear();
+    }
+}
+
+/// A native-owned session.  `next_chunk` has a deliberately small bounded
+/// work budget, so React Native can schedule another call and Stop can land
+/// between chunks without reimplementing a worker protocol in TypeScript.
+#[derive(uniffi::Object)]
+pub struct VanityRun {
+    inner: Mutex<VanityRunState>,
+    stop_requested: AtomicBool,
+}
+
+#[uniffi::export]
+impl VanityRun {
+    #[uniffi::constructor]
+    pub fn new(input: VanityRunInput) -> Result<Arc<Self>, EntropyStudioError> {
+        let validated =
+            validate_input(input).map_err(|_| EntropyStudioError::InvalidVanityInput)?;
+        Ok(Arc::new(Self {
+            inner: Mutex::new(VanityRunState::from_validated(validated)?),
+            stop_requested: AtomicBool::new(false),
+        }))
+    }
+
+    pub fn state(&self) -> VanityInputState {
+        let state = self
+            .inner
+            .lock()
+            .expect("VanityRun state mutex is not poisoned");
+        state.input_state()
+    }
+
+    pub fn next_chunk(&self) -> Result<VanityChunk, EntropyStudioError> {
+        let mut state = self
+            .inner
+            .lock()
+            .expect("VanityRun state mutex is not poisoned");
+        state.chunk(&self.stop_requested)
+    }
+
+    /// Asks the active bounded work step to stop.  A currently executing
+    /// candidate completes first; no subsequent candidate is admitted.
+    pub fn stop(&self) {
+        self.stop_requested.store(true, Ordering::Release);
+    }
+
+    /// Wipes mnemonic/passphrase/derived-node material and makes this session
+    /// unusable.  The caller should drop its object reference after clearing.
+    pub fn clear(&self) {
+        self.stop_requested.store(true, Ordering::Release);
+        let mut state = self
+            .inner
+            .lock()
+            .expect("VanityRun state mutex is not poisoned");
+        state.clear();
+    }
+}
+
+impl Drop for VanityRun {
+    fn drop(&mut self) {
+        self.stop_requested.store(true, Ordering::Release);
+        if let Ok(state) = self.inner.get_mut() {
+            state.clear();
+        }
+    }
+}
+
+struct SensitiveInput {
+    input: VanityRunInput,
+}
+
+impl Drop for SensitiveInput {
+    fn drop(&mut self) {
+        wipe_string(&mut self.input.mnemonic);
+        wipe_string(&mut self.input.starting_passphrase);
+        wipe_string(&mut self.input.account_path);
+        wipe_string(&mut self.input.branch_index);
+        wipe_string(&mut self.input.address_index);
+        wipe_string(&mut self.input.prefix);
+        wipe_string(&mut self.input.passphrase_length);
+        wipe_string(&mut self.input.start);
+        wipe_string(&mut self.input.count);
+    }
+}
+
+fn validate_input(input: VanityRunInput) -> Result<ValidatedInput, VanityValidationKind> {
+    let input = SensitiveInput { input };
+    let mnemonic = SecretText::new(input.input.mnemonic.trim().nfkd().collect());
+    let normalized_mnemonic_byte_length = byte_length(mnemonic.len());
+    if mnemonic.is_empty() {
+        return Err(VanityValidationKind::MissingMnemonic);
+    }
+    if mnemonic.len() > MAX_MNEMONIC_BYTES {
+        return Err(VanityValidationKind::MnemonicTooLong);
+    }
+    if unsafe { entropylab_wasm::el_bip39_validate(mnemonic.as_str().as_ptr(), mnemonic.len()) }
+        != 1
+    {
+        return Err(VanityValidationKind::InvalidMnemonic);
+    }
+
+    let starting_passphrase = SecretText::new(input.input.starting_passphrase.nfkd().collect());
+    let normalized_starting_passphrase_byte_length = byte_length(starting_passphrase.len());
+    if starting_passphrase.len() > MAX_PASSPHRASE_BYTES {
+        return Err(VanityValidationKind::PassphraseTooLong);
+    }
+
+    let account_path = parse_path(&input.input.account_path).map_err(path_validation_kind)?;
+    if account_path.len() > MAX_PATH_COMPONENTS {
+        return Err(VanityValidationKind::PathTooLong);
+    }
+    if account_path.len() < 3 {
+        return Err(VanityValidationKind::MissingAccountComponents);
+    }
+    if account_path[1].index != 0 {
+        return Err(VanityValidationKind::NonMainnetCoinType);
+    }
+
+    let path = if input.input.script == VanityScript::SilentPayments {
+        vec![
+            PathComponent {
+                index: 352,
+                hardened: true,
+            },
+            PathComponent {
+                index: 0,
+                hardened: true,
+            },
+            PathComponent {
+                index: account_path[2].index,
+                hardened: true,
+            },
+        ]
+    } else {
+        let branch_index = parse_index(&input.input.branch_index)
+            .ok_or(VanityValidationKind::InvalidBranchIndex)?;
+        let address_index = parse_index(&input.input.address_index)
+            .ok_or(VanityValidationKind::InvalidAddressIndex)?;
+        let mut path = account_path;
+        path.push(PathComponent {
+            index: branch_index,
+            hardened: input.input.branch_hardened,
+        });
+        path.push(PathComponent {
+            index: address_index,
+            hardened: input.input.address_hardened,
+        });
+        if path.len() > MAX_PATH_COMPONENTS {
+            return Err(VanityValidationKind::PathTooLong);
+        }
+        path
+    };
+
+    let prefix = normalize_prefix(&input.input.prefix, input.input.script);
+    validate_prefix(&prefix, input.input.script)?;
+
+    let passphrase_length = if input.input.method == VanityMethod::Passphrase {
+        parse_passphrase_length(&input.input.passphrase_length)
+            .ok_or(VanityValidationKind::InvalidPassphraseLength)?
+    } else {
+        0
+    };
+    let start = parse_counter(&input.input.start);
+    let count = parse_counter(&input.input.count);
+    let (start, count, counter_limit) =
+        validate_counter_range(input.input.method, passphrase_length, start, count)?;
+    let account_hardened = path[2].hardened;
+    let coin_type = path[1].index;
+
+    let config = VanityRunConfig {
+        method: input.input.method,
+        script: input.input.script,
+        expected_candidates: expected_candidates(&prefix, input.input.script),
+        prefix,
+        account_hardened,
+        path,
+        passphrase_length,
+        start,
+        count,
+        presentation: VanityValidationMetadata {
+            normalized_mnemonic_byte_length,
+            normalized_starting_passphrase_byte_length,
+            coin_type: Some(coin_type),
+            counter_limit: Some(counter_limit),
+        },
+    };
+    Ok(ValidatedInput {
+        config,
+        mnemonic,
+        starting_passphrase,
+    })
+}
+
+fn normalize_prefix(value: &str, script: VanityScript) -> String {
+    let mut value = value.trim().to_owned();
+    if script_metadata(script).bech32 {
+        value.make_ascii_lowercase();
+    }
+    value
+}
+
+fn validate_prefix(prefix: &str, script: VanityScript) -> Result<(), VanityValidationKind> {
+    let metadata = script_metadata(script);
+    if !prefix.starts_with(metadata.fixed_prefix) {
+        return Err(VanityValidationKind::InvalidPrefix);
+    }
+    if prefix.len() <= metadata.fixed_prefix.len() {
+        return Err(VanityValidationKind::PrefixTooShort);
+    }
+    if prefix.len() > metadata.max_length as usize {
+        return Err(VanityValidationKind::PrefixTooLong);
+    }
+    let alphabet = if metadata.bech32 {
+        BECH32_ALPHABET
+    } else {
+        BASE58_ALPHABET
+    };
+    if !prefix[metadata.fixed_prefix.len()..]
+        .chars()
+        .all(|character| alphabet.contains(character))
+    {
+        return Err(VanityValidationKind::PrefixAlphabet);
+    }
+    if !metadata.first_variable_characters.is_empty()
+        && !metadata
+            .first_variable_characters
+            .contains(prefix.as_bytes()[metadata.fixed_prefix.len()] as char)
+    {
+        return Err(VanityValidationKind::SilentPaymentParity);
+    }
+    Ok(())
+}
+
+#[derive(Debug, Clone, Copy)]
+enum PathParseError {
+    Root,
+    Index,
+}
+
+fn path_validation_kind(error: PathParseError) -> VanityValidationKind {
+    match error {
+        PathParseError::Root => VanityValidationKind::PathRoot,
+        PathParseError::Index => VanityValidationKind::PathIndex,
+    }
+}
+
+/// Parses the exact two-stage grammar used upstream: a root/shaping failure
+/// is distinct from a malformed BIP32 index after a valid `m/...` shape.
+fn parse_path(value: &str) -> Result<Vec<PathComponent>, PathParseError> {
+    let value = value.trim();
+    if value == "m" {
+        return Ok(Vec::new());
+    }
+    let Some(components) = value.strip_prefix("m/") else {
+        return Err(PathParseError::Root);
+    };
+    if components.is_empty() || components.split('/').any(str::is_empty) {
+        return Err(PathParseError::Root);
+    }
+
+    components
+        .split('/')
+        .map(parse_path_component)
+        .collect::<Option<Vec<_>>>()
+        .ok_or(PathParseError::Index)
+}
+
+fn parse_path_component(part: &str) -> Option<PathComponent> {
+    let hardened = part.ends_with(['\'', 'h', 'H']);
+    let digits = if hardened {
+        part.strip_suffix(['\'', 'h', 'H'])?
+    } else {
+        part
+    };
+    parse_bip32_index(digits).map(|index| PathComponent { index, hardened })
+}
+
+fn parse_bip32_index(value: &str) -> Option<u32> {
+    (!value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()))
+        .then(|| value.parse::<u64>().ok())
+        .flatten()
+        .filter(|index| *index <= u64::from(MAX_INDEX))
+        .map(|index| index as u32)
+}
+
+fn parse_index(value: &str) -> Option<u32> {
+    let value = value.trim();
+    let value = value.strip_suffix(['\'', 'h', 'H']).unwrap_or(value);
+    parse_bip32_index(value)
+}
+
+fn parse_passphrase_length(value: &str) -> Option<u8> {
+    let value = value.trim();
+    if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    value
+        .parse::<u8>()
+        .ok()
+        .filter(|length| (1..=MAX_PASSPHRASE_LENGTH).contains(length))
+}
+
+fn byte_length(length: usize) -> u32 {
+    // UniFFI strings are length-prefixed with a signed 32-bit byte length, so
+    // every input that crossed this boundary (and its finite NFKD expansion)
+    // fits the non-negative u32 used for presentation metadata.
+    u32::try_from(length).expect("normalized vanity input fits in u32")
+}
+
+fn normalized_utf8_byte_length(value: &str, trim_boundary_whitespace: bool) -> u32 {
+    let value = if trim_boundary_whitespace {
+        value.trim()
+    } else {
+        value
+    };
+    byte_length(value.nfkd().map(char::len_utf8).sum())
+}
+
+#[derive(Debug, Clone, Copy)]
+enum CounterParse {
+    Invalid,
+    Value(u64),
+    /// A digits-only counter too large to represent in Rust's native u64.
+    /// It remains a syntactically valid upstream BigInt and is classified by
+    /// the selected range rule rather than reported as malformed input.
+    TooLarge,
+}
+
+fn parse_counter(value: &str) -> CounterParse {
+    let value = value.trim();
+    if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return CounterParse::Invalid;
+    }
+    // Strip insignificant zeroes before parsing.  This keeps a perfectly
+    // valid value such as a long, zero-padded `1` from looking like an
+    // overflow merely because its textual representation is long.
+    let significant = value.trim_start_matches('0');
+    if significant.is_empty() {
+        return CounterParse::Value(0);
+    }
+    significant
+        .parse::<u64>()
+        .map(CounterParse::Value)
+        .unwrap_or(CounterParse::TooLarge)
+}
+
+fn counter_value_or_zero(value: CounterParse) -> u64 {
+    match value {
+        CounterParse::Value(value) => value,
+        CounterParse::Invalid | CounterParse::TooLarge => 0,
+    }
+}
+
+fn validate_counter_range(
+    method: VanityMethod,
+    passphrase_length: u8,
+    start: CounterParse,
+    count: CounterParse,
+) -> Result<(u64, u64, u64), VanityValidationKind> {
+    // `hodlVanityParseInputs` first requires digits-only counters, then the
+    // range validators enforce a nonzero count before checking the start or
+    // end.  Retain that ordering for identical feedback when several fields
+    // are temporarily invalid at once.
+    if matches!(start, CounterParse::Invalid) {
+        return Err(VanityValidationKind::InvalidStart);
+    }
+    if matches!(count, CounterParse::Invalid) {
+        return Err(VanityValidationKind::InvalidCount);
+    }
+
+    if matches!(count, CounterParse::Value(0)) {
+        return Err(range_minimum_kind(method));
+    }
+
+    let counter_limit = counter_limit(method, passphrase_length);
+    let start_value = match start {
+        CounterParse::Value(value) => value,
+        CounterParse::TooLarge => return Err(start_beyond_kind(method)),
+        CounterParse::Invalid => unreachable!("checked above"),
+    };
+    if start_value >= counter_limit {
+        return Err(start_beyond_kind(method));
+    }
+    let count_value = match count {
+        CounterParse::Value(value) => value,
+        CounterParse::TooLarge => return Err(range_past_kind(method, passphrase_length)),
+        CounterParse::Invalid => unreachable!("checked above"),
+    };
+    if start_value
+        .checked_add(count_value)
+        .is_none_or(|end| end > counter_limit)
+    {
+        return Err(range_past_kind(method, passphrase_length));
+    }
+    Ok((start_value, count_value, counter_limit))
+}
+
+fn counter_limit(method: VanityMethod, passphrase_length: u8) -> u64 {
+    match method {
+        VanityMethod::Passphrase => passphrase_counter_limit(passphrase_length),
+        VanityMethod::Derivation => u64::from(MAX_INDEX) + 1,
+    }
+}
+
+fn range_minimum_kind(method: VanityMethod) -> VanityValidationKind {
+    match method {
+        VanityMethod::Passphrase => VanityValidationKind::PassphraseRangeMinimum,
+        VanityMethod::Derivation => VanityValidationKind::DerivationRangeMinimum,
+    }
+}
+
+fn start_beyond_kind(method: VanityMethod) -> VanityValidationKind {
+    match method {
+        VanityMethod::Passphrase => VanityValidationKind::PassphraseStartBeyond,
+        VanityMethod::Derivation => VanityValidationKind::DerivationStartBeyond,
+    }
+}
+
+fn range_past_kind(method: VanityMethod, passphrase_length: u8) -> VanityValidationKind {
+    match method {
+        VanityMethod::Passphrase if passphrase_counter_limit(passphrase_length) == u64::MAX => {
+            VanityValidationKind::PassphraseRangePast64Bit
+        }
+        VanityMethod::Passphrase => VanityValidationKind::PassphraseRangePast,
+        VanityMethod::Derivation => VanityValidationKind::DerivationRangePast,
+    }
+}
+
+fn passphrase_counter_limit(length: u8) -> u64 {
+    let mut limit = 1u64;
+    for _ in 0..length {
+        match limit.checked_mul(62) {
+            Some(next) => limit = next,
+            None => return u64::MAX,
+        }
+    }
+    limit
+}
+
+fn format_path(path: &[PathComponent]) -> String {
+    let mut formatted = String::from("m");
+    for component in path {
+        use std::fmt::Write;
+        write!(
+            formatted,
+            "/{}{}",
+            component.index,
+            if component.hardened { "'" } else { "" }
+        )
+        .expect("writing to String cannot fail");
+    }
+    formatted
+}
+
+fn input_state_from_config(
+    config: &VanityRunConfig,
+    validation_kind: VanityValidationKind,
+    valid: bool,
+) -> VanityInputState {
+    let metadata = script_metadata(config.script);
+    let path = format_path(&config.path);
+    let (silent_payment_scan_path, silent_payment_spend_path) =
+        silent_payment_paths(config.script, &path);
+    VanityInputState {
+        valid,
+        validation_kind,
+        normalized_mnemonic_byte_length: config.presentation.normalized_mnemonic_byte_length,
+        normalized_starting_passphrase_byte_length: config
+            .presentation
+            .normalized_starting_passphrase_byte_length,
+        maximum_mnemonic_byte_length: MAX_MNEMONIC_BYTES as u32,
+        maximum_starting_passphrase_byte_length: MAX_PASSPHRASE_BYTES as u32,
+        maximum_passphrase_length: MAX_PASSPHRASE_LENGTH,
+        maximum_path_components: MAX_PATH_COMPONENTS as u8,
+        maximum_bip32_index: MAX_INDEX,
+        coin_type: config.presentation.coin_type,
+        counter_limit: config
+            .presentation
+            .counter_limit
+            .map(|limit| limit.to_string()),
+        normalized_prefix: config.prefix.clone(),
+        fixed_prefix: metadata.fixed_prefix.to_owned(),
+        prefix_alphabet: if metadata.bech32 {
+            BECH32_ALPHABET.to_owned()
+        } else {
+            BASE58_ALPHABET.to_owned()
+        },
+        first_variable_characters: metadata.first_variable_characters.to_owned(),
+        maximum_prefix_length: metadata.max_length,
+        path,
+        silent_payment_scan_path,
+        silent_payment_spend_path,
+        account_hardened: config.account_hardened,
+        passphrase_length: config.passphrase_length,
+        start: config.start,
+        count: config.count,
+        total_count: config.count,
+        expected_candidates: config.expected_candidates.clone(),
+    }
+}
+
+fn silent_payment_paths(script: VanityScript, path: &str) -> (String, String) {
+    if script != VanityScript::SilentPayments {
+        return (String::new(), String::new());
+    }
+    (format!("{path}/1'/0"), format!("{path}/0'/0"))
+}
+
+struct InputPresentation {
+    script: VanityScript,
+    presentation: VanityValidationMetadata,
+    normalized_prefix: String,
+    path: String,
+    account_hardened: bool,
+    passphrase_length: u8,
+    start: u64,
+    count: u64,
+}
+
+impl InputPresentation {
+    fn from_input(input: &VanityRunInput) -> Self {
+        let script = input.script;
+        let normalized_prefix = normalize_prefix(&input.prefix, script);
+        let account_path = parse_path(&input.account_path).ok();
+        let coin_type = account_path
+            .as_ref()
+            .and_then(|path| path.get(1).map(|component| component.index));
+        let path = if let Some(account_path) = account_path.filter(|path| path.len() >= 3) {
+            if script == VanityScript::SilentPayments {
+                vec![
+                    PathComponent {
+                        index: 352,
+                        hardened: true,
+                    },
+                    PathComponent {
+                        index: 0,
+                        hardened: true,
+                    },
+                    PathComponent {
+                        index: account_path[2].index,
+                        hardened: true,
+                    },
+                ]
+            } else if let (Some(branch), Some(address)) = (
+                parse_index(&input.branch_index),
+                parse_index(&input.address_index),
+            ) {
+                let mut path = account_path;
+                path.push(PathComponent {
+                    index: branch,
+                    hardened: input.branch_hardened,
+                });
+                path.push(PathComponent {
+                    index: address,
+                    hardened: input.address_hardened,
+                });
+                path
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        };
+        let passphrase_length = if input.method == VanityMethod::Passphrase {
+            parse_passphrase_length(&input.passphrase_length).unwrap_or(0)
+        } else {
+            0
+        };
+        let counter_limit = match input.method {
+            VanityMethod::Passphrase if passphrase_length == 0 => None,
+            method => Some(counter_limit(method, passphrase_length)),
+        };
+        Self {
+            script,
+            presentation: VanityValidationMetadata {
+                normalized_mnemonic_byte_length: normalized_utf8_byte_length(&input.mnemonic, true),
+                normalized_starting_passphrase_byte_length: normalized_utf8_byte_length(
+                    &input.starting_passphrase,
+                    false,
+                ),
+                coin_type,
+                counter_limit,
+            },
+            normalized_prefix,
+            account_hardened: path.get(2).is_some_and(|component| component.hardened),
+            path: format_path(&path),
+            passphrase_length,
+            start: counter_value_or_zero(parse_counter(&input.start)),
+            count: counter_value_or_zero(parse_counter(&input.count)),
+        }
+    }
+
+    fn into_state(self, validation_kind: VanityValidationKind) -> VanityInputState {
+        let metadata = script_metadata(self.script);
+        let (silent_payment_scan_path, silent_payment_spend_path) =
+            silent_payment_paths(self.script, &self.path);
+        VanityInputState {
+            valid: false,
+            validation_kind,
+            normalized_mnemonic_byte_length: self.presentation.normalized_mnemonic_byte_length,
+            normalized_starting_passphrase_byte_length: self
+                .presentation
+                .normalized_starting_passphrase_byte_length,
+            maximum_mnemonic_byte_length: MAX_MNEMONIC_BYTES as u32,
+            maximum_starting_passphrase_byte_length: MAX_PASSPHRASE_BYTES as u32,
+            maximum_passphrase_length: MAX_PASSPHRASE_LENGTH,
+            maximum_path_components: MAX_PATH_COMPONENTS as u8,
+            maximum_bip32_index: MAX_INDEX,
+            coin_type: self.presentation.coin_type,
+            counter_limit: self
+                .presentation
+                .counter_limit
+                .map(|limit| limit.to_string()),
+            normalized_prefix: self.normalized_prefix.clone(),
+            fixed_prefix: metadata.fixed_prefix.to_owned(),
+            prefix_alphabet: if metadata.bech32 {
+                BECH32_ALPHABET.to_owned()
+            } else {
+                BASE58_ALPHABET.to_owned()
+            },
+            first_variable_characters: metadata.first_variable_characters.to_owned(),
+            maximum_prefix_length: metadata.max_length,
+            path: self.path,
+            silent_payment_scan_path,
+            silent_payment_spend_path,
+            account_hardened: self.account_hardened,
+            passphrase_length: self.passphrase_length,
+            start: self.start,
+            count: self.count,
+            total_count: self.count,
+            expected_candidates: expected_candidates(&self.normalized_prefix, self.script),
+        }
+    }
+}
+
+fn expected_candidates(prefix: &str, script: VanityScript) -> String {
+    let metadata = script_metadata(script);
+    let free = prefix.len().saturating_sub(metadata.fixed_prefix.len());
+    if free == 0 {
+        return "1".to_owned();
+    }
+    let mut value = Decimal::from_u32(if metadata.first_variable_characters.is_empty() {
+        1
+    } else {
+        metadata.first_variable_characters.len() as u32
+    });
+    let exponent = if metadata.first_variable_characters.is_empty() {
+        free
+    } else {
+        free.saturating_sub(1)
+    };
+    let factor = if metadata.bech32 { 32 } else { 58 };
+    for _ in 0..exponent {
+        value.multiply(factor);
+    }
+    value.to_string()
+}
+
+/// A tiny unsigned decimal implementation avoids a new arbitrary-precision
+/// dependency solely for UI estimate text (a 116-character prefix exceeds
+/// primitive integer widths by a large margin).
+struct Decimal {
+    digits: Vec<u32>,
+}
+
+impl Decimal {
+    const BASE: u64 = 1_000_000_000;
+
+    fn from_u32(value: u32) -> Self {
+        Self {
+            digits: vec![value],
+        }
+    }
+
+    fn multiply(&mut self, factor: u32) {
+        let mut carry = 0u64;
+        for digit in &mut self.digits {
+            let product = u64::from(*digit) * u64::from(factor) + carry;
+            *digit = (product % Self::BASE) as u32;
+            carry = product / Self::BASE;
+        }
+        while carry > 0 {
+            self.digits.push((carry % Self::BASE) as u32);
+            carry /= Self::BASE;
+        }
+    }
+}
+
+impl std::fmt::Display for Decimal {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut digits = self.digits.iter().rev();
+        let Some(first) = digits.next() else {
+            return formatter.write_str("0");
+        };
+        write!(formatter, "{first}")?;
+        for digit in digits {
+            write!(formatter, "{digit:09}")?;
+        }
+        Ok(())
+    }
+}
+
+fn seed_from_normalized(
+    mnemonic: &str,
+    passphrase: &str,
+) -> Result<SecretSeed, EntropyStudioError> {
+    let mut salt = String::from("mnemonic");
+    salt.push_str(passphrase);
+    let mut seed = SecretSeed([0u8; 64]);
+    let status = unsafe {
+        entropylab_wasm::el_pbkdf2_hmac_sha512(
+            mnemonic.as_ptr(),
+            mnemonic.len(),
+            salt.as_ptr(),
+            salt.len(),
+            2048,
+            seed.0.as_mut_ptr(),
+            seed.0.len(),
+        )
+    };
+    wipe_string(&mut salt);
+    if status != 64 {
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    Ok(seed)
+}
+
+fn master_node(seed: &[u8]) -> Result<SecretNode, EntropyStudioError> {
+    let mut node = SecretNode([0u8; 78]);
+    let status =
+        unsafe { entropylab_wasm::el_hd_master(seed.as_ptr(), seed.len(), node.0.as_mut_ptr()) };
+    if status != 78 {
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    Ok(node)
+}
+
+/// Unlike the general Key Station path helper, this intentionally does not
+/// retry an invalid BIP32 child at the next index: the Vanity counter names a
+/// specific candidate, and upstream skips that (astronomically rare) candidate
+/// rather than silently changing its counter semantics.
+fn derive_child_strict(
+    parent: SecretNode,
+    component: PathComponent,
+) -> Result<Option<SecretNode>, EntropyStudioError> {
+    let mut child = SecretNode([0u8; 78]);
+    let status = unsafe {
+        entropylab_wasm::el_hd_ckd_priv(
+            parent.0.as_ptr(),
+            component.encoded(),
+            child.0.as_mut_ptr(),
+        )
+    };
+    match status {
+        78 => Ok(Some(child)),
+        1 => Ok(None),
+        _ => Err(EntropyStudioError::InvalidMasterKey),
+    }
+}
+
+fn derive_path_strict(
+    mut node: SecretNode,
+    path: &[PathComponent],
+) -> Result<Option<SecretNode>, EntropyStudioError> {
+    for component in path {
+        let Some(child) = derive_child_strict(node, *component)? else {
+            return Ok(None);
+        };
+        node = child;
+    }
+    Ok(Some(node))
+}
+
+fn node_fingerprint(node: &SecretNode) -> Result<String, EntropyStudioError> {
+    let mut public_key = [0u8; 65];
+    let mut hash = [0u8; 20];
+    let public_key_status = unsafe {
+        entropylab_wasm::secp_pubkey_create(node.0[46..].as_ptr(), public_key.as_mut_ptr(), 1)
+    };
+    if public_key_status != 33 {
+        wipe_bytes(&mut public_key);
+        wipe_bytes(&mut hash);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    let hash_status =
+        unsafe { entropylab_wasm::el_hash160(public_key.as_ptr(), 33, hash.as_mut_ptr()) };
+    wipe_bytes(&mut public_key);
+    if hash_status != 20 {
+        wipe_bytes(&mut hash);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    let fingerprint = hash[..4].iter().map(|byte| format!("{byte:02x}")).collect();
+    wipe_bytes(&mut hash);
+    Ok(fingerprint)
+}
+
+struct Candidate {
+    address: String,
+    candidate_passphrase: String,
+    path: String,
+    master_fingerprint: Option<String>,
+}
+
+impl Drop for Candidate {
+    fn drop(&mut self) {
+        // The address/path are public output, but the passphrase and its
+        // resulting master fingerprint belong to the private candidate.
+        wipe_string(&mut self.candidate_passphrase);
+        if let Some(fingerprint) = &mut self.master_fingerprint {
+            wipe_string(fingerprint);
+        }
+    }
+}
+
+impl Candidate {
+    fn into_match(
+        mut self,
+        counter: u64,
+        method: VanityMethod,
+        source_fingerprint: &str,
+    ) -> VanityMatch {
+        VanityMatch {
+            counter,
+            account_index: (method == VanityMethod::Derivation).then_some(counter as u32),
+            candidate_passphrase: std::mem::take(&mut self.candidate_passphrase),
+            path: std::mem::take(&mut self.path),
+            address: std::mem::take(&mut self.address),
+            master_fingerprint: match method {
+                VanityMethod::Passphrase => std::mem::take(&mut self.master_fingerprint),
+                VanityMethod::Derivation => Some(source_fingerprint.to_owned()),
+            },
+        }
+    }
+}
+
+fn candidate_from_passphrase(
+    mnemonic: &SecretText,
+    starting_passphrase: &SecretText,
+    path: &[PathComponent],
+    script: VanityScript,
+    passphrase_length: u8,
+    counter: u64,
+) -> Result<Option<Candidate>, EntropyStudioError> {
+    let odometer = SecretText::new(odometer(counter, passphrase_length));
+    let mut candidate_passphrase =
+        String::with_capacity(starting_passphrase.len() + odometer.len());
+    candidate_passphrase.push_str(starting_passphrase.as_str());
+    candidate_passphrase.push_str(odometer.as_str());
+    let candidate_passphrase = SecretText::new(candidate_passphrase);
+    let seed = seed_from_normalized(mnemonic.as_str(), candidate_passphrase.as_str())?;
+    let root = master_node(seed.as_bytes())?;
+    drop(seed);
+    let fingerprint = node_fingerprint(&root)?;
+    let child = derive_path_strict(root, path)?;
+    let Some(node) = child else {
+        return Ok(None);
+    };
+    let address = address_from_node(node, script)?;
+    Ok(Some(Candidate {
+        address,
+        candidate_passphrase: candidate_passphrase.into_inner(),
+        path: format_path(path),
+        master_fingerprint: Some(fingerprint),
+    }))
+}
+
+fn candidate_from_derivation(
+    parent: &SecretNode,
+    full_path: &[PathComponent],
+    script: VanityScript,
+    counter: u64,
+) -> Result<Option<Candidate>, EntropyStudioError> {
+    debug_assert!(full_path.len() >= 3);
+    let mut candidate_tail = full_path[2..].to_vec();
+    candidate_tail[0].index = counter as u32;
+    let Some(node) = derive_path_from_borrowed_strict(parent, &candidate_tail)? else {
+        return Ok(None);
+    };
+    let address = address_from_node(node, script)?;
+    let mut concrete_path = full_path.to_vec();
+    concrete_path[2].index = counter as u32;
+    Ok(Some(Candidate {
+        address,
+        // A derivation match changes only the account component; returning
+        // the source passphrase would retain an unnecessary secret copy.
+        candidate_passphrase: String::new(),
+        path: format_path(&concrete_path),
+        master_fingerprint: None,
+    }))
+}
+
+/// Derives a candidate tail from a borrowed fixed parent.  Copying its wire
+/// serialization is unavoidable at the FFI boundary; the temporary is wiped
+/// when it retires and the session's original node stays intact.
+fn derive_path_from_borrowed_strict(
+    parent: &SecretNode,
+    path: &[PathComponent],
+) -> Result<Option<SecretNode>, EntropyStudioError> {
+    let mut copy = SecretNode([0u8; 78]);
+    copy.0.copy_from_slice(&parent.0);
+    derive_path_strict(copy, path)
+}
+
+fn odometer(counter: u64, length: u8) -> String {
+    let mut digits = vec![b'a'; length as usize];
+    let mut value = counter;
+    for digit in digits.iter_mut().rev() {
+        *digit = VANITY_ALPHABET[(value % 62) as usize];
+        value /= 62;
+    }
+    // The alphabet is ASCII, so this conversion cannot fail.
+    String::from_utf8(digits).expect("the Vanity alphabet is UTF-8")
+}
+
+fn address_from_node(node: SecretNode, script: VanityScript) -> Result<String, EntropyStudioError> {
+    match script {
+        VanityScript::SilentPayments => silent_payment_address(node),
+        VanityScript::P2pkh
+        | VanityScript::P2shP2wpkh
+        | VanityScript::P2wpkh
+        | VanityScript::P2tr => standard_address(node, script),
+    }
+}
+
+fn standard_address(node: SecretNode, script: VanityScript) -> Result<String, EntropyStudioError> {
+    let mut public_key = [0u8; 65];
+    let mut script_bytes = [0u8; 64];
+    let mut address = [0u8; 128];
+    let public_key_status = unsafe {
+        entropylab_wasm::secp_pubkey_create(node.0[46..].as_ptr(), public_key.as_mut_ptr(), 1)
+    };
+    if public_key_status != 33 {
+        wipe_bytes(&mut public_key);
+        wipe_bytes(&mut script_bytes);
+        wipe_bytes(&mut address);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    let script_length = unsafe {
+        match script {
+            VanityScript::P2pkh => entropylab_wasm::el_spk_p2pkh(
+                public_key.as_ptr(),
+                33,
+                script_bytes.as_mut_ptr(),
+                script_bytes.len(),
+            ),
+            VanityScript::P2shP2wpkh => entropylab_wasm::el_spk_p2sh_p2wpkh(
+                public_key.as_ptr(),
+                33,
+                script_bytes.as_mut_ptr(),
+                script_bytes.len(),
+            ),
+            VanityScript::P2wpkh => entropylab_wasm::el_spk_p2wpkh(
+                public_key.as_ptr(),
+                33,
+                script_bytes.as_mut_ptr(),
+                script_bytes.len(),
+            ),
+            VanityScript::P2tr => entropylab_wasm::el_spk_p2tr_key(
+                public_key[1..].as_ptr(),
+                script_bytes.as_mut_ptr(),
+                script_bytes.len(),
+            ),
+            VanityScript::SilentPayments => unreachable!("Silent Payments are handled separately"),
+        }
+    };
+    wipe_bytes(&mut public_key);
+    if script_length <= 0 {
+        wipe_bytes(&mut script_bytes);
+        wipe_bytes(&mut address);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    let address_length = unsafe {
+        entropylab_wasm::el_addr_from_script(
+            script_bytes.as_ptr(),
+            script_length as usize,
+            0,
+            address.as_mut_ptr(),
+            address.len(),
+        )
+    };
+    wipe_bytes(&mut script_bytes);
+    let result = if address_length > 0 && (address_length as usize) <= address.len() {
+        std::str::from_utf8(&address[..address_length as usize])
+            .map(str::to_owned)
+            .map_err(|_| EntropyStudioError::InvalidMasterKey)
+    } else {
+        Err(EntropyStudioError::InvalidMasterKey)
+    };
+    wipe_bytes(&mut address);
+    result
+}
+
+fn silent_payment_address(account: SecretNode) -> Result<String, EntropyStudioError> {
+    let scan_path = [
+        PathComponent {
+            index: 1,
+            hardened: true,
+        },
+        PathComponent {
+            index: 0,
+            hardened: false,
+        },
+    ];
+    let spend_path = [
+        PathComponent {
+            index: 0,
+            hardened: true,
+        },
+        PathComponent {
+            index: 0,
+            hardened: false,
+        },
+    ];
+    let mut copy = SecretNode([0u8; 78]);
+    copy.0.copy_from_slice(&account.0);
+    let scan = derive_path_strict(copy, &scan_path)?;
+    let spend = derive_path_strict(account, &spend_path)?;
+    let (Some(scan), Some(spend)) = (scan, spend) else {
+        return Ok(String::new());
+    };
+    let mut scan_public = [0u8; 65];
+    let mut spend_public = [0u8; 65];
+    let mut payload = [0u8; 66];
+    let mut words = [0u8; 107];
+    let mut encoded = [0u8; 128];
+    let scan_status = unsafe {
+        entropylab_wasm::secp_pubkey_create(scan.0[46..].as_ptr(), scan_public.as_mut_ptr(), 1)
+    };
+    let spend_status = unsafe {
+        entropylab_wasm::secp_pubkey_create(spend.0[46..].as_ptr(), spend_public.as_mut_ptr(), 1)
+    };
+    if scan_status != 33 || spend_status != 33 {
+        wipe_bytes(&mut scan_public);
+        wipe_bytes(&mut spend_public);
+        wipe_bytes(&mut payload);
+        wipe_bytes(&mut words);
+        wipe_bytes(&mut encoded);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    payload[..33].copy_from_slice(&scan_public[..33]);
+    payload[33..].copy_from_slice(&spend_public[..33]);
+    wipe_bytes(&mut scan_public);
+    wipe_bytes(&mut spend_public);
+    let word_count = bytes_to_bech32_words(&payload, &mut words);
+    let address_length = unsafe {
+        entropylab_wasm::el_bech32m_encode(
+            b"sp".as_ptr(),
+            2,
+            words.as_ptr(),
+            word_count,
+            encoded.as_mut_ptr(),
+            encoded.len(),
+        )
+    };
+    wipe_bytes(&mut payload);
+    wipe_bytes(&mut words);
+    let result = if address_length > 0 && (address_length as usize) <= encoded.len() {
+        std::str::from_utf8(&encoded[..address_length as usize])
+            .map(str::to_owned)
+            .map_err(|_| EntropyStudioError::InvalidMasterKey)
+    } else {
+        Err(EntropyStudioError::InvalidMasterKey)
+    };
+    wipe_bytes(&mut encoded);
+    result
+}
+
+/// Writes BIP173 convertbits output with a leading witness/version word zero,
+/// matching upstream's `[0, ...toWords(scan || spend)]` BIP-352 encoding.
+fn bytes_to_bech32_words(bytes: &[u8], output: &mut [u8; 107]) -> usize {
+    output[0] = 0;
+    let mut written = 1usize;
+    let mut accumulator = 0u16;
+    let mut bits = 0u8;
+    for byte in bytes {
+        accumulator = (accumulator << 8) | u16::from(*byte);
+        bits += 8;
+        while bits >= 5 {
+            bits -= 5;
+            output[written] = ((accumulator >> bits) & 31) as u8;
+            written += 1;
+        }
+    }
+    if bits > 0 {
+        output[written] = ((accumulator << (5 - bits)) & 31) as u8;
+        written += 1;
+    }
+    written
+}

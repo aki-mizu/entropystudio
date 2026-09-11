@@ -93,11 +93,11 @@ export const UPSTREAM_TEXT = {
     },
     coldcard: {
       desc: 'SHA-256 of the original dice digit string, matching the method used by COLDCARD and SeedSigner. The first {bits} bits become the selected {words}-word seed; {hashRolls} rolls are recommended, and every entered roll is included.',
-      title: 'Hashed rolls / Base 10 [0-9] (recommended)',
+      title: 'Base 10 [0-9] / Hashed rolls (recommended)',
     },
     coleman: {
       desc: 'Convert each 6 to 0 and SHA-256 the complete mapped digit string, matching the method used by Keystone. Use the first {bits} bits; {hashRolls} rolls are recommended, and every entered roll is included.',
-      title: 'Hashed rolls / Dice [1-6]',
+      title: 'Dice [1-6] / Hashed rolls',
     },
     dplus: {
       aCoinFlip: 'a coin flip',
@@ -148,6 +148,7 @@ export const UPSTREAM_TEXT = {
     },
     method: {
       coldcard: 'Hashed rolls / Base 10 [0-9]',
+      coleman: 'Hashed rolls / Dice [1-6]',
     },
   },
   error: {
@@ -462,6 +463,84 @@ export const UPSTREAM_TEXT = {
     entropy: '{words} words use {bits} bits of BIP39 entropy.',
     label: 'Seed phrase length',
     words: '{n} words',
+  },
+  vanity: {
+    tabLabel: 'Vanity',
+    intro: {
+      kicker: 'Same key, same counter, same address',
+      title: 'Grind a vanity address',
+      description:
+        'Pick a Key Station key and turn one of its dials. Passphrase grind extends the key\'s BIP39 passphrase with counter characters (base-62 over a-zA-Z0-9 in odometer order: "aaa…", "aab…"); derivation grind keeps the passphrase and steps through account indexes. Every candidate is derived the standard way — PBKDF2 seed, BIP32 path — in a dedicated WebAssembly module, one Web Worker per CPU core, and its address of the selected type (including BIP-352 Silent Payment codes) is checked against your prefix. This invents no entropy: same key and counter always reproduce the same address, so every result replays by hand, and Update key writes the winning passphrase or account back to the key it came from.',
+    },
+    warnings: {
+      passphrase:
+        'A vanity passphrase is a BIP39 passphrase: the seed words alone no longer recover the wallet. After Update key, record the passphrase with the same care as the words.',
+      mainnet:
+        'Matching is Bitcoin mainnet, at the key\'s first receive address (its own purpose, account, branch, and address index). Update key re-derives the key, so the Keys tab, its exports, and the Journal show the vanity wallet.',
+      privacy:
+        'Found passphrases remain in this page only and are never intentionally stored or sent. Memory clearing is best-effort because browsers may retain internal copies; close the page before reconnecting the computer.',
+    },
+    source: {
+      heading: 'Bring in a key from Key Station',
+      selectedKey: 'Selected key',
+      startingPassphrase: 'Starting passphrase',
+      placeholder: 'No passphrase — the key uses its seed words alone',
+      noKeyYet:
+        'Derive a key on the Keys tab first — the grinder searches that key\'s passphrase or account index. A key with seed words supports both methods; a root-xprv key supports the derivation grind only.',
+    },
+    form: {
+      method: 'Method',
+      addressType: 'Address type',
+      addressPrefix: 'Address prefix',
+      passphraseLength: 'Passphrase length',
+      startCounter: 'Start counter',
+      rangeSize: 'Range size',
+      startAccount: 'Start account',
+      accountsToTry: 'Accounts to try',
+      workers: 'Workers',
+      methodOptions: {
+        passphrase: 'Passphrase grind',
+        derivation: 'Derivation grind',
+      },
+      scriptOptions: {
+        p2pkh: 'Legacy P2PKH · 1…',
+        p2shP2wpkh: 'Nested SegWit P2SH-P2WPKH · 3…',
+        p2wpkh: 'Native SegWit P2WPKH · bc1q…',
+        p2tr: 'Taproot P2TR · bc1p…',
+        sp: 'Silent Payments BIP-352 · sp1qq…',
+      },
+      help: {
+        methodPassphrase:
+          'Each candidate is the starting passphrase followed by the counter characters, stretched into a seed (2,048 PBKDF2 rounds) and derived at the key\'s path. A match is a new passphrase for this key.',
+        prefixP2wpkh:
+          'Native SegWit P2WPKH prefix, starts with “bc1q”. Live-filtered to lowercase bech32 characters; each free character multiplies the work by ~32.',
+        passphraseLength:
+          'Counter characters a-zA-Z0-9 appended after the starting passphrase. 62^10 counters fill the 64-bit counter; longer passphrases grind their low range.',
+        startCounter: 'First counter tried. Counter 0 is "aaa…".',
+        rangeSize:
+          'Candidates to grind. After a run, Start continues where the range ended.',
+        startAccount:
+          'First BIP32 account index tried (0 to 2,147,483,647). Each match is an account index holding the vanity address.',
+        accountsToTry:
+          'Account indexes to grind. After a run, Start account continues where the range ended.',
+        workers:
+          'One per CPU core is fastest; defaults to this device\'s core count.',
+      },
+    },
+    actions: {
+      startGrinding: 'Start grinding',
+      stop: 'Stop',
+      stopOnFirstFind: 'Stop on first find',
+      clearResults: 'Clear results',
+    },
+    result: {
+      airGapOnly: '(air-gap only)',
+      copied: 'Copied',
+      key: 'Key',
+    },
+    status: {
+      idle: 'Idle. No range has been ground this session.',
+    },
   },
   sync: {
     description: '(Keeps non-hashed methods synchronized. Hashed inputs update them one way and are never overwritten.)',
@@ -899,6 +978,246 @@ export const UPSTREAM_UI_FALLBACK_COPY = {
         'This is not a Bitcoin Core hdseed or address-key backup of the same wallet.',
       ],
       title: 'Brain wallet warning — read before use',
+    },
+  },
+  vanity: {
+    actions: {
+      grinding: 'Grinding…',
+      stopOnFirstEnabled: 'Stop on first find: on',
+      updateKey: 'Update key',
+      updating: 'Updating…',
+    },
+    source: {
+      noSelectedKey:
+        'Pick the key to grind. Its passphrase and derivation settings come along exactly as set on the Keys tab: a key with seed words supports both methods, a root-xprv key the derivation grind only.',
+      seedWords: 'BIP39 seed words',
+      rootXprv: 'Root xprv',
+      fromKey: (label: string) => `· from key ${label}`,
+      kind: (
+        hasMnemonic: boolean,
+        name: string | undefined,
+        label: string,
+        derivationPath: string,
+      ) =>
+        `${hasMnemonic ? 'BIP39 seed words' : 'Root xprv'}${
+          name && name !== label ? ` · ${name}` : ''
+        } · ${derivationPath}`,
+      rootXprvNote: (label: string) =>
+        `Key ${label} was imported as a root xprv: it has no seed words, so its passphrase cannot be extended — only the derivation grind is available.`,
+      withPassphraseNote: (label: string) =>
+        `Copied verbatim from key ${label}'s Optional BIP39 passphrase on the Keys tab. Passphrase grind: candidates are this text followed by the counter characters. Derivation grind: this exact passphrase, with the account index changing.`,
+      withoutPassphraseNote: (label: string) =>
+        `Key ${label} has no passphrase. Passphrase grind: candidates are the counter characters alone. Derivation grind: no passphrase, with the account index changing.`,
+    },
+    form: {
+      scriptNames: {
+        p2pkh: 'Legacy P2PKH',
+        p2shP2wpkh: 'Nested SegWit P2SH-P2WPKH',
+        p2wpkh: 'Native SegWit P2WPKH',
+        p2tr: 'Taproot P2TR',
+        sp: 'Silent Payments BIP-352',
+      },
+      methodDerivationHelp:
+        'The passphrase stays as it is; each candidate is the next BIP32 account index at the key\'s path. A match is an account index holding the vanity address — Update key sets it on the key.',
+      prefixPlaceholder: (prefix: string) => `${prefix}…`,
+      prefixHelp: {
+        silentPayment: (
+          label: string,
+          prefix: string,
+          firstFree: readonly string[],
+        ) =>
+          `${label} code, starts with “${prefix}”; the next character is one of ${firstFree.join(' ')} (the scan key's parity). Live-filtered to lowercase bech32 characters; each further free character multiplies the work by ~32.`,
+        bech32: (label: string, prefix: string) =>
+          `${label} prefix, starts with “${prefix}”. Live-filtered to lowercase bech32 characters; each free character multiplies the work by ~32.`,
+        base58: (label: string, prefix: string) =>
+          `${label} prefix, starts with “${prefix}”. Live-filtered to base58 characters; each free character multiplies the work by ~58.`,
+      },
+    },
+    estimate: {
+      derivationWithoutRate:
+        'Derivation grind: each candidate is a few BIP32 child steps.',
+      passphraseWithoutRate:
+        'Passphrase grind: each candidate is a full BIP39 seed stretch.',
+      formatDuration: (seconds: number): string => {
+        if (!Number.isFinite(seconds)) {
+          return '';
+        }
+        if (seconds < 1) {
+          return 'under a second';
+        }
+        if (seconds < 90) {
+          const rounded = Math.round(seconds);
+          return `${rounded} second${rounded === 1 ? '' : 's'}`;
+        }
+        const minutes = seconds / 60;
+        if (minutes < 90) {
+          return `${Math.round(minutes)} minutes`;
+        }
+        const hours = minutes / 60;
+        if (hours < 48) {
+          return `${Math.round(hours)} hours`;
+        }
+        const days = hours / 24;
+        if (days < 730) {
+          return `${Math.round(days)} days`;
+        }
+        return `${Math.round(days / 365).toLocaleString('en-US')} years`;
+      },
+      timing: (
+        rate: string | number,
+        running: boolean,
+        workers: number,
+        duration: string,
+      ) =>
+        `At about ${rate} candidates/s${
+          running ? '' : ` on ${workers} worker${workers === 1 ? '' : 's'}`
+        }, expect a match roughly every ${duration}.`,
+      summary: (
+        prefix: string,
+        work: string | number,
+        scriptLabel: string,
+        timing: string,
+      ) =>
+        `Prefix “${prefix}” matches about 1 in ${work} ${scriptLabel} candidates on average. ${timing}`,
+    },
+    result: {
+      showPassphrases: 'Show passphrases',
+      counter: 'Counter',
+      passphrase: 'Passphrase (keep it secret)',
+      keyAfterUpdate: 'Key after update',
+      matchesHeading: (derivation: boolean) =>
+        `Matching ${derivation ? 'accounts' : 'passphrases'}`,
+      overflow: (listed: number, found: string | number) =>
+        `Only the first ${listed} matches are listed; ${found} found in total.`,
+      maskedPassphrase: () => '•'.repeat(12),
+      silentPaymentWhere: (path: string) =>
+        `the BIP-352 Silent Payment code of that account (scan ${path}/1h/0, spend …/0h/0)`,
+      addressWhere: (scriptLabel: string, path: string) =>
+        `the ${scriptLabel} address at ${path}`,
+      derivationDescription: (sourceLabel: string, where: string) =>
+        `Each row is a BIP32 account index of key ${sourceLabel} — with its passphrase unchanged, ${where} starts with the prefix. Update key sets that account on the key and re-derives it, so the Keys tab, its exports, and the Journal show this wallet.`,
+      passphraseDescription: (sourceLabel: string, where: string) =>
+        `Each row is a new BIP39 passphrase for key ${sourceLabel}: the starting passphrase followed by the counter characters. With this key's seed words it derives ${where}. Update key writes the passphrase to the key and re-derives it, so the Keys tab, its exports, and the Journal show this wallet. Anyone holding the words and this passphrase holds the coins.`,
+      savedToKey: (label: string) => `Saved to key ${label}`,
+    },
+    status: {
+      stopped: 'Stopped.',
+      starting: (derivation: boolean, sourceLabel: string) =>
+        derivation
+          ? `Starting workers — stepping through account indexes of key ${sourceLabel}…`
+          : `Starting workers — extending key ${sourceLabel}'s passphrase with the counter characters…`,
+      progress: (
+        done: string | number,
+        total: string | number,
+        rate: string | number,
+        found: number,
+      ) =>
+        `${done} / ${total} candidates · ${rate}/s · ${found} match${
+          found === 1 ? '' : 'es'
+        }`,
+      complete: (
+        stopped: boolean,
+        stopOnFirst: boolean,
+        found: number,
+        done: string | number,
+        derivation: boolean,
+        nextStart: string | number,
+      ) =>
+        `${
+          stopped
+            ? stopOnFirst && found > 0
+              ? 'Stopped at first match'
+              : 'Stopped'
+            : 'Range complete'
+        }: ${done} candidates, ${found} match${
+          found === 1 ? '' : 'es'
+        }. Next ${derivation ? 'account' : 'counter'}: ${nextStart}.`,
+      saved: (
+        savedTo: string,
+        accountIndex: number | null,
+        sourceLabel: string,
+      ) =>
+        `Saved to key ${savedTo}: ${
+          accountIndex !== null ? `account ${accountIndex}` : 'the new passphrase'
+        } is now on the key${
+          sourceLabel !== savedTo
+            ? ` — its master fingerprint and LifeHash changed from ${sourceLabel} to ${savedTo}`
+            : ''
+        }. Open the Keys tab to review and export it.`,
+    },
+    errors: {
+      keyRequired:
+        'Pick a Key Station key first — the grinder searches that key\'s passphrase or account index.',
+      counterLabels: {
+        startAccount: 'The start account',
+        accountRange: 'The account range',
+        startCounter: 'The start counter',
+        rangeSize: 'The range size',
+      },
+      prefixMustStartWith: (scriptLabel: string, prefix: string) =>
+        `${scriptLabel} addresses start with “${prefix}”; the prefix must too.`,
+      prefixNeedsAdditionalCharacter: (scriptLabel: string, prefix: string) =>
+        `Add at least one character after “${prefix}” — “${prefix}” alone matches every ${scriptLabel} address.`,
+      prefixTooLong: (scriptLabel: string, maximum: number) =>
+        `The prefix is longer than a whole ${scriptLabel} address (${maximum} characters).`,
+      bech32Characters:
+        'Bech32 addresses use qpzry9x8gf2tvdw0s3jn54khce6mua7l after the separator (no b, i, o, or 1).',
+      base58Characters:
+        'Base58 addresses use no 0 (zero), O, I, or l characters.',
+      silentPaymentParity: (
+        scriptLabel: string,
+        prefix: string,
+        firstFree: readonly string[],
+      ) =>
+        `The character after “${prefix}” encodes the scan key's parity: every ${scriptLabel} code continues with one of ${firstFree.join(', ')}.`,
+      startingPassphraseTooLong: (length: number, maximum: number) =>
+        `The starting passphrase is ${length} UTF-8 bytes, over the ${maximum}-byte vanity limit — shorten it on the Keys tab.`,
+      mnemonicMissing:
+        'The passphrase grind needs the key\'s seed words — this key has no mnemonic.',
+      mnemonicTooLong: (length: number, maximum: number) =>
+        `The mnemonic is ${length} UTF-8 bytes, over the ${maximum}-byte vanity limit.`,
+      passphraseLength: (maximum: number) =>
+        `Passphrase length is 1 to ${maximum} characters.`,
+      counterRangeMinimum:
+        'The start counter is zero or more; the range is at least one candidate.',
+      counterStartBeyond: (passphraseLength: number) =>
+        `The start counter is beyond the ${passphraseLength}-character counter space.`,
+      counterRangePast: (passphraseLength: number, limit: string | number) =>
+        `The range runs past the ${passphraseLength}-character space (${limit} counters).`,
+      counterRangePast64Bit: 'The range runs past the 64-bit counter.',
+      accountRangeMinimum:
+        'The start account is zero or more; the range is at least one account.',
+      accountStartBeyond:
+        'The start account is beyond the BIP32 index range (0 to 2,147,483,647).',
+      accountRangePast:
+        'The range runs past the last BIP32 account index (2,147,483,647).',
+      pathRoot:
+        'Derivation path must start with m and contain slash-separated BIP32 indexes.',
+      pathIndex:
+        "Each derivation path index is a whole number from 0 to 2,147,483,647, optionally followed by h or '.",
+      pathTooDeep: (maximum: number) =>
+        `Derivation paths are at most ${maximum} components deep for the vanity grind.`,
+      workersBlocked: 'Vanity workers are blocked in this context.',
+      workerFailed: 'Vanity worker failed.',
+      workerFailedToStart: 'Vanity worker failed to start.',
+      accountPathNeedsComponents: (label: string) =>
+        `Key ${label}'s derivation path needs purpose, coin type, and account components.`,
+      mainnetOnly: (label: string, coinType: number) =>
+        `Vanity matching is Bitcoin mainnet: key ${label} derives coin type ${coinType}. Pick a mainnet key (coin type 0).`,
+      branchAndAddressIndexes: (label: string) =>
+        `Key ${label}'s branch and address indexes must be whole numbers from 0 to 2,147,483,647.`,
+      noMnemonicForPassphrase: (label: string) =>
+        `Key ${label} has no seed words (root xprv), so its passphrase cannot be extended — switch to the derivation grind.`,
+      noKeyMaterial: (label: string) =>
+        `Key ${label} carries neither seed words nor a root xprv.`,
+      watchOnly: (label: string) =>
+        `Key ${label} is watch-only; the derivation grind needs private material.`,
+      wholeNumber: (label: string) => `${label} is a whole number (digits only).`,
+      keyNoLongerInStation: (label: string) =>
+        `Key ${label} is no longer in Key Station, so there is nothing to update.`,
+      derivationAlreadyRunning:
+        'A derivation is already running on the Keys tab — wait for it to finish.',
+      updateDerivationFailed: 'Deriving the updated key failed.',
     },
   },
 } as const;

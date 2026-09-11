@@ -6,6 +6,8 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const upstreamRoot = join(root, 'entropylab');
 const previousRevision = currentRevision();
 
+clearGeneratedRlibOverlay();
+
 execFileSync('git', ['submodule', 'update', '--init', '--remote', '--checkout', 'entropylab'], {
   cwd: root,
   stdio: 'inherit',
@@ -36,4 +38,15 @@ function currentRevision() {
   } catch {
     return undefined;
   }
+}
+
+function clearGeneratedRlibOverlay() {
+  if (previousRevision === undefined) {
+    return;
+  }
+
+  const manifestPath = 'entropylab-wasm/Cargo.toml';
+  execFileSync('git', ['-C', upstreamRoot, 'restore', '--source=HEAD', '--worktree', '--', manifestPath], {
+    stdio: 'inherit',
+  });
 }

@@ -16,13 +16,21 @@ const upstreamAppJs = readFileSync(
   resolve(__dirname, '../../../entropylab/src/js/app.js'),
   'utf8',
 );
+const upstreamVanityJs = readFileSync(
+  resolve(__dirname, '../../../entropylab/src/js/vanity.js'),
+  'utf8',
+);
 const upstreamShellHtml = readOptionalSource('src/shell.html');
 const renderedUpstreamAppJs = decodeJavaScriptEscapes(upstreamAppJs);
 const renderedUpstreamUiSources = [
   renderedUpstreamAppJs,
+  decodeJavaScriptEscapes(upstreamVanityJs),
   decodeJavaScriptEscapes(readOptionalSource('src/js/i18n-labels.js')),
   upstreamShellHtml,
   readOptionalSource('src/index.html'),
+  // The catalog's keys are English source text; it is read only by this
+  // provenance test and is never bundled by the React Native app.
+  readOptionalSource('src/locales/es.json'),
 ].join('\n');
 
 describe('Upstream UI copy provenance', () => {
@@ -398,6 +406,208 @@ describe('Upstream UI copy provenance', () => {
       'seedPhrase.wordsLabel': {
         source: upstreamAppJs,
         template: /Your \$\{config\.words\}-word seed phrase/,
+      },
+      'vanity.errors.accountPathNeedsComponents': {
+        source: upstreamAppJs,
+        template:
+          /Key \$\{label\}'s derivation path needs purpose, coin type, and account components\./,
+      },
+      'vanity.errors.branchAndAddressIndexes': {
+        source: upstreamAppJs,
+        template:
+          /Key \$\{label\}'s branch and address indexes must be whole numbers from 0 to 2,147,483,647\./,
+      },
+      'vanity.errors.counterRangePast': {
+        source: upstreamVanityJs,
+        template:
+          /The range runs past the \$\{passLen\}-character space \(\$\{limit\.toString\(\)\} counters\)\./,
+      },
+      'vanity.errors.counterStartBeyond': {
+        source: upstreamVanityJs,
+        template:
+          /The start counter is beyond the \$\{passLen\}-character counter space\./,
+      },
+      'vanity.errors.keyNoLongerInStation': {
+        source: upstreamAppJs,
+        template:
+          /Key \$\{run\.sourceLabel\} is no longer in Key Station, so there is nothing to update\./,
+      },
+      'vanity.errors.mainnetOnly': {
+        source: upstreamAppJs,
+        template:
+          /Vanity matching is Bitcoin mainnet: key \$\{label\} derives coin type \$\{accountComponents\[1\] & VANITY_MAX_INDEX\}\. Pick a mainnet key \(coin type 0\)\./,
+      },
+      'vanity.errors.mnemonicTooLong': {
+        source: upstreamVanityJs,
+        template:
+          /The mnemonic is \$\{length\} UTF-8 bytes, over the \$\{VANITY_MAX_MNEMONIC_LEN\}-byte vanity limit\./,
+      },
+      'vanity.errors.noKeyMaterial': {
+        source: upstreamAppJs,
+        template: /Key \$\{label\} carries neither seed words nor a root xprv\./,
+      },
+      'vanity.errors.noMnemonicForPassphrase': {
+        source: upstreamAppJs,
+        template:
+          /Key \$\{label\} has no seed words \(root xprv\), so its passphrase cannot be extended — switch to the derivation grind\./,
+      },
+      'vanity.errors.passphraseLength': {
+        source: upstreamVanityJs,
+        template: /Passphrase length is 1 to \$\{VANITY_MAX_PASS_LEN\} characters\./,
+      },
+      'vanity.errors.pathTooDeep': {
+        source: upstreamVanityJs,
+        template:
+          /Derivation paths are at most \$\{VANITY_MAX_PATH_LEN\} components deep for the vanity grind\./,
+      },
+      'vanity.errors.prefixMustStartWith': {
+        source: upstreamVanityJs,
+        template:
+          /\$\{meta\.label\} addresses start with “\$\{meta\.prefix\}”; the prefix must too\./,
+      },
+      'vanity.errors.prefixNeedsAdditionalCharacter': {
+        source: upstreamVanityJs,
+        template:
+          /Add at least one character after “\$\{meta\.prefix\}” — “\$\{meta\.prefix\}” alone matches every \$\{meta\.label\} address\./,
+      },
+      'vanity.errors.prefixTooLong': {
+        source: upstreamVanityJs,
+        template:
+          /The prefix is longer than a whole \$\{meta\.label\} address \(\$\{meta\.max\} characters\)\./,
+      },
+      'vanity.errors.silentPaymentParity': {
+        source: upstreamVanityJs,
+        template:
+          /The character after “\$\{meta\.prefix\}” encodes the scan key's parity: every \$\{meta\.label\} code continues with one of \$\{\[\.\.\.meta\.firstFree\]\.join\(", "\)\}\./,
+      },
+      'vanity.errors.startingPassphraseTooLong': {
+        source: upstreamVanityJs,
+        template:
+          /The starting passphrase is \$\{length\} UTF-8 bytes, over the \$\{VANITY_MAX_SALT_LEN\}-byte vanity limit — shorten it on the Keys tab\./,
+      },
+      'vanity.errors.watchOnly': {
+        source: upstreamAppJs,
+        template:
+          /Key \$\{label\} is watch-only; the derivation grind needs private material\./,
+      },
+      'vanity.errors.wholeNumber': {
+        source: upstreamAppJs,
+        template: /\$\{label\} is a whole number \(digits only\)\./,
+      },
+      'vanity.estimate.formatDuration': {
+        source: upstreamAppJs,
+        template:
+          /function hodlVanityFormatDuration\(seconds\) \{[\s\S]*?seconds < 1\) return "under a second";[\s\S]*?seconds < 90\) return `\$\{Math\.round\(seconds\)\} second\$\{Math\.round\(seconds\) === 1 \? "" : "s"\}`;[\s\S]*?return `\$\{Math\.round\(days \/ 365\)\.toLocaleString\("en-US"\)\} years`;/,
+      },
+      'vanity.estimate.summary': {
+        source: upstreamAppJs,
+        template:
+          /estimateEl\.textContent = `Prefix “\$\{prefix\}” matches about 1 in \$\{hodlVanityFormatCount\(work\)\} \$\{hodlVanityScript\(\)\.label\} candidates on average\. \$\{timing\}`;/,
+      },
+      'vanity.estimate.timing': {
+        source: upstreamAppJs,
+        template:
+          /At about \$\{hodlVanityFormatCount\(Math\.round\(rate\)\)\} candidates\/s[\s\S]*?expect a match roughly every \$\{hodlVanityFormatDuration\(Number\(work\) \/ rate\)\}\./,
+      },
+      'vanity.form.prefixHelp.base58': {
+        source: upstreamAppJs,
+        template:
+          /\$\{meta\.label\} prefix, starts with “\$\{meta\.prefix\}”\. Live-filtered to base58 characters; each free character multiplies the work by ~58\./,
+      },
+      'vanity.form.prefixHelp.bech32': {
+        source: upstreamAppJs,
+        template:
+          /\$\{meta\.label\} prefix, starts with “\$\{meta\.prefix\}”\. Live-filtered to lowercase bech32 characters; each free character multiplies the work by ~32\./,
+      },
+      'vanity.form.prefixHelp.silentPayment': {
+        source: upstreamAppJs,
+        template:
+          /\$\{meta\.label\} code, starts with “\$\{meta\.prefix\}”; the next character is one of \$\{\[\.\.\.meta\.firstFree\]\.join\(" "\)\} \(the scan key's parity\)\. Live-filtered to lowercase bech32 characters; each further free character multiplies the work by ~32\./,
+      },
+      'vanity.form.prefixPlaceholder': {
+        source: upstreamAppJs,
+        template: /input\.placeholder = `\$\{meta\.prefix\}…`;/,
+      },
+      'vanity.result.addressWhere': {
+        source: upstreamAppJs,
+        template:
+          /`the \$\{hodlEscapeHtml\(meta\.label\)\} address at \$\{hodlEscapeHtml\(hodlDisplayDerivationPath\(run\.pathText\)\)\}`/,
+      },
+      'vanity.result.derivationDescription': {
+        source: upstreamAppJs,
+        template:
+          /Each row is a BIP32 account index of key \$\{label\} — with its passphrase unchanged, \$\{where\} starts with the prefix\. Update key sets that account on the key and re-derives it, so the Keys tab, its exports, and the Journal show this wallet\./,
+      },
+      'vanity.result.matchesHeading': {
+        source: upstreamAppJs,
+        template: /Matching \$\{derivation \? "accounts" : "passphrases"\}/,
+      },
+      'vanity.result.overflow': {
+        source: upstreamAppJs,
+        template:
+          /Only the first \$\{hodlVanityMatches\.length\} matches are listed; \$\{hodlVanityFormatCount\(hodlVanityFound\)\} found in total\./,
+      },
+      'vanity.result.maskedPassphrase': {
+        source: upstreamAppJs,
+        template: /hodlEscapeHtml\("•"\.repeat\(12\)\)/,
+      },
+      'vanity.result.passphraseDescription': {
+        source: upstreamAppJs,
+        template:
+          /Each row is a new BIP39 passphrase for key \$\{label\}: the starting passphrase followed by the counter characters\. With this key's seed words it derives \$\{where\}\. Update key writes the passphrase to the key and re-derives it, so the Keys tab, its exports, and the Journal show this wallet\. Anyone holding the words and this passphrase holds the coins\./,
+      },
+      'vanity.result.savedToKey': {
+        source: upstreamAppJs,
+        template: /Saved to key \$\{hodlEscapeHtml\(match\.savedTo\)\}/,
+      },
+      'vanity.result.silentPaymentWhere': {
+        source: upstreamAppJs,
+        template:
+          /the BIP-352 Silent Payment code of that account \(scan \$\{hodlEscapeHtml\(hodlDisplayDerivationPath\(run\.pathText\)\)\}\/1h\/0, spend …\/0h\/0\)/,
+      },
+      'vanity.source.fromKey': {
+        source: upstreamAppJs,
+        template: /if \(from\) from\.textContent = `· from key \$\{label\}`;/,
+      },
+      'vanity.source.kind': {
+        source: upstreamAppJs,
+        template:
+          /if \(kind\) kind\.textContent = `\$\{hasMnemonic \? "BIP39 seed words" : "Root xprv"\}\$\{state\.name && state\.name !== label \? ` · \$\{state\.name\}` : ""\} · \$\{hodlDisplayDerivationPath\(state\.fields\?\.derivationPath \|\| ""\)\}`;/,
+      },
+      'vanity.source.rootXprvNote': {
+        source: upstreamAppJs,
+        template:
+          /Key \$\{label\} was imported as a root xprv: it has no seed words, so its passphrase cannot be extended — only the derivation grind is available\./,
+      },
+      'vanity.source.withPassphraseNote': {
+        source: upstreamAppJs,
+        template:
+          /Copied verbatim from key \$\{label\}'s Optional BIP39 passphrase on the Keys tab\. Passphrase grind: candidates are this text followed by the counter characters\. Derivation grind: this exact passphrase, with the account index changing\./,
+      },
+      'vanity.source.withoutPassphraseNote': {
+        source: upstreamAppJs,
+        template:
+          /Key \$\{label\} has no passphrase\. Passphrase grind: candidates are the counter characters alone\. Derivation grind: no passphrase, with the account index changing\./,
+      },
+      'vanity.status.complete': {
+        source: upstreamAppJs,
+        template:
+          /Stopped at first match[\s\S]*?Range complete[\s\S]*?Next \$\{inputs\.method === "derivation" \? "account" : "counter"\}: \$\{nextStart\.toString\(\)\}\./,
+      },
+      'vanity.status.progress': {
+        source: upstreamAppJs,
+        template:
+          /\$\{hodlVanityFormatCount\(done\)\} \/ \$\{hodlVanityFormatCount\(total\)\} candidates · \$\{hodlVanityFormatCount\(Math\.round\(rate\)\)\}\/s · \$\{hodlVanityFound\} match\$\{hodlVanityFound === 1 \? "" : "es"\}/,
+      },
+      'vanity.status.saved': {
+        source: upstreamAppJs,
+        template:
+          /Saved to key \$\{match\.savedTo\}: \$\{match\.index !== null \? `account \$\{match\.index\}` : "the new passphrase"\} is now on the key\$\{run\.sourceLabel !== match\.savedTo \? ` — its master fingerprint and LifeHash changed from \$\{run\.sourceLabel\} to \$\{match\.savedTo\}` : ""\}\. Open the Keys tab to review and export it\./,
+      },
+      'vanity.status.starting': {
+        source: upstreamAppJs,
+        template:
+          /Starting workers — stepping through account indexes of key \$\{inputs\.sourceLabel\}…[\s\S]*?Starting workers — extending key \$\{inputs\.sourceLabel\}'s passphrase with the counter characters…/,
       },
     };
 

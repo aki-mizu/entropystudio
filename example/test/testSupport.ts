@@ -17,6 +17,10 @@ import type {
   PrivateKeyInputState,
   PrivateKeyMaterial,
   EntropySyncSnapshot,
+  VanityChunk,
+  VanityInputState,
+  VanityMatch,
+  VanityRunInput,
 } from '../src/native/entropyStudio';
 import { installCardUiFixtures } from './cardUiFixtures';
 import { installBip39UiFixtures } from './bip39UiFixtures';
@@ -216,6 +220,105 @@ export const mockSynchronizeEntropy = jest.fn<
   [string, number, number, boolean, string]
 >();
 
+// Vanity fixtures intentionally model returned native records only. They do
+// not calculate candidates in TypeScript: workflow tests explicitly choose
+// the native state/chunk records that their scenario needs.
+export const VANITY_RUN_INPUT_DEFAULT_FIXTURE: VanityRunInput = {
+  accountPath: "m/84'/0'/0'",
+  addressHardened: false,
+  addressIndex: '0',
+  branchHardened: false,
+  branchIndex: '0',
+  count: '1',
+  method: 0,
+  mnemonic: BIP39_MNEMONIC_FIXTURE,
+  passphraseLength: '8',
+  prefix: 'bc1q',
+  script: 2,
+  start: '0',
+  startingPassphrase: '',
+};
+
+export const VANITY_INPUT_STATE_DEFAULT_FIXTURE: VanityInputState = {
+  accountHardened: true,
+  count: BigInt(1),
+  counterLimit: '1',
+  expectedCandidates: '1',
+  firstVariableCharacters: '',
+  fixedPrefix: 'bc1q',
+  maximumBip32Index: 2_147_483_647,
+  maximumMnemonicByteLength: 1_024,
+  maximumPassphraseLength: 32,
+  maximumPathComponents: 16,
+  maximumPrefixLength: 42,
+  maximumStartingPassphraseByteLength: 256,
+  normalizedMnemonicByteLength: 0,
+  normalizedPrefix: '',
+  normalizedStartingPassphraseByteLength: 0,
+  passphraseLength: 8,
+  path: "m/84'/0'/0'/0/0",
+  prefixAlphabet: 'qpzry9x8gf2tvdw0s3jn54khce6mua7l',
+  silentPaymentScanPath: '',
+  silentPaymentSpendPath: '',
+  start: BigInt(0),
+  totalCount: BigInt(1),
+  valid: false,
+  validationKind: 13,
+};
+
+export const VANITY_MATCH_DEFAULT_FIXTURE: VanityMatch = {
+  accountIndex: 0,
+  address: 'bc1qylthc2drk6x5q0czdljal99vqwed9tja80z06d',
+  candidatePassphrase: 'a',
+  counter: BigInt(0),
+  masterFingerprint: 'c55401c7',
+  path: "m/84'/0'/0'/0/0",
+};
+
+export const VANITY_CHUNK_DEFAULT_FIXTURE: VanityChunk = {
+  candidatesPerSecond: 0,
+  complete: true,
+  elapsedMilliseconds: BigInt(0),
+  matches: [],
+  nextCounter: BigInt(1),
+  processed: BigInt(1),
+  progressPercent: 100,
+  stopped: false,
+  totalCount: BigInt(1),
+  totalProcessed: BigInt(1),
+};
+
+export const mockVanityInputState = jest.fn<VanityInputState, [VanityRunInput]>(
+  () => VANITY_INPUT_STATE_DEFAULT_FIXTURE,
+);
+export const mockVanityFilterPrefix = jest.fn<string, [string, number]>(() => 'bc1q');
+export const mockVanityRunState = jest.fn<VanityInputState, []>(
+  () => VANITY_INPUT_STATE_DEFAULT_FIXTURE,
+);
+export const mockVanityRunNextChunk = jest.fn<VanityChunk, []>(
+  () => VANITY_CHUNK_DEFAULT_FIXTURE,
+);
+export const mockVanityRunStop = jest.fn();
+export const mockVanityRunClear = jest.fn();
+export const mockVanityRunDestroy = jest.fn();
+export const mockVanityRun = {
+  clear: mockVanityRunClear,
+  nextChunk: mockVanityRunNextChunk,
+  state: mockVanityRunState,
+  stop: mockVanityRunStop,
+  uniffiDestroy: mockVanityRunDestroy,
+};
+export const mockVanityRunNew = jest.fn<typeof mockVanityRun, [VanityRunInput]>(
+  () => mockVanityRun,
+);
+// A UniFFI primary constructor is emitted as `new VanityRun(input)`. Keep a
+// static `new` mock as well so the fixture remains usable if binding output
+// names an alternate constructor instead.
+export const mockVanityRunConstructor = Object.assign(
+  jest.fn<typeof mockVanityRun, [VanityRunInput]>(() => mockVanityRun),
+  { new: mockVanityRunNew },
+);
+
 jest.mock('entropystudio', () => ({
   AccountScriptType: {
     Legacy: 0,
@@ -260,6 +363,47 @@ jest.mock('entropystudio', () => ({
     InvalidWord: 6,
     InvalidNumber: 7,
     ChecksumInvalid: 8,
+  },
+  VanityMethod: {
+    Passphrase: 0,
+    Derivation: 1,
+  },
+  VanityScript: {
+    P2pkh: 0,
+    P2shP2wpkh: 1,
+    P2wpkh: 2,
+    P2tr: 3,
+    SilentPayments: 4,
+  },
+  VanityValidationKind: {
+    Valid: 0,
+    MissingMnemonic: 1,
+    MnemonicTooLong: 2,
+    InvalidMnemonic: 3,
+    PassphraseTooLong: 4,
+    PathRoot: 5,
+    PathIndex: 6,
+    PathTooLong: 7,
+    MissingAccountComponents: 8,
+    NonMainnetCoinType: 9,
+    InvalidBranchIndex: 10,
+    InvalidAddressIndex: 11,
+    InvalidPrefix: 12,
+    PrefixTooShort: 13,
+    PrefixTooLong: 14,
+    PrefixAlphabet: 15,
+    SilentPaymentParity: 16,
+    InvalidPassphraseLength: 17,
+    InvalidStart: 18,
+    InvalidCount: 19,
+    PassphraseRangeMinimum: 20,
+    PassphraseStartBeyond: 21,
+    PassphraseRangePast: 22,
+    PassphraseRangePast64Bit: 23,
+    DerivationRangeMinimum: 24,
+    DerivationStartBeyond: 25,
+    DerivationRangePast: 26,
+    RunCleared: 27,
   },
   DirectDiceMethod: {
     Bitbox: 0,
@@ -351,6 +495,8 @@ jest.mock('entropystudio', () => ({
     InvalidPrivateKeyRange: 'InvalidPrivateKeyRange',
     EmptyBrainWallet: 'EmptyBrainWallet',
     TrimmedBrainWalletEmpty: 'TrimmedBrainWalletEmpty',
+    InvalidVanityInput: 'InvalidVanityInput',
+    VanityRunCleared: 'VanityRunCleared',
   },
   HashedCardInstruction: {
     Empty: 0,
@@ -444,6 +590,9 @@ jest.mock('entropystudio', () => ({
   seedQrData: mockSeedQrData,
   synchronizeEntropy: mockSynchronizeEntropy,
   translateSeedNumberIndices: mockTranslateSeedNumberIndices,
+  VanityRun: mockVanityRunConstructor,
+  vanityFilterPrefix: mockVanityFilterPrefix,
+  vanityInputState: mockVanityInputState,
 }));
 
 installBip39UiFixtures({
@@ -552,10 +701,11 @@ export function appTabBar(app: ReactTestRenderer.ReactTestRenderer) {
 
 export async function selectAppTab(
   app: ReactTestRenderer.ReactTestRenderer,
-  tab: 'method' | 'settings',
+  tab: 'method' | 'vanity' | 'settings',
 ) {
+  const index = tab === 'method' ? 0 : tab === 'vanity' ? 1 : 2;
   await ReactTestRenderer.act(async () => {
-    appTabBar(app).props.onIndexChange(tab === 'method' ? 0 : 1);
+    appTabBar(app).props.onIndexChange(index);
   });
 }
 

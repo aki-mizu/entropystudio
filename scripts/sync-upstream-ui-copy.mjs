@@ -8,13 +8,17 @@ const typescript = require('typescript');
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const upstreamRoot = join(root, 'entropylab');
 const upstreamAppFile = join(upstreamRoot, 'src/js/app.js');
+const upstreamVanityFile = join(upstreamRoot, 'src/js/vanity.js');
 const upstreamLocaleCatalogFile = join(upstreamRoot, 'src/locales/es.json');
 const upstreamLabelsFile = join(upstreamRoot, 'src/js/i18n-labels.js');
 const upstreamUiCopyFile = join(root, 'example/src/features/upstreamUiCopy.ts');
 
 const upstreamSourceKeys = readUpstreamSourceKeys();
 const upstreamSourceSet = new Set(upstreamSourceKeys);
-const upstreamRenderedSource = readFileSync(upstreamAppFile, 'utf8');
+const upstreamRenderedSource = [
+  readFileSync(upstreamAppFile, 'utf8'),
+  readFileSync(upstreamVanityFile, 'utf8'),
+].join('\n');
 const upstreamLabelsSource = sourceFile(upstreamLabelsFile);
 const upstreamUiCopySource = sourceFile(upstreamUiCopyFile);
 const staticText = findStaticText(upstreamUiCopySource);
