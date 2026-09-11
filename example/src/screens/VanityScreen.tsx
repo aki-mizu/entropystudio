@@ -1744,9 +1744,8 @@ const styles = StyleSheet.create({
     display: 'none',
   },
   intro: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 17,
   },
   kicker: {
     fontSize: 12,
@@ -1941,10 +1940,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   title: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: '700',
-    lineHeight: 34,
-    marginTop: 3,
+    lineHeight: 25,
+    marginBottom: 5,
   },
   toggle: {
     alignItems: 'center',

@@ -40,6 +40,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 12,
     fontWeight: '700',
+    letterSpacing: 0.4,
     lineHeight: 17,
     textTransform: 'uppercase',
   },
