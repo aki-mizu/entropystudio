@@ -342,6 +342,8 @@ export function VanityScreen({
 }: Props) {
   const colors = diceColors(isDarkMode);
   const chunkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const backgroundPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const backgroundModeRef = useRef(false);
   const foundRef = useRef(0);
   const matchesRef = useRef<readonly VanityMatch[]>([]);
   const mountedRef = useRef(true);
@@ -503,6 +505,10 @@ export function VanityScreen({
       clearTimeout(chunkTimerRef.current);
       chunkTimerRef.current = null;
     }
+    if (backgroundPollTimerRef.current !== null) {
+      clearTimeout(backgroundPollTimerRef.current);
+      backgroundPollTimerRef.current = null;
+    }
   }
 
   function disposeNativeRun(run: InstanceType<typeof VanityRun>) {
@@ -526,6 +532,7 @@ export function VanityScreen({
   function clearNativeRun() {
     clearQueuedChunk();
     runIdRef.current += 1;
+    backgroundModeRef.current = false;
     const run = runRef.current;
     runRef.current = null;
     if (run) {
@@ -566,6 +573,7 @@ export function VanityScreen({
     }
 
     clearQueuedChunk();
+    backgroundModeRef.current = false;
     runRef.current = null;
     setRunning(false);
     if (!mountedRef.current) {
@@ -595,6 +603,76 @@ export function VanityScreen({
     disposeNativeRun(run);
   }
 
+  function processChunk(
+    run: InstanceType<typeof VanityRun>,
+    runId: number,
+    meta: RunMeta,
+    chunk: VanityChunk,
+  ): boolean {
+    if (runRef.current !== run || runIdRef.current !== runId) {
+      return true;
+    }
+
+    if (chunk.failed) {
+      clearQueuedChunk();
+      backgroundModeRef.current = false;
+      runRef.current = null;
+      setRunning(false);
+      disposeNativeRun(run);
+      if (mountedRef.current) {
+        setRunError(UPSTREAM_TEXT.error.generic);
+      }
+      return true;
+    }
+
+    const chunkMatches = chunk.matches ?? [];
+    // A native background pool retains only the first displayable records,
+    // while this cumulative count still reports every match it found.
+    const nextFound = Number(chunk.totalFound);
+    foundRef.current = nextFound;
+    if (chunkMatches.length > 0) {
+      const nextMatches = [
+        ...matchesRef.current,
+        ...chunkMatches.slice(
+          0,
+          Math.max(0, MAX_DISPLAYED_MATCHES - matchesRef.current.length),
+        ),
+      ];
+      matchesRef.current = nextMatches;
+      if (mountedRef.current) {
+        setMatches(nextMatches);
+      }
+    }
+
+    if (mountedRef.current) {
+      setProgress(chunk.progressPercent);
+      setCandidatesPerSecond(chunk.candidatesPerSecond);
+      setStatus(
+        UPSTREAM_UI_FALLBACK_COPY.vanity.status.progress(
+          formattedCount(chunk.totalProcessed),
+          formattedCount(chunk.totalCount),
+          formattedCount(chunk.candidatesPerSecond),
+          nextFound,
+        ),
+      );
+      setTotalFound(nextFound);
+    }
+
+    if (meta.stopOnFirst && chunkMatches.length > 0 && !chunk.complete) {
+      try {
+        run.stop();
+      } catch {
+        // A completed object does not need another stop request.
+      }
+    }
+
+    if (chunk.complete) {
+      completeRun(run, runId, chunk, meta);
+      return true;
+    }
+    return false;
+  }
+
   function runNextChunk(
     run: InstanceType<typeof VanityRun>,
     runId: number,
@@ -603,76 +681,45 @@ export function VanityScreen({
     clearQueuedChunk();
     chunkTimerRef.current = setTimeout(() => {
       chunkTimerRef.current = null;
-      if (runRef.current !== run || runIdRef.current !== runId) {
-        return;
-      }
-
       let chunk: VanityChunk;
       try {
         chunk = run.nextChunk();
       } catch {
-        if (runRef.current !== run || runIdRef.current !== runId) {
-          return;
-        }
-        runRef.current = null;
-        setRunning(false);
-        disposeNativeRun(run);
-        if (mountedRef.current) {
-          setRunError(UPSTREAM_TEXT.error.generic);
+        if (runRef.current === run && runIdRef.current === runId) {
+          runRef.current = null;
+          setRunning(false);
+          disposeNativeRun(run);
+          if (mountedRef.current) setRunError(UPSTREAM_TEXT.error.generic);
         }
         return;
       }
-
-      if (runRef.current !== run || runIdRef.current !== runId) {
-        return;
+      if (!processChunk(run, runId, meta, chunk)) {
+        runNextChunk(run, runId, meta);
       }
-
-      const chunkMatches = chunk.matches ?? [];
-      const nextFound = foundRef.current + chunkMatches.length;
-      foundRef.current = nextFound;
-      if (chunkMatches.length > 0) {
-        const nextMatches = [
-          ...matchesRef.current,
-          ...chunkMatches.slice(
-            0,
-            Math.max(0, MAX_DISPLAYED_MATCHES - matchesRef.current.length),
-          ),
-        ];
-        matchesRef.current = nextMatches;
-        if (mountedRef.current) {
-          setMatches(nextMatches);
-        }
-      }
-
-      if (mountedRef.current) {
-        setProgress(chunk.progressPercent);
-        setCandidatesPerSecond(chunk.candidatesPerSecond);
-        setStatus(
-          UPSTREAM_UI_FALLBACK_COPY.vanity.status.progress(
-            formattedCount(chunk.totalProcessed),
-            formattedCount(chunk.totalCount),
-            formattedCount(chunk.candidatesPerSecond),
-            nextFound,
-          ),
-        );
-        setTotalFound(nextFound);
-      }
-
-      if (meta.stopOnFirst && chunkMatches.length > 0 && !chunk.complete) {
-        try {
-          run.stop();
-        } catch {
-          // A completed object does not need another stop request.
-        }
-      }
-
-      if (chunk.complete) {
-        completeRun(run, runId, chunk, meta);
-        return;
-      }
-
-      runNextChunk(run, runId, meta);
     }, 0);
+  }
+
+  function pollBackgroundRun(
+    run: InstanceType<typeof VanityRun>,
+    runId: number,
+    meta: RunMeta,
+  ) {
+    clearQueuedChunk();
+    backgroundPollTimerRef.current = setTimeout(() => {
+      backgroundPollTimerRef.current = null;
+      let chunks: readonly VanityChunk[];
+      try {
+        chunks = run.takeChunks();
+      } catch {
+        chunks = [];
+      }
+      for (const chunk of chunks) {
+        if (processChunk(run, runId, meta, chunk)) return;
+      }
+      if (runRef.current === run && runIdRef.current === runId) {
+        pollBackgroundRun(run, runId, meta);
+      }
+    }, 100);
   }
 
   function stopRun() {
@@ -692,9 +739,13 @@ export function VanityScreen({
     if (mountedRef.current) {
       setStatus(UPSTREAM_UI_FALLBACK_COPY.vanity.status.stopped);
     }
-    // One final bounded call turns the native stop request into a final
-    // progress/next-counter record before its secret state is wiped.
-    runNextChunk(run, runId, meta);
+    if (backgroundModeRef.current) {
+      pollBackgroundRun(run, runId, meta);
+    } else {
+      // One final bounded call turns the native stop request into a final
+      // progress/next-counter record before its secret state is wiped.
+      runNextChunk(run, runId, meta);
+    }
   }
 
   function selectSource(nextSourceId: number) {
@@ -789,7 +840,12 @@ export function VanityScreen({
         meta.sourceLabel,
       ),
     );
-    runNextChunk(run, runId, meta);
+    backgroundModeRef.current = run.start();
+    if (backgroundModeRef.current) {
+      pollBackgroundRun(run, runId, meta);
+    } else {
+      runNextChunk(run, runId, meta);
+    }
   }
 
   function updatePrefix(value: string) {

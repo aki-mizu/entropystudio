@@ -4,8 +4,8 @@
 //! entropy: a counter either extends a BIP39 passphrase with a base-62
 //! odometer or replaces the account component of the selected derivation
 //! path.  The sensitive key material and every BIP32/PBKDF2 operation live in
-//! Rust; React Native only schedules bounded chunks and renders their typed
-//! results.
+//! Rust; React Native only starts a native session, polls typed snapshots, and
+//! renders their results.
 
 use crate::error::EntropyStudioError;
 use bitcoin::bech32::{Bech32m, ByteIterExt, Fe32, Fe32IterExt, Hrp};
@@ -14,9 +14,10 @@ use bitcoin::{
     WitnessVersion,
 };
 use num_bigint::BigUint;
+use std::collections::VecDeque;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex, OnceLock,
+    atomic::{AtomicBool, AtomicUsize, Ordering},
+    mpsc, Arc, Mutex, OnceLock,
 };
 use std::thread;
 use std::time::Instant;
@@ -28,10 +29,13 @@ const MAX_PASSPHRASE_LENGTH: u8 = 32;
 const MAX_PASSPHRASE_BYTES: usize = 256;
 const MAX_MNEMONIC_BYTES: usize = 1024;
 const MAX_PATH_COMPONENTS: usize = 16;
-// This matches upstream's public passphrase timing sample. It amortizes the
-// React Native bridge yield while keeping one-worker stop latency short.
-const PASSPHRASE_CHUNK_SIZE: u64 = 24;
-const DERIVATION_CHUNK_SIZE: u64 = 256;
+// Match upstream vanity-worker.js: start promptly, then adapt each worker's
+// range toward a 120 ms yield interval.
+const INITIAL_PASSPHRASE_CHUNK_SIZE: u64 = 16;
+const INITIAL_DERIVATION_CHUNK_SIZE: u64 = 512;
+const MIN_CHUNK_SIZE: u64 = 8;
+const MAX_CHUNK_SIZE: u64 = 8_192;
+const TARGET_CHUNK_MILLISECONDS: u64 = 120;
 const MAX_WORKERS: u8 = 64;
 const BASE58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const BECH32_ALPHABET: &str = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
@@ -39,6 +43,13 @@ const UPSTREAM_GRIND_HEADER_BYTES: usize = 12;
 const UPSTREAM_GRIND_RECORD_BYTES: usize = 106;
 const UPSTREAM_GRIND_SUFFIX_BYTES: usize = 32;
 const UPSTREAM_GRIND_PAYLOAD_BYTES: usize = 66;
+// The JS side polls about every 100 ms. A native worker can finish more often
+// on a fast device, especially when all 64 upstream-allowed workers are
+// active, so retain one aggregate snapshot instead of queuing UI work.
+const MAX_BACKGROUND_CHUNK_SNAPSHOTS: usize = 1;
+// Studio renders at most 100 matches.  Keep that same fixed bound in the
+// native queue while carrying the exact cumulative total separately.
+const MAX_BACKGROUND_RETAINED_MATCHES: usize = 100;
 const BENCHMARK_PREFIX: &str = "bc1qqqqqqqqqqqq";
 const BENCHMARK_MNEMONIC: &str =
     "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
@@ -209,6 +220,9 @@ pub struct VanityChunk {
     /// Candidates tested in this call.
     pub processed: u64,
     pub total_processed: u64,
+    /// All matching candidates found so far, including records retained only
+    /// as a count after the bounded background-result buffer fills.
+    pub total_found: u64,
     pub total_count: u64,
     pub next_counter: u64,
     pub progress_percent: f64,
@@ -217,6 +231,10 @@ pub struct VanityChunk {
     pub matches: Vec<VanityMatch>,
     pub complete: bool,
     pub stopped: bool,
+    /// The native pool could not complete its upstream grinder work.  This is
+    /// distinct from a user-requested stop so the UI can surface its existing
+    /// generic native-operation error rather than describe it as a stop.
+    pub failed: bool,
 }
 
 /// Per-worker rates for EntropyLab's fixed, public Vanity benchmark samples.
@@ -421,10 +439,16 @@ struct VanityRunState {
     secrets: RunSecrets,
     source_fingerprint: String,
     cursor: u64,
+    worker_chunk_size: u64,
     total_processed: u64,
+    total_found: u64,
     complete: bool,
     stopped: bool,
+    failed: bool,
     cleared: bool,
+    /// A native background pool owns the candidate ranges.  Synchronous
+    /// `next_chunk` calls must not also admit candidates from those ranges.
+    background_active: bool,
     started_at: Instant,
 }
 
@@ -441,10 +465,14 @@ impl VanityRunState {
                 },
                 source_fingerprint: String::new(),
                 cursor,
+                worker_chunk_size: INITIAL_PASSPHRASE_CHUNK_SIZE,
                 total_processed: 0,
+                total_found: 0,
                 complete: false,
                 stopped: false,
+                failed: false,
                 cleared: false,
+                background_active: false,
                 started_at: Instant::now(),
             },
             VanityMethod::Derivation => {
@@ -465,10 +493,14 @@ impl VanityRunState {
                     },
                     source_fingerprint,
                     cursor,
+                    worker_chunk_size: INITIAL_DERIVATION_CHUNK_SIZE,
                     total_processed: 0,
+                    total_found: 0,
                     complete: false,
                     stopped: false,
+                    failed: false,
                     cleared: false,
+                    background_active: false,
                     started_at: Instant::now(),
                 }
             }
@@ -482,6 +514,7 @@ impl VanityRunState {
         self.stopped = true;
         self.complete = true;
         self.cleared = true;
+        self.background_active = false;
     }
 
     fn input_state(&self) -> VanityInputState {
@@ -506,6 +539,12 @@ impl VanityRunState {
             .elapsed()
             .as_millis()
             .min(u128::from(u64::MAX)) as u64;
+        if self.background_active {
+            // `start` switches this object to the polling API.  Returning a
+            // snapshot rather than entering a second grinder prevents a
+            // concurrent caller from overlapping the pool's fixed ranges.
+            return Ok(self.chunk_result(0, Vec::new(), elapsed_milliseconds));
+        }
         if self.complete || self.stopped || stop_requested.load(Ordering::Acquire) {
             self.stopped |= stop_requested.load(Ordering::Acquire);
             self.complete = true;
@@ -513,16 +552,14 @@ impl VanityRunState {
         }
 
         let remaining = self.config.end() - self.cursor;
-        let per_worker_budget = match self.config.method {
-            VanityMethod::Passphrase => PASSPHRASE_CHUNK_SIZE,
-            VanityMethod::Derivation => DERIVATION_CHUNK_SIZE,
-        };
-        let budget = per_worker_budget
+        let budget = self
+            .worker_chunk_size
             .saturating_mul(u64::from(self.config.workers))
             .min(remaining);
         // Reuse upstream's Rust grinder for the whole bounded range.  The
         // Studio layer owns only the typed session and FFI adaptation around
         // that canonical candidate engine.
+        let work_started_at = Instant::now();
         let (processed, matches) = grind_upstream_ranges(
             &self.config,
             &self.secrets,
@@ -530,8 +567,12 @@ impl VanityRunState {
             self.cursor,
             budget,
         )?;
+        let work_milliseconds = work_started_at.elapsed().as_millis().max(1) as u64;
+        let worker_requested = budget.div_ceil(u64::from(self.config.workers));
+        self.worker_chunk_size = upstream_next_chunk_size(worker_requested, work_milliseconds);
         self.cursor += processed;
         self.total_processed += processed;
+        self.total_found = self.total_found.saturating_add(matches.len() as u64);
 
         if self.cursor == self.config.end() || self.stopped {
             self.complete = true;
@@ -542,6 +583,70 @@ impl VanityRunState {
             .as_millis()
             .min(u128::from(u64::MAX)) as u64;
         Ok(self.chunk_result(processed, matches, elapsed_milliseconds))
+    }
+
+    /// Transfers immutable input material into a background-owned job. The
+    /// state mutex is released before any candidate work begins, so UI reads
+    /// and cancellation are never held up by PBKDF2/BIP32 work.
+    fn begin_background(&mut self) -> Option<BackgroundPoolJob> {
+        if self.cleared {
+            return None;
+        }
+        self.background_active = true;
+        Some(BackgroundPoolJob {
+            config: Arc::new(self.config.clone()),
+            secrets: Arc::new(std::mem::replace(&mut self.secrets, RunSecrets::Cleared)),
+            source_fingerprint: Arc::<str>::from(std::mem::take(&mut self.source_fingerprint)),
+            start: self.cursor,
+            count: self.config.end().saturating_sub(self.cursor),
+        })
+    }
+
+    /// Publishes one completed persistent-worker step as a typed aggregate
+    /// snapshot.  Bucket completion can be out of counter order, just as it
+    /// is in upstream's independent Web Workers, so `next_counter` follows
+    /// the upstream display convention of start plus all completed work.
+    fn record_background_progress(
+        &mut self,
+        processed: u64,
+        found: u64,
+        matches: Vec<VanityMatch>,
+    ) -> Option<VanityChunk> {
+        if self.cleared {
+            return None;
+        }
+        debug_assert!(processed <= self.config.count.saturating_sub(self.total_processed));
+        self.total_processed = self
+            .total_processed
+            .saturating_add(processed)
+            .min(self.config.count);
+        self.total_found = self.total_found.saturating_add(found);
+        self.cursor = self.config.start.saturating_add(self.total_processed);
+        let elapsed_milliseconds = self
+            .started_at
+            .elapsed()
+            .as_millis()
+            .min(u128::from(u64::MAX)) as u64;
+        Some(self.chunk_result(processed, matches, elapsed_milliseconds))
+    }
+
+    /// Produces the single terminal pool snapshot after every native worker
+    /// has exited.  The caller clears the retained state only after this
+    /// record has been made available to the JS polling side.
+    fn finish_background(&mut self, stopped: bool, failed: bool) -> Option<VanityChunk> {
+        if self.cleared {
+            return None;
+        }
+        self.background_active = false;
+        self.failed |= failed;
+        self.stopped |= stopped || self.failed;
+        self.complete = true;
+        let elapsed_milliseconds = self
+            .started_at
+            .elapsed()
+            .as_millis()
+            .min(u128::from(u64::MAX)) as u64;
+        Some(self.chunk_result(0, Vec::new(), elapsed_milliseconds))
     }
 
     fn chunk_result(
@@ -558,6 +663,7 @@ impl VanityRunState {
         VanityChunk {
             processed,
             total_processed: self.total_processed,
+            total_found: self.total_found,
             total_count: self.config.count,
             next_counter: self.cursor,
             progress_percent: if self.config.count == 0 {
@@ -570,8 +676,31 @@ impl VanityRunState {
             matches,
             complete: self.complete,
             stopped: self.stopped,
+            failed: self.failed,
         }
     }
+}
+
+/// Immutable material shared by a native background pool.  It deliberately
+/// does not retain `VanityRun` itself: dropping a UniFFI object must still be
+/// able to signal cancellation without an internal self-reference keeping the
+/// object alive.
+struct BackgroundPoolJob {
+    config: Arc<VanityRunConfig>,
+    secrets: Arc<RunSecrets>,
+    source_fingerprint: Arc<str>,
+    start: u64,
+    count: u64,
+}
+
+enum BackgroundWorkerEvent {
+    Progress {
+        processed: u64,
+        found: u64,
+        matches: Vec<VanityMatch>,
+    },
+    Failed,
+    Finished,
 }
 
 impl Drop for VanityRunState {
@@ -585,8 +714,13 @@ impl Drop for VanityRunState {
 /// between chunks without reimplementing a worker protocol in TypeScript.
 #[derive(uniffi::Object)]
 pub struct VanityRun {
-    inner: Mutex<VanityRunState>,
-    stop_requested: AtomicBool,
+    inner: Arc<Mutex<VanityRunState>>,
+    stop_requested: Arc<AtomicBool>,
+    background_chunks: Arc<Mutex<VecDeque<VanityChunk>>>,
+    /// `clear`/Drop disable publishing before clearing the queue so an
+    /// in-flight worker cannot repopulate it with stale records.
+    accept_background_chunks: Arc<AtomicBool>,
+    background_started: AtomicBool,
 }
 
 #[uniffi::export]
@@ -596,8 +730,11 @@ impl VanityRun {
         let validated =
             validate_input(input).map_err(|_| EntropyStudioError::InvalidVanityInput)?;
         Ok(Arc::new(Self {
-            inner: Mutex::new(VanityRunState::from_validated(validated)?),
-            stop_requested: AtomicBool::new(false),
+            inner: Arc::new(Mutex::new(VanityRunState::from_validated(validated)?)),
+            stop_requested: Arc::new(AtomicBool::new(false)),
+            background_chunks: Arc::new(Mutex::new(VecDeque::new())),
+            accept_background_chunks: Arc::new(AtomicBool::new(true)),
+            background_started: AtomicBool::new(false),
         }))
     }
 
@@ -617,8 +754,71 @@ impl VanityRun {
         state.chunk(&self.stop_requested)
     }
 
-    /// Asks the active bounded work step to stop.  A currently executing
-    /// candidate completes first; no subsequent candidate is admitted.
+    /// Begins the native-owned grinder loop. It never calls into JavaScript:
+    /// the UI drains typed completed chunks with `take_chunks` at its own
+    /// display cadence, so grinding does not wait for a JS timer frame.
+    pub fn start(&self) -> bool {
+        if self.background_started.swap(true, Ordering::AcqRel) {
+            return false;
+        }
+        let inner = Arc::clone(&self.inner);
+        let stop_requested = Arc::clone(&self.stop_requested);
+        let background_chunks = Arc::clone(&self.background_chunks);
+        let accept_background_chunks = Arc::clone(&self.accept_background_chunks);
+        let job = {
+            let mut state = inner.lock().expect("VanityRun state mutex is not poisoned");
+            state.begin_background()
+        };
+        let Some(job) = job else {
+            self.background_started.store(false, Ordering::Release);
+            return false;
+        };
+        let pool_inner = Arc::clone(&inner);
+        let pool_stop_requested = Arc::clone(&stop_requested);
+        let pool_background_chunks = Arc::clone(&background_chunks);
+        let pool_accept_background_chunks = Arc::clone(&accept_background_chunks);
+        let spawned = thread::Builder::new()
+            .name("entropystudio-vanity-supervisor".to_owned())
+            .spawn(move || {
+                run_background_pool(
+                    pool_inner,
+                    pool_stop_requested,
+                    pool_background_chunks,
+                    pool_accept_background_chunks,
+                    job,
+                );
+            });
+        if spawned.is_err() {
+            // A resource-exhausted process must still wake the polling UI.
+            // Do this tiny state-only terminal transition on the caller;
+            // there are no candidate workers to join in this failure path.
+            stop_requested.store(true, Ordering::Release);
+            let terminal = inner
+                .lock()
+                .expect("VanityRun state mutex is not poisoned")
+                .finish_background(true, true);
+            if let Some(chunk) = terminal {
+                publish_background_chunk(&background_chunks, &accept_background_chunks, chunk);
+            }
+            if let Ok(mut state) = inner.lock() {
+                state.clear();
+            }
+        }
+        true
+    }
+
+    /// Returns and clears chunks completed by the background grinder.
+    pub fn take_chunks(&self) -> Vec<VanityChunk> {
+        self.background_chunks
+            .lock()
+            .expect("VanityRun chunk queue mutex is not poisoned")
+            .drain(..)
+            .collect()
+    }
+
+    /// Asks the active bounded upstream work step to stop. A currently
+    /// executing adaptive chunk completes first; no subsequent chunk is
+    /// admitted.
     pub fn stop(&self) {
         self.stop_requested.store(true, Ordering::Release);
     }
@@ -627,6 +827,12 @@ impl VanityRun {
     /// reference after clearing.
     pub fn clear(&self) {
         self.stop_requested.store(true, Ordering::Release);
+        self.accept_background_chunks
+            .store(false, Ordering::Release);
+        self.background_chunks
+            .lock()
+            .expect("VanityRun chunk queue mutex is not poisoned")
+            .clear();
         let mut state = self
             .inner
             .lock()
@@ -635,13 +841,304 @@ impl VanityRun {
     }
 }
 
+#[cfg(test)]
+impl VanityRun {
+    /// Lets the Rust transport tests make every P2WPKH candidate match without
+    /// weakening the production input validator.
+    pub(crate) fn test_set_prefix_after_validation(&self, prefix: &str) {
+        self.inner
+            .lock()
+            .expect("VanityRun state mutex is not poisoned")
+            .config
+            .prefix = prefix.to_owned();
+    }
+}
+
 impl Drop for VanityRun {
     fn drop(&mut self) {
         self.stop_requested.store(true, Ordering::Release);
-        if let Ok(state) = self.inner.get_mut() {
+        self.accept_background_chunks
+            .store(false, Ordering::Release);
+        if let Ok(mut chunks) = self.background_chunks.lock() {
+            chunks.clear();
+        }
+        if let Ok(mut state) = self.inner.lock() {
             state.clear();
         }
     }
+}
+
+/// Runs a stable native worker set for the full upstream bucket ranges.  It
+/// owns all join handles itself so neither `clear` nor a UniFFI destructor can
+/// block the JS thread waiting for a PBKDF2-sized step to finish.
+///
+/// Concurrent upstream calls are supported here: the pinned libsecp256k1
+/// header guarantees that a constructed context is safe for simultaneous use,
+/// and `vanity-wasm` neither randomizes nor destroys its shared context after
+/// construction.
+fn run_background_pool(
+    inner: Arc<Mutex<VanityRunState>>,
+    stop_requested: Arc<AtomicBool>,
+    background_chunks: Arc<Mutex<VecDeque<VanityChunk>>>,
+    accept_background_chunks: Arc<AtomicBool>,
+    job: BackgroundPoolJob,
+) {
+    let mut failed = false;
+
+    if !stop_requested.load(Ordering::Acquire) {
+        let job = Arc::new(job);
+        let worker_count = u64::from(job.config.workers).min(job.count) as usize;
+        if worker_count > 0 {
+            // At most two pending reports per worker puts backpressure on a
+            // runaway producer without placing a lock around candidate work.
+            let (event_sender, event_receiver) = mpsc::sync_channel(worker_count * 2);
+            let retained_matches = Arc::new(AtomicUsize::new(MAX_BACKGROUND_RETAINED_MATCHES));
+            let mut workers = Vec::with_capacity(worker_count);
+            let base = job.count / worker_count as u64;
+            let extra = job.count % worker_count as u64;
+            let mut range_start = job.start;
+
+            for index in 0..worker_count {
+                let range_count = base + u64::from(index < extra as usize);
+                let worker_job = Arc::clone(&job);
+                let worker_stop_requested = Arc::clone(&stop_requested);
+                let worker_stop_for_run = Arc::clone(&worker_stop_requested);
+                let worker_retained_matches = Arc::clone(&retained_matches);
+                let worker_events = event_sender.clone();
+                let spawned = thread::Builder::new()
+                    .name(format!("entropystudio-vanity-{index}"))
+                    .spawn(move || {
+                        // A panic must become a terminal pool event; otherwise
+                        // the polling UI could wait forever for that worker.
+                        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            run_background_worker(
+                                worker_job,
+                                range_start,
+                                range_count,
+                                worker_stop_for_run,
+                                worker_retained_matches,
+                                worker_events.clone(),
+                            );
+                        }));
+                        if result.is_err() {
+                            worker_stop_requested.store(true, Ordering::Release);
+                            let _ = worker_events.send(BackgroundWorkerEvent::Failed);
+                            let _ = worker_events.send(BackgroundWorkerEvent::Finished);
+                        }
+                    });
+                match spawned {
+                    Ok(worker) => workers.push(worker),
+                    Err(_) => {
+                        failed = true;
+                        stop_requested.store(true, Ordering::Release);
+                        break;
+                    }
+                }
+                range_start += range_count;
+            }
+            drop(event_sender);
+
+            let mut finished_workers = 0usize;
+            while finished_workers < workers.len() {
+                match event_receiver.recv() {
+                    Ok(BackgroundWorkerEvent::Progress {
+                        processed,
+                        found,
+                        matches,
+                    }) => {
+                        let chunk = inner
+                            .lock()
+                            .expect("VanityRun state mutex is not poisoned")
+                            .record_background_progress(processed, found, matches);
+                        if let Some(chunk) = chunk {
+                            publish_background_chunk(
+                                &background_chunks,
+                                &accept_background_chunks,
+                                chunk,
+                            );
+                        }
+                    }
+                    Ok(BackgroundWorkerEvent::Failed) => {
+                        failed = true;
+                        stop_requested.store(true, Ordering::Release);
+                    }
+                    Ok(BackgroundWorkerEvent::Finished) => {
+                        finished_workers += 1;
+                    }
+                    // A panic can drop a sender before it reports its
+                    // terminal event. Once every sender is gone, all of the
+                    // surviving workers have also exited and it is safe to
+                    // join below.
+                    Err(_) => {
+                        failed = true;
+                        stop_requested.store(true, Ordering::Release);
+                        break;
+                    }
+                }
+            }
+
+            for worker in workers {
+                if worker.join().is_err() {
+                    failed = true;
+                    stop_requested.store(true, Ordering::Release);
+                }
+            }
+        }
+    }
+
+    let terminal = inner
+        .lock()
+        .expect("VanityRun state mutex is not poisoned")
+        .finish_background(failed || stop_requested.load(Ordering::Acquire), failed);
+    if let Some(chunk) = terminal {
+        publish_background_chunk(&background_chunks, &accept_background_chunks, chunk);
+    }
+    if let Ok(mut state) = inner.lock() {
+        state.clear();
+    }
+}
+
+/// A single long-lived native worker for one of upstream's contiguous
+/// `vanityBuckets` ranges. Its cursor, adaptive chunk size, and wasm output
+/// allocation stay local to this thread for the whole run.
+fn run_background_worker(
+    job: Arc<BackgroundPoolJob>,
+    mut cursor: u64,
+    mut remaining: u64,
+    stop_requested: Arc<AtomicBool>,
+    retained_matches: Arc<AtomicUsize>,
+    events: mpsc::SyncSender<BackgroundWorkerEvent>,
+) {
+    let mut chunk_size = match job.config.method {
+        VanityMethod::Passphrase => INITIAL_PASSPHRASE_CHUNK_SIZE,
+        VanityMethod::Derivation => INITIAL_DERIVATION_CHUNK_SIZE,
+    };
+    let mut scratch = UpstreamGrindScratch::new(&job.config);
+
+    while remaining > 0 && !stop_requested.load(Ordering::Acquire) {
+        let count = chunk_size.min(remaining);
+        let started_at = Instant::now();
+        let raw = match scratch.grind_raw(&job.config, &job.secrets, cursor, count) {
+            Ok(raw) => raw,
+            Err(_) => {
+                stop_requested.store(true, Ordering::Release);
+                let _ = events.send(BackgroundWorkerEvent::Failed);
+                break;
+            }
+        };
+        let elapsed_milliseconds = started_at.elapsed().as_millis().max(1) as u64;
+        chunk_size = upstream_next_chunk_size(count, elapsed_milliseconds);
+
+        if raw.processed > count {
+            stop_requested.store(true, Ordering::Release);
+            let _ = events.send(BackgroundWorkerEvent::Failed);
+            break;
+        }
+
+        let retained = reserve_background_match_slots(&retained_matches, raw.matches);
+        let matches = match scratch.decode_matches(
+            &job.config,
+            &job.secrets,
+            &job.source_fingerprint,
+            raw.matches,
+            retained,
+        ) {
+            Ok(matches) => matches,
+            Err(_) => {
+                stop_requested.store(true, Ordering::Release);
+                let _ = events.send(BackgroundWorkerEvent::Failed);
+                break;
+            }
+        };
+        if events
+            .send(BackgroundWorkerEvent::Progress {
+                processed: raw.processed,
+                found: raw.matches as u64,
+                matches,
+            })
+            .is_err()
+        {
+            return;
+        }
+        cursor += raw.processed;
+        remaining -= raw.processed;
+        // The upstream ABI can return a short range only when its output
+        // record area fills. A worker-local buffer covers its full chunk, but
+        // treat a future short result as a stopped/error run rather than
+        // silently reporting an unsearched bucket as complete.
+        if raw.processed < count {
+            stop_requested.store(true, Ordering::Release);
+            let _ = events.send(BackgroundWorkerEvent::Failed);
+            break;
+        }
+    }
+    let _ = events.send(BackgroundWorkerEvent::Finished);
+}
+
+fn upstream_next_chunk_size(chunk: u64, elapsed_milliseconds: u64) -> u64 {
+    // Equivalent to upstream's positive-number `Math.round(chunk * 120 /
+    // elapsed)`, including its half-up tie behavior.
+    (chunk
+        .saturating_mul(TARGET_CHUNK_MILLISECONDS)
+        .saturating_add(elapsed_milliseconds / 2)
+        / elapsed_milliseconds)
+        .clamp(MIN_CHUNK_SIZE, MAX_CHUNK_SIZE)
+}
+
+fn reserve_background_match_slots(slots: &AtomicUsize, matches: usize) -> usize {
+    let mut available = slots.load(Ordering::Acquire);
+    loop {
+        let retained = available.min(matches);
+        if retained == 0 {
+            return 0;
+        }
+        match slots.compare_exchange_weak(
+            available,
+            available - retained,
+            Ordering::AcqRel,
+            Ordering::Acquire,
+        ) {
+            Ok(_) => return retained,
+            Err(current) => available = current,
+        }
+    }
+}
+
+fn publish_background_chunk(
+    background_chunks: &Mutex<VecDeque<VanityChunk>>,
+    accept_background_chunks: &AtomicBool,
+    chunk: VanityChunk,
+) {
+    if !accept_background_chunks.load(Ordering::Acquire) {
+        return;
+    }
+    let mut chunks = background_chunks
+        .lock()
+        .expect("VanityRun chunk queue mutex is not poisoned");
+    // `clear` can land while this thread waits for the queue mutex. Check
+    // again under the mutex so it cannot republish a stale snapshot.
+    if !accept_background_chunks.load(Ordering::Acquire) {
+        return;
+    }
+    if chunks.len() < MAX_BACKGROUND_CHUNK_SNAPSHOTS {
+        chunks.push_back(chunk);
+        return;
+    }
+    let tail = chunks
+        .back_mut()
+        .expect("a full vanity chunk queue has a tail");
+    tail.processed = tail.processed.saturating_add(chunk.processed);
+    tail.total_processed = chunk.total_processed;
+    tail.total_found = chunk.total_found;
+    tail.total_count = chunk.total_count;
+    tail.next_counter = chunk.next_counter;
+    tail.progress_percent = chunk.progress_percent;
+    tail.elapsed_milliseconds = chunk.elapsed_milliseconds;
+    tail.candidates_per_second = chunk.candidates_per_second;
+    tail.matches.extend(chunk.matches);
+    tail.complete = chunk.complete;
+    tail.stopped = chunk.stopped;
+    tail.failed = chunk.failed;
 }
 
 fn validate_input(input: VanityRunInput) -> Result<ValidatedInput, VanityValidationKind> {
@@ -1333,7 +1830,13 @@ fn grind_upstream_ranges(
             let range_start = next_start;
             next_start += range_count;
             jobs.push(scope.spawn(move || {
-                grind_upstream_chunk(config, secrets, source_fingerprint, range_start, range_count)
+                grind_upstream_chunk(
+                    config,
+                    secrets,
+                    source_fingerprint,
+                    range_start,
+                    range_count,
+                )
             }));
         }
 
@@ -1357,61 +1860,131 @@ fn grind_upstream_chunk(
     start: u64,
     count: u64,
 ) -> Result<(u64, Vec<VanityMatch>), EntropyStudioError> {
-    let path = upstream_path(config);
-    let record_capacity = usize::try_from(count).expect("Vanity chunk size fits usize");
-    let mut output =
-        vec![0u8; UPSTREAM_GRIND_HEADER_BYTES + UPSTREAM_GRIND_RECORD_BYTES * record_capacity];
-    let result = match secrets {
-        RunSecrets::Passphrase {
-            mnemonic,
-            starting_passphrase,
-        } => {
-            let call = call_upstream_grinder(
+    let mut scratch = UpstreamGrindScratch::new(config);
+    let raw = scratch.grind_raw(config, secrets, start, count)?;
+    let matches = scratch.decode_matches(
+        config,
+        secrets,
+        source_fingerprint,
+        raw.matches,
+        raw.matches,
+    )?;
+    Ok((raw.processed, matches))
+}
+
+struct UpstreamRawGrind {
+    processed: u64,
+    matches: usize,
+}
+
+/// Per-native-worker reusable buffers around the pinned upstream ABI.  The
+/// output grows only when adaptive sizing reaches a new high-water mark, not
+/// once per 120 ms step.
+struct UpstreamGrindScratch {
+    path: Vec<u8>,
+    output: Vec<u8>,
+}
+
+impl UpstreamGrindScratch {
+    fn new(config: &VanityRunConfig) -> Self {
+        Self {
+            path: upstream_path(config),
+            output: Vec::new(),
+        }
+    }
+
+    fn grind_raw(
+        &mut self,
+        config: &VanityRunConfig,
+        secrets: &RunSecrets,
+        start: u64,
+        count: u64,
+    ) -> Result<UpstreamRawGrind, EntropyStudioError> {
+        let output_length = upstream_output_length(count);
+        if self.output.len() < output_length {
+            self.output.resize(output_length, 0);
+        }
+        let output = &mut self.output[..output_length];
+        let (processed, matches) = match secrets {
+            RunSecrets::Passphrase {
+                mnemonic,
+                starting_passphrase,
+            } => call_upstream_grinder(
                 config.script,
                 &config.prefix,
                 config.passphrase_length as usize,
                 0,
                 mnemonic.as_bytes(),
                 starting_passphrase.as_bytes(),
-                &path,
+                &self.path,
                 u32::MAX,
                 start,
                 count,
-                &mut output,
-            );
-            call.and_then(|(processed, matches)| {
-                let matches =
-                    passphrase_matches(config, mnemonic, starting_passphrase, &output, matches)?;
-                Ok((processed, matches))
-            })
-        }
-        RunSecrets::Derivation { parent } => {
-            if let Some(parent) = parent.as_ref() {
+                output,
+            )?,
+            RunSecrets::Derivation { parent } => {
+                let parent = parent
+                    .as_ref()
+                    .ok_or(EntropyStudioError::VanityRunCleared)?;
                 let parent_material = upstream_parent_material(parent);
-                let call = call_upstream_grinder(
+                call_upstream_grinder(
                     config.script,
                     &config.prefix,
                     config.passphrase_length as usize,
                     1,
                     &parent_material,
                     &[],
-                    &path,
+                    &self.path,
                     0,
                     start,
                     count,
-                    &mut output,
-                );
-                call.and_then(|(processed, matches)| {
-                    let matches = derivation_matches(config, source_fingerprint, &output, matches)?;
-                    Ok((processed, matches))
-                })
-            } else {
+                    output,
+                )?
+            }
+            RunSecrets::Cleared => return Err(EntropyStudioError::VanityRunCleared),
+        };
+        Ok(UpstreamRawGrind { processed, matches })
+    }
+
+    fn decode_matches(
+        &self,
+        config: &VanityRunConfig,
+        secrets: &RunSecrets,
+        source_fingerprint: &str,
+        matches: usize,
+        retained: usize,
+    ) -> Result<Vec<VanityMatch>, EntropyStudioError> {
+        let retained = matches.min(retained);
+        match secrets {
+            RunSecrets::Passphrase {
+                mnemonic,
+                starting_passphrase,
+            } => passphrase_matches(
+                config,
+                mnemonic,
+                starting_passphrase,
+                &self.output,
+                retained,
+            ),
+            RunSecrets::Derivation { parent } if parent.is_some() => {
+                derivation_matches(config, source_fingerprint, &self.output, retained)
+            }
+            RunSecrets::Derivation { .. } | RunSecrets::Cleared => {
                 Err(EntropyStudioError::VanityRunCleared)
             }
         }
-        RunSecrets::Cleared => Err(EntropyStudioError::VanityRunCleared),
-    };
-    result
+    }
+}
+
+fn upstream_output_length(count: u64) -> usize {
+    let record_capacity = usize::try_from(count).expect("Vanity chunk size fits usize");
+    UPSTREAM_GRIND_HEADER_BYTES
+        .checked_add(
+            UPSTREAM_GRIND_RECORD_BYTES
+                .checked_mul(record_capacity)
+                .expect("Vanity chunk output fits usize"),
+        )
+        .expect("Vanity chunk output fits usize")
 }
 
 fn upstream_path(config: &VanityRunConfig) -> Vec<u8> {

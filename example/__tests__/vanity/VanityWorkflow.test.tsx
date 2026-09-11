@@ -17,6 +17,8 @@ import {
   mockVanityRunNextChunk,
   mockVanityRunState,
   mockVanityRunStop,
+  mockVanityRunStart,
+  mockVanityRunTakeChunks,
   React,
   ReactTestRenderer,
   selectAppTab,
@@ -294,6 +296,7 @@ function completedChunk(matches: readonly VanityMatch[]): VanityChunk {
   return {
     ...VANITY_CHUNK_DEFAULT_FIXTURE,
     matches: [...matches],
+    totalFound: BigInt(matches.length),
   };
 }
 
@@ -314,6 +317,10 @@ function resetVanityFixtures() {
   mockVanityRunNew.mockClear();
   mockVanityRunClear.mockClear();
   mockVanityRunStop.mockClear();
+  mockVanityRunStart.mockReset();
+  mockVanityRunStart.mockReturnValue(false);
+  mockVanityRunTakeChunks.mockReset();
+  mockVanityRunTakeChunks.mockReturnValue([]);
 }
 
 async function chooseNativeSelect(
@@ -502,7 +509,7 @@ describe(UPSTREAM_TEXT.vanity.tabLabel, () => {
     },
   );
 
-  test('uses native validation and a bounded passphrase chunk, masks its match, and clears it', async () => {
+  test('drains a native background chunk, masks its match, and clears it', async () => {
     const onApplyAccount = jest.fn(
       (_source: KeyStationTab, _accountIndex: number, _accountHardened: boolean) =>
         'unused',
@@ -521,7 +528,8 @@ describe(UPSTREAM_TEXT.vanity.tabLabel, () => {
     mockVanityFilterPrefix.mockReturnValue('bc1qf');
     mockVanityInputState.mockReturnValue(validState);
     mockVanityRunState.mockReturnValue(validState);
-    mockVanityRunNextChunk.mockReturnValue(completedChunk([match]));
+    mockVanityRunStart.mockReturnValue(true);
+    mockVanityRunTakeChunks.mockReturnValue([completedChunk([match])]);
     jest.useFakeTimers();
 
     let app: ReactTestRenderer.ReactTestRenderer;
@@ -586,7 +594,9 @@ describe(UPSTREAM_TEXT.vanity.tabLabel, () => {
       jest.runOnlyPendingTimers();
     });
 
-    expect(mockVanityRunNextChunk).toHaveBeenCalledTimes(1);
+    expect(mockVanityRunStart).toHaveBeenCalledTimes(1);
+    expect(mockVanityRunTakeChunks).toHaveBeenCalledTimes(1);
+    expect(mockVanityRunNextChunk).not.toHaveBeenCalled();
     expect(mockVanityRunClear).toHaveBeenCalledTimes(1);
     expect(app!.root.findByProps({ testID: 'vanity-match-0-address' }).props.children).toBe(
       match.address,
@@ -627,6 +637,43 @@ describe(UPSTREAM_TEXT.vanity.tabLabel, () => {
     expect(app!.root.findAllByProps({ testID: 'vanity-results' })).toHaveLength(0);
     expect(app!.root.findByProps({ testID: 'vanity-status' }).props.children).toBe(
       UPSTREAM_TEXT.vanity.status.idle,
+    );
+  });
+
+  test('surfaces a failed native background run as an error, not a user stop', async () => {
+    const validState = validInputState();
+    mockVanityInputState.mockReturnValue(validState);
+    mockVanityRunState.mockReturnValue(validState);
+    mockVanityRunStart.mockReturnValue(true);
+    mockVanityRunTakeChunks.mockReturnValue([
+      { ...VANITY_CHUNK_DEFAULT_FIXTURE, failed: true },
+    ]);
+    jest.useFakeTimers();
+
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(
+        <VanityScreen
+          isActive
+          isDarkMode={false}
+          onApplyAccount={() => 'unused'}
+          onApplyPassphrase={() => 'unused'}
+          tabs={[SOURCE_TAB]}
+        />,
+      );
+    });
+    await selectSource(app!);
+
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'vanity-start' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      jest.runOnlyPendingTimers();
+    });
+
+    expect(mockVanityRunClear).toHaveBeenCalledTimes(1);
+    expect(app!.root.findByProps({ testID: 'vanity-error' }).props.children).toBe(
+      UPSTREAM_TEXT.error.generic,
     );
   });
 

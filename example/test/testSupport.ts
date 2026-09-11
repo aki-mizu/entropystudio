@@ -282,12 +282,14 @@ export const VANITY_CHUNK_DEFAULT_FIXTURE: VanityChunk = {
   candidatesPerSecond: 0,
   complete: true,
   elapsedMilliseconds: BigInt(0),
+  failed: false,
   matches: [],
   nextCounter: BigInt(1),
   processed: BigInt(1),
   progressPercent: 100,
   stopped: false,
   totalCount: BigInt(1),
+  totalFound: BigInt(0),
   totalProcessed: BigInt(1),
 };
 
@@ -314,11 +316,19 @@ export const mockVanityRunNextChunk = jest.fn<VanityChunk, []>(
 export const mockVanityRunStop = jest.fn();
 export const mockVanityRunClear = jest.fn();
 export const mockVanityRunDestroy = jest.fn();
+// Workflow fixtures use the foreground path; production uses Rust's
+// background worker and drains typed chunks through takeChunks().
+export const mockVanityRunStart = jest.fn<boolean, []>(() => false);
+export const mockVanityRunTakeChunks = jest.fn<readonly VanityChunk[], []>(
+  () => [],
+);
 export const mockVanityRun = {
   clear: mockVanityRunClear,
   nextChunk: mockVanityRunNextChunk,
+  start: mockVanityRunStart,
   state: mockVanityRunState,
   stop: mockVanityRunStop,
+  takeChunks: mockVanityRunTakeChunks,
   uniffiDestroy: mockVanityRunDestroy,
 };
 export const mockVanityRunNew = jest.fn<typeof mockVanityRun, [VanityRunInput]>(

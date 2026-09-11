@@ -81,6 +81,7 @@ fn one_match(value: VanityRunInput) -> VanityMatch {
     let run = VanityRun::new(value).expect("valid vanity run");
     let chunk = run.next_chunk().expect("one work chunk");
     assert_eq!(chunk.processed, 1);
+    assert_eq!(chunk.total_found, 1);
     assert!(chunk.complete);
     assert_eq!(
         chunk.matches.len(),
@@ -92,6 +93,41 @@ fn one_match(value: VanityRunInput) -> VanityMatch {
         .into_iter()
         .next()
         .expect("one matching candidate")
+}
+
+fn background_chunks_until_complete(run: &VanityRun) -> Vec<VanityChunk> {
+    let mut result = Vec::new();
+    for _ in 0..2_000 {
+        let mut chunks = run.take_chunks();
+        let complete = chunks.iter().any(|chunk| chunk.complete);
+        result.append(&mut chunks);
+        if complete {
+            return result;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    panic!("background vanity run did not complete");
+}
+
+fn wait_for_background_progress(run: &VanityRun) {
+    for _ in 0..2_000 {
+        if run
+            .take_chunks()
+            .into_iter()
+            .any(|chunk| chunk.total_processed > 0)
+        {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    panic!("background vanity run did not report progress");
+}
+
+/// A one-character valid P2WPKH prefix is probabilistic.  This test helper
+/// deliberately lowers it to the fixed upstream prefix after validation so a
+/// short worker-range test can assert exact counters and result buffering.
+fn make_every_p2wpkh_candidate_match(run: &VanityRun) {
+    run.test_set_prefix_after_validation("bc1q");
 }
 
 #[test]
@@ -152,17 +188,193 @@ fn vanity_input_state_normalizes_metadata_and_filters_prefixes_natively() {
 
 #[test]
 fn vanity_workers_follow_upstream_clamping() {
-    let mut value = input(VanityMethod::Passphrase, VanityScript::P2wpkh, "bc1q".to_owned());
+    let mut value = input(
+        VanityMethod::Passphrase,
+        VanityScript::P2wpkh,
+        "bc1q".to_owned(),
+    );
     value.workers = "99".to_owned();
     assert_eq!(vanity_input_state(value).workers, 64);
 
-    let mut value = input(VanityMethod::Passphrase, VanityScript::P2wpkh, "bc1q".to_owned());
+    let mut value = input(
+        VanityMethod::Passphrase,
+        VanityScript::P2wpkh,
+        "bc1q".to_owned(),
+    );
     value.workers = "1000".to_owned();
     assert_eq!(vanity_input_state(value).workers, 64);
 
-    let mut value = input(VanityMethod::Passphrase, VanityScript::P2wpkh, "bc1q".to_owned());
+    let mut value = input(
+        VanityMethod::Passphrase,
+        VanityScript::P2wpkh,
+        "bc1q".to_owned(),
+    );
     value.workers = "0".to_owned();
     assert_eq!(vanity_input_state(value).workers, 1);
+}
+
+#[test]
+fn background_run_returns_typed_completed_chunks_without_js_driving_work() {
+    let run = VanityRun::new(input(
+        VanityMethod::Passphrase,
+        VanityScript::P2wpkh,
+        "bc1qf".to_owned(),
+    ))
+    .unwrap();
+    assert!(run.start());
+    assert!(!run.start());
+
+    for _ in 0..100 {
+        let chunks = run.take_chunks();
+        if let Some(chunk) = chunks.into_iter().find(|chunk| chunk.complete) {
+            assert_eq!(chunk.total_processed, 1);
+            assert_eq!(chunk.next_counter, 1);
+            assert!(!chunk.failed);
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    panic!("background vanity run did not complete");
+}
+
+#[test]
+fn persistent_background_workers_cover_upstream_buckets_once() {
+    let mut value = input(
+        VanityMethod::Derivation,
+        VanityScript::P2wpkh,
+        "bc1qf".to_owned(),
+    );
+    value.count = "5".to_owned();
+    value.workers = "3".to_owned();
+    let run = VanityRun::new(value).unwrap();
+    make_every_p2wpkh_candidate_match(&run);
+
+    assert!(run.start());
+    let chunks = background_chunks_until_complete(&run);
+    let terminal = chunks
+        .iter()
+        .find(|chunk| chunk.complete)
+        .expect("terminal pool snapshot");
+    assert!(!terminal.stopped);
+    assert_eq!(terminal.total_processed, 5);
+    assert_eq!(terminal.total_found, 5);
+    assert_eq!(terminal.next_counter, 5);
+
+    let mut counters = chunks
+        .iter()
+        .flat_map(|chunk| chunk.matches.iter().map(|found| found.counter))
+        .collect::<Vec<_>>();
+    counters.sort_unstable();
+    assert_eq!(counters, vec![0, 1, 2, 3, 4]);
+}
+
+#[test]
+fn persistent_background_pool_bounds_retained_matches_but_reports_all_found() {
+    let mut value = input(
+        VanityMethod::Derivation,
+        VanityScript::P2wpkh,
+        "bc1qf".to_owned(),
+    );
+    // Each three-worker bucket exceeds the initial 512 candidate derivation
+    // step, so every persistent worker has to retain its local state for a
+    // second adaptive call.
+    value.count = "1600".to_owned();
+    value.workers = "3".to_owned();
+    let run = VanityRun::new(value).unwrap();
+    make_every_p2wpkh_candidate_match(&run);
+
+    assert!(run.start());
+    let chunks = background_chunks_until_complete(&run);
+    let terminal = chunks
+        .iter()
+        .find(|chunk| chunk.complete)
+        .expect("terminal pool snapshot");
+    assert_eq!(terminal.total_processed, 1600);
+    assert_eq!(terminal.total_found, 1600);
+    assert_eq!(
+        chunks
+            .iter()
+            .map(|chunk| chunk.matches.len())
+            .sum::<usize>(),
+        100
+    );
+}
+
+#[test]
+fn persistent_background_pool_stops_and_clear_suppresses_stale_snapshots() {
+    let mut stopped_input = input(
+        VanityMethod::Derivation,
+        VanityScript::P2wpkh,
+        "bc1qf".to_owned(),
+    );
+    stopped_input.count = "100000".to_owned();
+    stopped_input.workers = "3".to_owned();
+    let stopped = VanityRun::new(stopped_input).unwrap();
+    assert!(stopped.start());
+    wait_for_background_progress(&stopped);
+    stopped.stop();
+    let chunks = background_chunks_until_complete(&stopped);
+    let terminal = chunks
+        .iter()
+        .find(|chunk| chunk.complete)
+        .expect("stopped terminal pool snapshot");
+    assert!(terminal.stopped);
+    assert!(terminal.total_processed < terminal.total_count);
+
+    let mut cleared_input = input(
+        VanityMethod::Derivation,
+        VanityScript::P2wpkh,
+        "bc1qf".to_owned(),
+    );
+    cleared_input.count = "100000".to_owned();
+    cleared_input.workers = "3".to_owned();
+    let cleared = VanityRun::new(cleared_input).unwrap();
+    assert!(cleared.start());
+    wait_for_background_progress(&cleared);
+    cleared.clear();
+    assert_eq!(
+        cleared.state().validation_kind,
+        VanityValidationKind::RunCleared
+    );
+    std::thread::sleep(std::time::Duration::from_millis(250));
+    assert!(cleared.take_chunks().is_empty());
+}
+
+#[test]
+fn persistent_background_pool_reports_upstream_failures_without_hanging() {
+    let run = VanityRun::new(input(
+        VanityMethod::Derivation,
+        VanityScript::P2wpkh,
+        "bc1qf".to_owned(),
+    ))
+    .unwrap();
+    // The production validator never admits an empty prefix.  Mutating this
+    // test-only hook makes the pinned upstream ABI reject the worker request,
+    // exercising the terminal failure transport rather than a user stop.
+    run.test_set_prefix_after_validation("");
+
+    assert!(run.start());
+    let chunks = background_chunks_until_complete(&run);
+    let terminal = chunks
+        .iter()
+        .find(|chunk| chunk.complete)
+        .expect("failed pool terminal snapshot");
+    assert!(terminal.stopped);
+    assert!(terminal.failed);
+}
+
+#[test]
+fn cleared_run_does_not_claim_to_start_a_background_pool() {
+    let run = VanityRun::new(input(
+        VanityMethod::Derivation,
+        VanityScript::P2wpkh,
+        "bc1qf".to_owned(),
+    ))
+    .unwrap();
+    run.clear();
+
+    assert!(!run.start());
+    assert!(run.take_chunks().is_empty());
 }
 
 #[test]
