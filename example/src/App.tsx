@@ -295,11 +295,14 @@ function App() {
   }
 
   function addKeyStationTab(derivation: KeyStationDerivation, input: KeyStationInput) {
-    const editedTab = editInputRequest;
-    const tab = createKeyStationTab(
+    // Upstream commits a derived key into an existing tab only when its newly
+    // derived master fingerprint matches. An edit is merely a convenient way
+    // to reopen its source inputs; changing those inputs can produce a wholly
+    // different key and must leave the original tab intact.
+    const candidate = createKeyStationTab(
       derivation,
-      editedTab?.id ?? nextKeyStationTabId.current++,
-      editedTab?.number ?? nextKeyStationTabNumber.current++,
+      nextKeyStationTabId.current,
+      nextKeyStationTabNumber.current,
       {
         derivationSettings: keyStationDerivationSettings,
         input,
@@ -307,9 +310,26 @@ function App() {
         scriptType: keyStationScriptType,
       },
     );
+    const matchingTab = candidate.masterFingerprint
+      ? keyStationTabs.find(tab => tab.masterFingerprint === candidate.masterFingerprint)
+      : undefined;
+    const tab = matchingTab
+      ? {
+          ...candidate,
+          id: matchingTab.id,
+          number: matchingTab.number,
+          resultScriptType: matchingTab.resultScriptType,
+        }
+      : candidate;
     setKeyStationTabs(tabs =>
-      editedTab ? tabs.map(existingTab => (existingTab.id === editedTab.id ? tab : existingTab)) : [...tabs, tab],
+      matchingTab
+        ? tabs.map(existingTab => (existingTab.id === matchingTab.id ? tab : existingTab))
+        : [...tabs, tab],
     );
+    if (!matchingTab) {
+      nextKeyStationTabId.current += 1;
+      nextKeyStationTabNumber.current += 1;
+    }
     setEditInputRequest(null);
     setActiveKeyStationTabId(tab.id);
   }

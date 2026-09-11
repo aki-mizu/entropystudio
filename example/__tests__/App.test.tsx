@@ -22,6 +22,7 @@ import {
   mockKeyDerivationProjectAdvancedPath,
   mockKeyDerivationVisiblePathState,
   mockLifehashFromFingerprint,
+  mockMnemonicToMasterFingerprint,
   React,
   ReactTestRenderer,
   ScrollView,
@@ -74,6 +75,18 @@ const SYNCED_ZERO_ENTROPY_SNAPSHOT: EntropySyncSnapshot = {
   seedWords: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
   wifPrivateKey: '',
 };
+
+function restoreMasterFingerprintFixture() {
+  mockMnemonicToMasterFingerprint.mockImplementation((phrase, passphrase) => {
+    if (
+      phrase !==
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
+    ) {
+      return '';
+    }
+    return passphrase === 'TREZOR' ? 'b4e3f5ed' : passphrase === '' ? '73c5da0a' : '';
+  });
+}
 
 function expectStartAction(app: ReactTestRenderer.ReactTestRenderer, testID: string) {
   const button = app.root.findByProps({ testID });
@@ -1360,13 +1373,67 @@ test('Edit input returns to the originating Dice input screen', async () => {
   expect(app!.root.findAllByProps({ testID: 'key-station-tab-2' })).toHaveLength(0);
 });
 
+test('editing inputs keeps the original tab when the derived fingerprint changes', async () => {
+  const entropy = new Uint8Array(16).buffer;
+  const originalMnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const replacementMnemonic =
+    'legal winner thank year wave sausage worth useful legal winner thank yellow';
+  mockDiceRollsToEntropy.mockReturnValue(entropy);
+  mockEntropyToMnemonic.mockReturnValue(originalMnemonic);
+  mockMnemonicToMasterFingerprint.mockImplementation(phrase =>
+    phrase === originalMnemonic ? '73c5da0a' : phrase === replacementMnemonic ? 'b4e3f5ed' : '',
+  );
+
+  try {
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(<App />);
+    });
+    await openDiceEntry(app!);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('1');
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'key-station-tab-1' }).props.onPress();
+      app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
+    });
+
+    mockEntropyToMnemonic.mockReturnValue(replacementMnemonic);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'dice-rolls-input' }).props.onChangeText('6');
+    });
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
+    });
+
+    expect(app!.root.findByProps({ testID: 'key-station-tab-1-label' }).props.children).toBe(
+      '73c5da0a',
+    );
+    expect(app!.root.findByProps({ testID: 'key-station-tab-2-label' }).props.children).toBe(
+      'b4e3f5ed',
+    );
+  } finally {
+    restoreMasterFingerprintFixture();
+    mockEntropyToMnemonic.mockReset();
+  }
+});
+
 test('Edit input follows the selected tab method', async () => {
   const entropy = new Uint8Array(16).buffer;
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const cardsMnemonic =
+    'legal winner thank year wave sausage worth useful legal winner thank yellow';
   mockDiceRollsToEntropy.mockReturnValue(entropy);
   mockCardTranscriptToEntropy.mockReturnValue(entropy);
   mockEntropyToMnemonic.mockReturnValue(mnemonic);
+  mockMnemonicToMasterFingerprint.mockImplementation(phrase =>
+    phrase === mnemonic ? '73c5da0a' : phrase === cardsMnemonic ? 'b4e3f5ed' : '',
+  );
 
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
@@ -1390,6 +1457,7 @@ test('Edit input follows the selected tab method', async () => {
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'card-transcript-input' }).props.onChangeText('4H 3H');
   });
+  mockEntropyToMnemonic.mockReturnValue(cardsMnemonic);
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'derive-card-phrase' }).props.onPress();
   });
@@ -1417,14 +1485,20 @@ test('Edit input follows the selected tab method', async () => {
   });
   expect(app!.root.findByProps({ testID: 'cards-entry-view' })).toBeDefined();
   expect(app!.root.findByProps({ testID: 'card-transcript-input' }).props.value).toBe('4h 3h');
+  restoreMasterFingerprintFixture();
 });
 
 test('Edit input restores the selected Dice tab input', async () => {
   const entropy = new Uint8Array(16).buffer;
   const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const secondMnemonic =
+    'legal winner thank year wave sausage worth useful legal winner thank yellow';
   mockDiceRollsToEntropy.mockReturnValue(entropy);
   mockEntropyToMnemonic.mockReturnValue(mnemonic);
+  mockMnemonicToMasterFingerprint.mockImplementation(phrase =>
+    phrase === mnemonic ? '73c5da0a' : phrase === secondMnemonic ? 'b4e3f5ed' : '',
+  );
 
   let app: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(async () => {
@@ -1452,6 +1526,7 @@ test('Edit input restores the selected Dice tab input', async () => {
   });
   expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('6');
   expect(app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.disabled).toBe(false);
+  mockEntropyToMnemonic.mockReturnValue(secondMnemonic);
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
   });
@@ -1477,6 +1552,7 @@ test('Edit input restores the selected Dice tab input', async () => {
     app!.root.findByProps({ testID: 'key-station-edit-inputs' }).props.onPress();
   });
   expect(app!.root.findByProps({ testID: 'dice-rolls-input' }).props.value).toBe('6');
+  restoreMasterFingerprintFixture();
 });
 
 test('keeps native workflow trees mounted while changing methods', async () => {
@@ -1695,7 +1771,8 @@ test('keeps derived keys in removable Key Station tabs', async () => {
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'derive-dice-phrase' }).props.onPress();
   });
-  expect(app!.root.findByProps({ testID: 'key-station-tab-2' })).toBeDefined();
+  // A second derivation of the same seed reuses the matching-fingerprint tab.
+  expect(app!.root.findAllByProps({ testID: 'key-station-tab-2' })).toHaveLength(0);
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'key-station-tab-1' }).props.onPress();
@@ -1705,14 +1782,6 @@ test('keeps derived keys in removable Key Station tabs', async () => {
   });
 
   expect(app!.root.findAllByProps({ testID: 'key-station-tab-1' })).toHaveLength(0);
-  expect(app!.root.findByProps({ testID: 'key-station-tab-2' }).props.accessibilityState).toEqual({
-    selected: true,
-  });
-
-  await ReactTestRenderer.act(async () => {
-    app!.root.findByProps({ testID: 'key-station-delete' }).props.onPress();
-  });
-  expect(app!.root.findAllByProps({ testID: 'key-station-tab-2' })).toHaveLength(0);
   expect(app!.root.findByProps({ testID: 'key-station-tab-lab' }).props.accessibilityState).toEqual({
     selected: true,
   });
