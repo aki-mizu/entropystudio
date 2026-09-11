@@ -115,7 +115,13 @@ test('opens a native iOS method wheel in a bottom sheet for switching workflows'
   expect(app!.root.findByProps({ testID: 'key-method-picker-sheet-title' }).props.children).toBe(
     UPSTREAM_TEXT.keys.methodLabel,
   );
-  expect(app!.root.findByProps({ testID: 'key-method-picker-wheel' }).props.selectedValue).toBe('dice');
+  const methodWheel = app!.root.findByProps({ testID: 'key-method-picker-wheel' });
+  expect(methodWheel.props.selectedValue).toBe('dice');
+  expect(methodWheel.props.numberOfLines).toBeUndefined();
+  expect(StyleSheet.flatten(methodWheel.parent?.props.style)).toMatchObject({
+    alignSelf: 'stretch',
+    marginHorizontal: -20,
+  });
 
   await ReactTestRenderer.act(async () => {
     app!.root.findByProps({ testID: 'key-method-picker-wheel' }).props.onValueChange('cards', 1);

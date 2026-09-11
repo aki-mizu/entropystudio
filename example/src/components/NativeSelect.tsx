@@ -86,17 +86,19 @@ export function NativeSelect<Value extends string | number>({
           title={accessibilityLabel}
           visible={iosPickerOpen}
         >
-          <Picker
-            accessibilityLabel={accessibilityLabel}
-            onValueChange={value => setIosPendingValue(value as Value)}
-            selectedValue={iosPendingValue}
-            style={[styles.iosPickerWheel, { color: colors.text }]}
-            testID={`${controlTestID}-wheel`}
-          >
-            {options.map(option => (
-              <Picker.Item key={option.value} label={option.label} value={option.value} />
-            ))}
-          </Picker>
+          <View style={styles.iosPickerWheelBleed}>
+            <Picker
+              accessibilityLabel={accessibilityLabel}
+              onValueChange={value => setIosPendingValue(value as Value)}
+              selectedValue={iosPendingValue}
+              style={[styles.iosPickerWheel, { color: colors.text }]}
+              testID={`${controlTestID}-wheel`}
+            >
+              {options.map(option => (
+                <Picker.Item key={option.value} label={option.label} value={option.value} />
+              ))}
+            </Picker>
+          </View>
           <Pressable
             accessibilityLabel={UPSTREAM_TEXT.common.done}
             accessibilityRole="button"
@@ -163,6 +165,11 @@ const styles = StyleSheet.create({
   },
   iosPickerWheel: {
     width: '100%',
+  },
+  iosPickerWheelBleed: {
+    // RNCPicker already reserves 20pt on each side of its label.
+    alignSelf: 'stretch',
+    marginHorizontal: -20,
   },
   picker: {
     minHeight: 48,
