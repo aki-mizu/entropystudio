@@ -24,6 +24,7 @@ import {
   VanityScript,
   VanityValidationKind,
   vanityBenchmark,
+  vanityDefaultWorkerCount,
   vanityFilterPrefix,
   vanityInputState,
 } from '../native/entropyStudio';
@@ -376,6 +377,7 @@ export function VanityScreen({
   );
   const [totalFound, setTotalFound] = useState(0);
   const [updatingMatch, setUpdatingMatch] = useState<number | null>(null);
+  const [workers, setWorkers] = useState('1');
 
   const sourceTabs = useMemo(() => tabs.filter(isVanitySource), [tabs]);
   const selectedSource =
@@ -411,6 +413,7 @@ export function VanityScreen({
       start: activeStart,
       startingPassphrase:
         source?.derivation.kind === 'bip39' ? source.derivation.passphrase : '',
+      workers,
     };
   }, [
     activeCount,
@@ -420,6 +423,7 @@ export function VanityScreen({
     prefix,
     script,
     selectedSource,
+    workers,
   ]);
 
   const inputState = useMemo(() => vanityInputState(input), [input]);
@@ -450,12 +454,14 @@ export function VanityScreen({
           currentScriptLabel,
           inputState.fixedPrefix,
         );
-  const benchmarkCandidatesPerSecond =
+  const perWorkerBenchmarkCandidatesPerSecond =
     method === 'passphrase'
       ? benchmark?.passphraseCandidatesPerSecond ?? 0
       : script === 'sp'
       ? benchmark?.silentPaymentCandidatesPerSecond ?? 0
       : benchmark?.derivationCandidatesPerSecond ?? 0;
+  const benchmarkCandidatesPerSecond =
+    perWorkerBenchmarkCandidatesPerSecond * inputState.workers;
   const expectedCandidatesPerSecond =
     isRunning && candidatesPerSecond > 0
       ? candidatesPerSecond
@@ -472,7 +478,7 @@ export function VanityScreen({
           ? UPSTREAM_UI_FALLBACK_COPY.vanity.estimate.timing(
               formattedCount(expectedCandidatesPerSecond),
               isRunning,
-              1,
+              inputState.workers,
               UPSTREAM_UI_FALLBACK_COPY.vanity.estimate.formatDuration(
                 expectedDurationSeconds,
               ),
@@ -882,6 +888,13 @@ export function VanityScreen({
   }, [benchmarkReady, isActive]);
 
   useEffect(() => {
+    if (!isActive) {
+      return;
+    }
+    setWorkers(String(vanityDefaultWorkerCount()));
+  }, [isActive]);
+
+  useEffect(() => {
     // A same-ID tab replacement can change its input kind while Vanity is
     // open. Keep the selected value representable by its method picker.
     if (
@@ -1220,6 +1233,15 @@ export function VanityScreen({
               />
             </>
           )}
+          <VanityNumberField
+            colors={colors}
+            disabled={isRunning}
+            help={UPSTREAM_TEXT.vanity.form.help.workers}
+            label={UPSTREAM_TEXT.vanity.form.workers}
+            onChangeText={value => setWorkers(value.replace(/\D/g, ''))}
+            testID="vanity-workers"
+            value={workers}
+          />
         </View>
 
         {estimate ? (

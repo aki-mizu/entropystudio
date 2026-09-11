@@ -27,6 +27,7 @@ import {
   VanityScript as GeneratedVanityScript,
   VanityValidationKind as GeneratedVanityValidationKind,
   vanityBenchmark,
+  vanityDefaultWorkerCount,
   analyzeNumberBaseInput,
   bip39EntropyBits,
   bip39PassphraseAutocomplete,
@@ -280,6 +281,7 @@ export {
   translateSeedNumberIndices,
   VanityRun,
   vanityBenchmark,
+  vanityDefaultWorkerCount,
   vanityFilterPrefix,
   vanityInputState,
 };

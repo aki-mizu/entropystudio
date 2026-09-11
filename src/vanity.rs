@@ -18,6 +18,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex, OnceLock,
 };
+use std::thread;
 use std::time::Instant;
 use unicode_normalization::UnicodeNormalization;
 
@@ -29,6 +30,7 @@ const MAX_MNEMONIC_BYTES: usize = 1024;
 const MAX_PATH_COMPONENTS: usize = 16;
 const PASSPHRASE_CHUNK_SIZE: u64 = 8;
 const DERIVATION_CHUNK_SIZE: u64 = 256;
+const MAX_WORKERS: u8 = 64;
 const BASE58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const BECH32_ALPHABET: &str = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 const UPSTREAM_GRIND_HEADER_BYTES: usize = 12;
@@ -126,6 +128,9 @@ pub struct VanityRunInput {
     pub passphrase_length: String,
     pub start: String,
     pub count: String,
+    /// Upstream accepts this as a numeric browser field, clamps it to 1–64,
+    /// and falls back to one worker for an incomplete draft.
+    pub workers: String,
 }
 
 /// Native form state and static metadata for the selected script.
@@ -175,6 +180,8 @@ pub struct VanityInputState {
     pub start: u64,
     pub count: u64,
     pub total_count: u64,
+    /// The native-normalized number of concurrent grinder ranges.
+    pub workers: u8,
     /// Exact decimal expected candidates per matching address, including the
     /// constrained BIP-352 scan-key parity character.
     pub expected_candidates: String,
@@ -321,13 +328,22 @@ pub fn vanity_input_state(input: VanityRunInput) -> VanityInputState {
 
 /// Measures the pinned upstream grinder once for each public Vanity workload.
 ///
-/// Studio currently executes one native grinder at a time, so these are
-/// per-worker rates rather than a synthetic CPU-core multiplier.
+/// These are per-worker rates; a run multiplies its selected sample by its
+/// configured native worker count.
 #[uniffi::export]
 pub fn vanity_benchmark() -> VanityBenchmark {
     VANITY_BENCHMARK
         .get_or_init(measure_vanity_benchmark)
         .clone()
+}
+
+/// The upstream UI defaults its Workers input to the available CPU-core count.
+#[uniffi::export]
+pub fn vanity_default_worker_count() -> u8 {
+    thread::available_parallelism()
+        .map(|parallelism| parallelism.get())
+        .unwrap_or(1)
+        .min(usize::from(MAX_WORKERS)) as u8
 }
 
 /// The upstream FFI's 78-byte xprv serialization. Its private key begins at
@@ -356,6 +372,7 @@ struct VanityRunConfig {
     passphrase_length: u8,
     start: u64,
     count: u64,
+    workers: u8,
     expected_candidates: String,
     presentation: VanityValidationMetadata,
 }
@@ -494,17 +511,19 @@ impl VanityRunState {
         }
 
         let remaining = self.config.end() - self.cursor;
-        let budget = match self.config.method {
+        let per_worker_budget = match self.config.method {
             VanityMethod::Passphrase => PASSPHRASE_CHUNK_SIZE,
             VanityMethod::Derivation => DERIVATION_CHUNK_SIZE,
-        }
-        .min(remaining);
+        };
+        let budget = per_worker_budget
+            .saturating_mul(u64::from(self.config.workers))
+            .min(remaining);
         // Reuse upstream's Rust grinder for the whole bounded range.  The
         // Studio layer owns only the typed session and FFI adaptation around
         // that canonical candidate engine.
-        let (processed, matches) = grind_upstream_chunk(
+        let (processed, matches) = grind_upstream_ranges(
             &self.config,
-            &mut self.secrets,
+            &self.secrets,
             &self.source_fingerprint,
             self.cursor,
             budget,
@@ -714,6 +733,7 @@ fn validate_input(input: VanityRunInput) -> Result<ValidatedInput, VanityValidat
         passphrase_length,
         start,
         count,
+        workers: normalize_workers(&input.workers),
         presentation: VanityValidationMetadata {
             normalized_mnemonic_byte_length,
             normalized_starting_passphrase_byte_length,
@@ -726,6 +746,15 @@ fn validate_input(input: VanityRunInput) -> Result<ValidatedInput, VanityValidat
         mnemonic,
         starting_passphrase,
     })
+}
+
+fn normalize_workers(value: &str) -> u8 {
+    value
+        .parse::<u64>()
+        .ok()
+        .filter(|workers| *workers > 0)
+        .map(|workers| workers.min(u64::from(MAX_WORKERS)) as u8)
+        .unwrap_or(1)
 }
 
 fn normalize_prefix(value: &str, script: VanityScript) -> String {
@@ -1032,6 +1061,7 @@ fn input_state_from_config(
         start: config.start,
         count: config.count,
         total_count: config.count,
+        workers: config.workers,
         expected_candidates: config.expected_candidates.clone(),
     }
 }
@@ -1052,6 +1082,7 @@ struct InputPresentation {
     passphrase_length: u8,
     start: u64,
     count: u64,
+    workers: u8,
 }
 
 impl InputPresentation {
@@ -1124,6 +1155,7 @@ impl InputPresentation {
             passphrase_length,
             start: counter_value_or_zero(parse_counter(&input.start)),
             count: counter_value_or_zero(parse_counter(&input.count)),
+            workers: normalize_workers(&input.workers),
         }
     }
 
@@ -1165,6 +1197,7 @@ impl InputPresentation {
             start: self.start,
             count: self.count,
             total_count: self.count,
+            workers: self.workers,
             expected_candidates: expected_candidates(&self.normalized_prefix, self.script),
         }
     }
@@ -1276,9 +1309,44 @@ fn node_fingerprint(node: &VanityNode) -> Result<String, EntropyStudioError> {
 /// chunk. Its compact records deliberately contain only the counter,
 /// passphrase suffix and public address payload; Studio adapts them to the
 /// typed UniFFI result without reimplementing candidate derivation.
+fn grind_upstream_ranges(
+    config: &VanityRunConfig,
+    secrets: &RunSecrets,
+    source_fingerprint: &str,
+    start: u64,
+    count: u64,
+) -> Result<(u64, Vec<VanityMatch>), EntropyStudioError> {
+    let range_count = u64::from(config.workers).min(count) as usize;
+    let base = count / range_count as u64;
+    let extra = count % range_count as u64;
+    thread::scope(|scope| {
+        let mut next_start = start;
+        let mut jobs = Vec::with_capacity(range_count);
+        for index in 0..range_count {
+            let range_count = base + u64::from(index < extra as usize);
+            let range_start = next_start;
+            next_start += range_count;
+            jobs.push(scope.spawn(move || {
+                grind_upstream_chunk(config, secrets, source_fingerprint, range_start, range_count)
+            }));
+        }
+
+        let mut processed = 0;
+        let mut matches = Vec::new();
+        for job in jobs {
+            let (range_processed, mut range_matches) = job
+                .join()
+                .map_err(|_| EntropyStudioError::InvalidMasterKey)??;
+            processed += range_processed;
+            matches.append(&mut range_matches);
+        }
+        Ok((processed, matches))
+    })
+}
+
 fn grind_upstream_chunk(
     config: &VanityRunConfig,
-    secrets: &mut RunSecrets,
+    secrets: &RunSecrets,
     source_fingerprint: &str,
     start: u64,
     count: u64,

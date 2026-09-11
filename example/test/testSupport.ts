@@ -238,6 +238,7 @@ export const VANITY_RUN_INPUT_DEFAULT_FIXTURE: VanityRunInput = {
   script: 2,
   start: '0',
   startingPassphrase: '',
+  workers: '1',
 };
 
 export const VANITY_INPUT_STATE_DEFAULT_FIXTURE: VanityInputState = {
@@ -258,6 +259,7 @@ export const VANITY_INPUT_STATE_DEFAULT_FIXTURE: VanityInputState = {
   normalizedStartingPassphraseByteLength: 0,
   passphraseLength: 8,
   path: "m/84'/0'/0'/0/0",
+  workers: 1,
   prefixAlphabet: 'qpzry9x8gf2tvdw0s3jn54khce6mua7l',
   silentPaymentScanPath: '',
   silentPaymentSpendPath: '',
@@ -298,6 +300,7 @@ export const VANITY_BENCHMARK_DEFAULT_FIXTURE: VanityBenchmark = {
 export const mockVanityBenchmark = jest.fn<VanityBenchmark, []>(
   () => VANITY_BENCHMARK_DEFAULT_FIXTURE,
 );
+export const mockVanityDefaultWorkerCount = jest.fn<number, []>(() => 1);
 export const mockVanityInputState = jest.fn<VanityInputState, [VanityRunInput]>(
   () => VANITY_INPUT_STATE_DEFAULT_FIXTURE,
 );
@@ -602,6 +605,7 @@ jest.mock('entropystudio', () => ({
   translateSeedNumberIndices: mockTranslateSeedNumberIndices,
   VanityRun: mockVanityRunConstructor,
   vanityBenchmark: mockVanityBenchmark,
+  vanityDefaultWorkerCount: mockVanityDefaultWorkerCount,
   vanityFilterPrefix: mockVanityFilterPrefix,
   vanityInputState: mockVanityInputState,
 }));

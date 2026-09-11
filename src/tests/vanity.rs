@@ -19,6 +19,7 @@ fn input(method: VanityMethod, script: VanityScript, prefix: String) -> VanityRu
         passphrase_length: "1".to_owned(),
         start: "0".to_owned(),
         count: "1".to_owned(),
+        workers: "1".to_owned(),
     }
 }
 
@@ -138,6 +139,7 @@ fn vanity_input_state_normalizes_metadata_and_filters_prefixes_natively() {
     assert_eq!(state.passphrase_length, 8);
     assert_eq!(state.start, 19);
     assert_eq!(state.count, 12);
+    assert_eq!(state.workers, 1);
     assert_eq!(
         vanity_filter_prefix(" BC1Qb!f ".to_owned(), VanityScript::P2wpkh),
         "bc1qbf"
@@ -146,6 +148,21 @@ fn vanity_input_state_normalizes_metadata_and_filters_prefixes_natively() {
         vanity_filter_prefix(" 1O0abIl ".to_owned(), VanityScript::P2pkh),
         "1ab"
     );
+}
+
+#[test]
+fn vanity_workers_follow_upstream_clamping() {
+    let mut value = input(VanityMethod::Passphrase, VanityScript::P2wpkh, "bc1q".to_owned());
+    value.workers = "99".to_owned();
+    assert_eq!(vanity_input_state(value).workers, 64);
+
+    let mut value = input(VanityMethod::Passphrase, VanityScript::P2wpkh, "bc1q".to_owned());
+    value.workers = "1000".to_owned();
+    assert_eq!(vanity_input_state(value).workers, 64);
+
+    let mut value = input(VanityMethod::Passphrase, VanityScript::P2wpkh, "bc1q".to_owned());
+    value.workers = "0".to_owned();
+    assert_eq!(vanity_input_state(value).workers, 1);
 }
 
 #[test]

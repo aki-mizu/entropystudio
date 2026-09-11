@@ -64,9 +64,9 @@ pub use seed_phrase::{
 	SeedPhraseAutocompleteResult, SeedPhraseInputMethod, SeedPhraseState, SeedPhraseStatus,
 };
 pub use vanity::{
-    vanity_benchmark, vanity_filter_prefix, vanity_input_state, VanityBenchmark, VanityChunk,
-    VanityInputState, VanityMatch, VanityMethod, VanityRun, VanityRunInput, VanityScript,
-    VanityValidationKind,
+    vanity_benchmark, vanity_default_worker_count, vanity_filter_prefix, vanity_input_state,
+    VanityBenchmark, VanityChunk, VanityInputState, VanityMatch, VanityMethod, VanityRun,
+    VanityRunInput, VanityScript, VanityValidationKind,
 };
 
 #[cfg(test)]

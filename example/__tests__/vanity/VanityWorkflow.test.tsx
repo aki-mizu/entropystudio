@@ -9,6 +9,7 @@ import {
   appTabBar,
   mockVanityFilterPrefix,
   mockVanityBenchmark,
+  mockVanityDefaultWorkerCount,
   mockVanityInputState,
   mockVanityRunClear,
   mockVanityRunConstructor,
@@ -301,6 +302,8 @@ function resetVanityFixtures() {
   mockVanityFilterPrefix.mockReturnValue('bc1q');
   mockVanityBenchmark.mockReset();
   mockVanityBenchmark.mockReturnValue(VANITY_BENCHMARK_DEFAULT_FIXTURE);
+  mockVanityDefaultWorkerCount.mockReset();
+  mockVanityDefaultWorkerCount.mockReturnValue(1);
   mockVanityInputState.mockReset();
   mockVanityInputState.mockReturnValue(VANITY_INPUT_STATE_DEFAULT_FIXTURE);
   mockVanityRunState.mockReset();
@@ -380,8 +383,43 @@ describe(UPSTREAM_TEXT.vanity.tabLabel, () => {
     expect(app!.root.findByProps({ testID: 'vanity-passphrase-length' }).props.value).toBe('8');
     expect(app!.root.findByProps({ testID: 'vanity-start-counter' }).props.value).toBe('0');
     expect(app!.root.findByProps({ testID: 'vanity-range-size' }).props.value).toBe('1000000');
+    expect(app!.root.findByProps({ testID: 'vanity-workers' }).props.value).toBe('1');
     expect(app!.root.findByProps({ testID: 'vanity-start' }).props.disabled).toBe(true);
     expect(app!.root.findAllByProps({ testID: 'vanity-source-7' })).toHaveLength(0);
+  });
+
+  test('passes the selected Workers value to native and uses its normalized count in the estimate', async () => {
+    mockVanityInputState.mockImplementation(input => ({
+      ...validInputState({
+        expectedCandidates: '34977600',
+        normalizedPrefix: 'bc1qf',
+      }),
+      workers: Number(input.workers) || 1,
+    }));
+
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(
+        <VanityScreen
+          isActive
+          isDarkMode={false}
+          onApplyAccount={() => 'unused'}
+          onApplyPassphrase={() => 'unused'}
+          tabs={[SOURCE_TAB]}
+        />,
+      );
+    });
+    await selectSource(app!);
+    await ReactTestRenderer.act(async () => {
+      app!.root.findByProps({ testID: 'vanity-workers' }).props.onChangeText('4');
+    });
+
+    expect(mockVanityInputState).toHaveBeenLastCalledWith(
+      expect.objectContaining({ workers: '4' }),
+    );
+    expect(app!.root.findByProps({ testID: 'vanity-estimate' }).props.children).toContain(
+      'on 4 workers',
+    );
   });
 
   test('uses the native public-fixture benchmark for the pre-run estimate', async () => {
