@@ -17,6 +17,7 @@ import type {
   PrivateKeyInputState,
   PrivateKeyMaterial,
   EntropySyncSnapshot,
+  VanityBenchmark,
   VanityChunk,
   VanityInputState,
   VanityMatch,
@@ -288,6 +289,15 @@ export const VANITY_CHUNK_DEFAULT_FIXTURE: VanityChunk = {
   totalProcessed: BigInt(1),
 };
 
+export const VANITY_BENCHMARK_DEFAULT_FIXTURE: VanityBenchmark = {
+  derivationCandidatesPerSecond: 4_858,
+  passphraseCandidatesPerSecond: 4_858,
+  silentPaymentCandidatesPerSecond: 4_858,
+};
+
+export const mockVanityBenchmark = jest.fn<VanityBenchmark, []>(
+  () => VANITY_BENCHMARK_DEFAULT_FIXTURE,
+);
 export const mockVanityInputState = jest.fn<VanityInputState, [VanityRunInput]>(
   () => VANITY_INPUT_STATE_DEFAULT_FIXTURE,
 );
@@ -591,6 +601,7 @@ jest.mock('entropystudio', () => ({
   synchronizeEntropy: mockSynchronizeEntropy,
   translateSeedNumberIndices: mockTranslateSeedNumberIndices,
   VanityRun: mockVanityRunConstructor,
+  vanityBenchmark: mockVanityBenchmark,
   vanityFilterPrefix: mockVanityFilterPrefix,
   vanityInputState: mockVanityInputState,
 }));

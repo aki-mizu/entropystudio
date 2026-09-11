@@ -26,6 +26,7 @@ import {
   VanityRun,
   VanityScript as GeneratedVanityScript,
   VanityValidationKind as GeneratedVanityValidationKind,
+  vanityBenchmark,
   analyzeNumberBaseInput,
   bip39EntropyBits,
   bip39PassphraseAutocomplete,
@@ -278,6 +279,7 @@ export {
   synchronizeEntropy,
   translateSeedNumberIndices,
   VanityRun,
+  vanityBenchmark,
   vanityFilterPrefix,
   vanityInputState,
 };
@@ -313,6 +315,7 @@ export type {
   SeedQrData,
   SeedPhraseState,
   VanityChunk,
+  VanityBenchmark,
   VanityInputState,
   VanityMatch,
   VanityRunInput,

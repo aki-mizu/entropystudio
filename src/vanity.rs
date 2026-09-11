@@ -16,7 +16,7 @@ use bitcoin::{
 use num_bigint::BigUint;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
+    Arc, Mutex, OnceLock,
 };
 use std::time::Instant;
 use unicode_normalization::UnicodeNormalization;
@@ -35,6 +35,11 @@ const UPSTREAM_GRIND_HEADER_BYTES: usize = 12;
 const UPSTREAM_GRIND_RECORD_BYTES: usize = 106;
 const UPSTREAM_GRIND_SUFFIX_BYTES: usize = 32;
 const UPSTREAM_GRIND_PAYLOAD_BYTES: usize = 66;
+const BENCHMARK_PREFIX: &str = "bc1qqqqqqqqqqqq";
+const BENCHMARK_MNEMONIC: &str =
+    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+static VANITY_BENCHMARK: OnceLock<VanityBenchmark> = OnceLock::new();
 
 /// Which wallet dial the vanity counter turns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -205,6 +210,17 @@ pub struct VanityChunk {
     pub stopped: bool,
 }
 
+/// Per-worker rates for EntropyLab's fixed, public Vanity benchmark samples.
+///
+/// The samples mirror upstream's browser benchmark: a BIP39 test-vector
+/// mnemonic and a deterministic BIP32 node. No wallet state crosses this API.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct VanityBenchmark {
+    pub passphrase_candidates_per_second: f64,
+    pub derivation_candidates_per_second: f64,
+    pub silent_payment_candidates_per_second: f64,
+}
+
 #[derive(Debug, Clone, Copy)]
 struct PathComponent {
     index: u32,
@@ -301,6 +317,17 @@ pub fn vanity_input_state(input: VanityRunInput) -> VanityInputState {
         }
         Err(kind) => presentation.into_state(kind),
     }
+}
+
+/// Measures the pinned upstream grinder once for each public Vanity workload.
+///
+/// Studio currently executes one native grinder at a time, so these are
+/// per-worker rates rather than a synthetic CPU-core multiplier.
+#[uniffi::export]
+pub fn vanity_benchmark() -> VanityBenchmark {
+    VANITY_BENCHMARK
+        .get_or_init(measure_vanity_benchmark)
+        .clone()
 }
 
 /// The upstream FFI's 78-byte xprv serialization. Its private key begins at
@@ -1266,7 +1293,9 @@ fn grind_upstream_chunk(
             starting_passphrase,
         } => {
             let call = call_upstream_grinder(
-                config,
+                config.script,
+                &config.prefix,
+                config.passphrase_length as usize,
                 0,
                 mnemonic.as_bytes(),
                 starting_passphrase.as_bytes(),
@@ -1286,7 +1315,9 @@ fn grind_upstream_chunk(
             if let Some(parent) = parent.as_ref() {
                 let parent_material = upstream_parent_material(parent);
                 let call = call_upstream_grinder(
-                    config,
+                    config.script,
+                    &config.prefix,
+                    config.passphrase_length as usize,
                     1,
                     &parent_material,
                     &[],
@@ -1323,7 +1354,9 @@ fn upstream_path(config: &VanityRunConfig) -> Vec<u8> {
 
 #[allow(clippy::too_many_arguments)]
 fn call_upstream_grinder(
-    config: &VanityRunConfig,
+    script: VanityScript,
+    prefix: &str,
+    passphrase_length: usize,
     mode: u32,
     key: &[u8],
     salt: &[u8],
@@ -1343,14 +1376,14 @@ fn call_upstream_grinder(
             path.as_ptr(),
             path.len() / std::mem::size_of::<u32>(),
             counter_slot,
-            config.prefix.as_ptr(),
-            config.prefix.len(),
-            config.passphrase_length as usize,
+            prefix.as_ptr(),
+            prefix.len(),
+            passphrase_length,
             start,
             count,
             output.as_mut_ptr(),
             output.len(),
-            upstream_script_code(config.script),
+            upstream_script_code(script),
         )
     };
     if status != 0 {
@@ -1381,6 +1414,88 @@ fn upstream_script_code(script: VanityScript) -> u32 {
         VanityScript::P2tr => 3,
         VanityScript::SilentPayments => 4,
     }
+}
+
+fn measure_vanity_benchmark() -> VanityBenchmark {
+    let benchmark_node = benchmark_node();
+    VanityBenchmark {
+        passphrase_candidates_per_second: measure_benchmark_sample(
+            VanityScript::P2wpkh,
+            0,
+            BENCHMARK_MNEMONIC.as_bytes(),
+            &[84 | HARDENED, HARDENED, HARDENED, 0, 0],
+            u32::MAX,
+            8,
+            24,
+        ),
+        derivation_candidates_per_second: measure_benchmark_sample(
+            VanityScript::P2wpkh,
+            1,
+            &benchmark_node,
+            &[HARDENED, 0, 0],
+            0,
+            0,
+            1_200,
+        ),
+        silent_payment_candidates_per_second: measure_benchmark_sample(
+            VanityScript::SilentPayments,
+            1,
+            &benchmark_node,
+            &[HARDENED],
+            0,
+            0,
+            600,
+        ),
+    }
+}
+
+fn benchmark_node() -> [u8; 64] {
+    let mut node = [2; 64];
+    node[..32].fill(1);
+    node
+}
+
+#[allow(clippy::too_many_arguments)]
+fn measure_benchmark_sample(
+    script: VanityScript,
+    mode: u32,
+    key: &[u8],
+    path_indexes: &[u32],
+    counter_slot: u32,
+    passphrase_length: usize,
+    count: u64,
+) -> f64 {
+    let mut path = Vec::with_capacity(path_indexes.len() * std::mem::size_of::<u32>());
+    for index in path_indexes {
+        path.extend_from_slice(&index.to_le_bytes());
+    }
+    let record_capacity = usize::try_from(count).expect("Vanity benchmark count fits usize");
+    let mut output =
+        vec![0u8; UPSTREAM_GRIND_HEADER_BYTES + UPSTREAM_GRIND_RECORD_BYTES * record_capacity];
+    let started = Instant::now();
+    let Ok((processed, _)) = call_upstream_grinder(
+        script,
+        BENCHMARK_PREFIX,
+        passphrase_length,
+        mode,
+        key,
+        &[],
+        &path,
+        counter_slot,
+        0,
+        count,
+        &mut output,
+    ) else {
+        return 0.0;
+    };
+    if processed != count {
+        return 0.0;
+    }
+    let elapsed_seconds = started.elapsed().as_secs_f64();
+    if elapsed_seconds == 0.0 {
+        return 0.0;
+    }
+    count as f64 / elapsed_seconds
 }
 
 fn upstream_parent_material(parent: &VanityNode) -> [u8; 64] {

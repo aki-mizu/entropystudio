@@ -8,6 +8,7 @@ import {
   App,
   appTabBar,
   mockVanityFilterPrefix,
+  mockVanityBenchmark,
   mockVanityInputState,
   mockVanityRunClear,
   mockVanityRunConstructor,
@@ -18,6 +19,7 @@ import {
   React,
   ReactTestRenderer,
   selectAppTab,
+  VANITY_BENCHMARK_DEFAULT_FIXTURE,
   VANITY_CHUNK_DEFAULT_FIXTURE,
   VANITY_INPUT_STATE_DEFAULT_FIXTURE,
   VANITY_MATCH_DEFAULT_FIXTURE,
@@ -297,6 +299,8 @@ function completedChunk(matches: readonly VanityMatch[]): VanityChunk {
 function resetVanityFixtures() {
   mockVanityFilterPrefix.mockReset();
   mockVanityFilterPrefix.mockReturnValue('bc1q');
+  mockVanityBenchmark.mockReset();
+  mockVanityBenchmark.mockReturnValue(VANITY_BENCHMARK_DEFAULT_FIXTURE);
   mockVanityInputState.mockReset();
   mockVanityInputState.mockReturnValue(VANITY_INPUT_STATE_DEFAULT_FIXTURE);
   mockVanityRunState.mockReset();
@@ -378,6 +382,44 @@ describe(UPSTREAM_TEXT.vanity.tabLabel, () => {
     expect(app!.root.findByProps({ testID: 'vanity-range-size' }).props.value).toBe('1000000');
     expect(app!.root.findByProps({ testID: 'vanity-start' }).props.disabled).toBe(true);
     expect(app!.root.findAllByProps({ testID: 'vanity-source-7' })).toHaveLength(0);
+  });
+
+  test('uses the native public-fixture benchmark for the pre-run estimate', async () => {
+    mockVanityInputState.mockReturnValue(
+      validInputState({
+        expectedCandidates: '34977600',
+        normalizedPrefix: 'bc1qf',
+      }),
+    );
+
+    let app: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(async () => {
+      app = ReactTestRenderer.create(
+        <VanityScreen
+          isActive
+          isDarkMode={false}
+          onApplyAccount={() => 'unused'}
+          onApplyPassphrase={() => 'unused'}
+          tabs={[SOURCE_TAB]}
+        />,
+      );
+    });
+    await selectSource(app!);
+
+    expect(mockVanityBenchmark).toHaveBeenCalledTimes(1);
+    expect(app!.root.findByProps({ testID: 'vanity-estimate' }).props.children).toBe(
+      UPSTREAM_UI_FALLBACK_COPY.vanity.estimate.summary(
+        'bc1qf',
+        BigInt(34_977_600).toLocaleString('en-US'),
+        UPSTREAM_UI_FALLBACK_COPY.vanity.form.scriptNames.p2wpkh,
+        UPSTREAM_UI_FALLBACK_COPY.vanity.estimate.timing(
+          VANITY_BENCHMARK_DEFAULT_FIXTURE.passphraseCandidatesPerSecond.toLocaleString('en-US'),
+          false,
+          1,
+          UPSTREAM_UI_FALLBACK_COPY.vanity.estimate.formatDuration(7_200),
+        ),
+      ),
+    );
   });
 
   test.each(VALIDATION_ERROR_CASES)(

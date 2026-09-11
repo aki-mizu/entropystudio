@@ -94,6 +94,17 @@ fn one_match(value: VanityRunInput) -> VanityMatch {
 }
 
 #[test]
+fn vanity_benchmark_uses_the_upstream_public_fixture_workloads() {
+    let benchmark = vanity_benchmark();
+    assert!(benchmark.passphrase_candidates_per_second.is_finite());
+    assert!(benchmark.derivation_candidates_per_second.is_finite());
+    assert!(benchmark.silent_payment_candidates_per_second.is_finite());
+    assert!(benchmark.passphrase_candidates_per_second > 0.0);
+    assert!(benchmark.derivation_candidates_per_second > 0.0);
+    assert!(benchmark.silent_payment_candidates_per_second > 0.0);
+}
+
+#[test]
 fn vanity_input_state_normalizes_metadata_and_filters_prefixes_natively() {
     let mut value = input(
         VanityMethod::Passphrase,

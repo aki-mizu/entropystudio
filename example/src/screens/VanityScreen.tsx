@@ -23,11 +23,13 @@ import {
   VanityRun,
   VanityScript,
   VanityValidationKind,
+  vanityBenchmark,
   vanityFilterPrefix,
   vanityInputState,
 } from '../native/entropyStudio';
 import type {
   VanityChunk,
+  VanityBenchmark,
   VanityInputState,
   VanityMatch,
   VanityRunInput,
@@ -350,6 +352,8 @@ export function VanityScreen({
   const [derivationCount, setDerivationCount] = useState('100000');
   const [derivationStart, setDerivationStart] = useState('0');
   const [candidatesPerSecond, setCandidatesPerSecond] = useState(0);
+  const [benchmark, setBenchmark] = useState<VanityBenchmark | null>(null);
+  const [benchmarkReady, setBenchmarkReady] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [matches, setMatches] = useState<readonly VanityMatch[]>([]);
   const [method, setMethod] = useState<VanityMethodId>('passphrase');
@@ -446,24 +450,35 @@ export function VanityScreen({
           currentScriptLabel,
           inputState.fixedPrefix,
         );
-  const liveDurationSeconds =
-    Number(inputState.expectedCandidates) / candidatesPerSecond;
+  const benchmarkCandidatesPerSecond =
+    method === 'passphrase'
+      ? benchmark?.passphraseCandidatesPerSecond ?? 0
+      : script === 'sp'
+      ? benchmark?.silentPaymentCandidatesPerSecond ?? 0
+      : benchmark?.derivationCandidatesPerSecond ?? 0;
+  const expectedCandidatesPerSecond =
+    isRunning && candidatesPerSecond > 0
+      ? candidatesPerSecond
+      : benchmarkCandidatesPerSecond;
+  const expectedDurationSeconds =
+    Number(inputState.expectedCandidates) / expectedCandidatesPerSecond;
   const estimate = inputState.valid
     ? UPSTREAM_UI_FALLBACK_COPY.vanity.estimate.summary(
         inputState.normalizedPrefix,
-        inputState.expectedCandidates,
+        formattedCount(BigInt(inputState.expectedCandidates)),
         currentScriptLabel,
-        isRunning &&
-          candidatesPerSecond > 0 &&
-          Number.isFinite(liveDurationSeconds)
+        expectedCandidatesPerSecond > 0 &&
+          Number.isFinite(expectedDurationSeconds)
           ? UPSTREAM_UI_FALLBACK_COPY.vanity.estimate.timing(
-              formattedCount(candidatesPerSecond),
-              true,
+              formattedCount(expectedCandidatesPerSecond),
+              isRunning,
               1,
               UPSTREAM_UI_FALLBACK_COPY.vanity.estimate.formatDuration(
-                liveDurationSeconds,
+                expectedDurationSeconds,
               ),
             )
+          : !benchmarkReady
+          ? UPSTREAM_TEXT.keys.addressEstimate.measuring
           : method === 'derivation'
           ? UPSTREAM_UI_FALLBACK_COPY.vanity.estimate.derivationWithoutRate
           : UPSTREAM_UI_FALLBACK_COPY.vanity.estimate.passphraseWithoutRate,
@@ -854,6 +869,17 @@ export function VanityScreen({
       stopRun();
     }
   }, [isActive]);
+
+  useEffect(() => {
+    if (!isActive || benchmarkReady) {
+      return;
+    }
+    try {
+      setBenchmark(vanityBenchmark());
+    } finally {
+      setBenchmarkReady(true);
+    }
+  }, [benchmarkReady, isActive]);
 
   useEffect(() => {
     // A same-ID tab replacement can change its input kind while Vanity is
