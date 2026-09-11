@@ -8,7 +8,6 @@
 //! results.
 
 use crate::error::EntropyStudioError;
-use crate::wipe::{wipe_bytes, wipe_string};
 use bitcoin::bech32::{Bech32m, ByteIterExt, Fe32, Fe32IterExt, Hrp};
 use bitcoin::{
     hashes::Hash, Address, KnownHrp, Network, PubkeyHash, ScriptBuf, WPubkeyHash, WitnessProgram,
@@ -265,7 +264,7 @@ fn script_metadata(script: VanityScript) -> VanityScriptMetadata {
 /// filters only characters; it does not synthesize the required fixed prefix
 /// or turn an incomplete draft into a valid one.
 #[uniffi::export]
-pub fn vanity_filter_prefix(mut value: String, script: VanityScript) -> String {
+pub fn vanity_filter_prefix(value: String, script: VanityScript) -> String {
     let metadata = script_metadata(script);
     let allowed = if metadata.bech32 {
         format!("{}{}", metadata.fixed_prefix, BECH32_ALPHABET)
@@ -286,7 +285,6 @@ pub fn vanity_filter_prefix(mut value: String, script: VanityScript) -> String {
             filtered.push(character);
         }
     }
-    wipe_string(&mut value);
     filtered
 }
 
@@ -305,73 +303,18 @@ pub fn vanity_input_state(input: VanityRunInput) -> VanityInputState {
     }
 }
 
-/// A String which reliably overwrites its owned UTF-8 allocation when it
-/// retires.  This is used for mnemonic and passphrase copies created during
-/// normalization as well as short-lived candidate text.
-struct SecretText(String);
-
-impl SecretText {
-    fn new(value: String) -> Self {
-        Self(value)
-    }
-
-    fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    fn into_inner(mut self) -> String {
-        std::mem::take(&mut self.0)
-    }
-}
-
-impl Drop for SecretText {
-    fn drop(&mut self) {
-        wipe_string(&mut self.0);
-    }
-}
-
-/// A wipeable BIP39 seed.  Keeping the seed in an owning wrapper ensures it
-/// is erased even if a fallible master-key operation returns early.
-struct SecretSeed([u8; 64]);
-
-impl SecretSeed {
-    fn as_bytes(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl Drop for SecretSeed {
-    fn drop(&mut self) {
-        wipe_bytes(&mut self.0);
-    }
-}
-
-/// A wipeable BIP32 private serialization.  The upstream FFI uses this
-/// 78-byte xprv representation; its private key begins at byte 46.
-struct SecretNode([u8; 78]);
-
-impl Drop for SecretNode {
-    fn drop(&mut self) {
-        wipe_bytes(&mut self.0);
-    }
-}
+/// The upstream FFI's 78-byte xprv serialization. Its private key begins at
+/// byte 46.
+type VanityNode = [u8; 78];
 
 struct ValidatedInput {
     config: VanityRunConfig,
-    mnemonic: SecretText,
-    starting_passphrase: SecretText,
+    mnemonic: String,
+    starting_passphrase: String,
 }
 
 impl ValidatedInput {
-    fn into_parts(self) -> (VanityRunConfig, SecretText, SecretText) {
+    fn into_parts(self) -> (VanityRunConfig, String, String) {
         (self.config, self.mnemonic, self.starting_passphrase)
     }
 }
@@ -401,7 +344,7 @@ impl VanityRunConfig {
 ///
 /// The source mnemonic and passphrase never cross this type: their
 /// normalized byte lengths are enough for the upstream error copy, while the
-/// sensitive text remains inside the wipeable validation/run types.
+/// sensitive text remains inside the validation/run types.
 #[derive(Debug, Clone, Copy)]
 struct VanityValidationMetadata {
     normalized_mnemonic_byte_length: u32,
@@ -412,19 +355,17 @@ struct VanityValidationMetadata {
 
 enum RunSecrets {
     Passphrase {
-        mnemonic: SecretText,
-        starting_passphrase: SecretText,
+        mnemonic: String,
+        starting_passphrase: String,
     },
     Derivation {
-        parent: Option<SecretNode>,
+        parent: Option<VanityNode>,
     },
     Cleared,
 }
 
 impl RunSecrets {
     fn clear(&mut self) {
-        // Replacing the enum drops SecretText/SecretNode values immediately;
-        // both own their wipe-on-drop behavior.
         drop(std::mem::replace(self, Self::Cleared));
     }
 }
@@ -461,12 +402,11 @@ impl VanityRunState {
                 started_at: Instant::now(),
             },
             VanityMethod::Derivation => {
-                let seed = seed_from_normalized(mnemonic.as_str(), starting_passphrase.as_str())?;
+                let seed = seed_from_normalized(&mnemonic, &starting_passphrase)?;
                 // The derivation run retains the fixed parent node, not the
                 // source passphrase.  It is only needed to make the seed.
                 drop(starting_passphrase);
-                let master = master_node(seed.as_bytes())?;
-                drop(seed);
+                let master = master_node(&seed)?;
                 drop(mnemonic);
                 let source_fingerprint = node_fingerprint(&master)?;
                 let Some(parent) = derive_path_strict(master, &config.path[..2])? else {
@@ -492,7 +432,7 @@ impl VanityRunState {
 
     fn clear(&mut self) {
         self.secrets.clear();
-        wipe_string(&mut self.source_fingerprint);
+        self.source_fingerprint.clear();
         self.stopped = true;
         self.complete = true;
         self.cleared = true;
@@ -635,8 +575,8 @@ impl VanityRun {
         self.stop_requested.store(true, Ordering::Release);
     }
 
-    /// Wipes mnemonic/passphrase/derived-node material and makes this session
-    /// unusable.  The caller should drop its object reference after clearing.
+    /// Makes this session unusable. The caller should drop its object
+    /// reference after clearing.
     pub fn clear(&self) {
         self.stop_requested.store(true, Ordering::Release);
         let mut state = self
@@ -656,27 +596,8 @@ impl Drop for VanityRun {
     }
 }
 
-struct SensitiveInput {
-    input: VanityRunInput,
-}
-
-impl Drop for SensitiveInput {
-    fn drop(&mut self) {
-        wipe_string(&mut self.input.mnemonic);
-        wipe_string(&mut self.input.starting_passphrase);
-        wipe_string(&mut self.input.account_path);
-        wipe_string(&mut self.input.branch_index);
-        wipe_string(&mut self.input.address_index);
-        wipe_string(&mut self.input.prefix);
-        wipe_string(&mut self.input.passphrase_length);
-        wipe_string(&mut self.input.start);
-        wipe_string(&mut self.input.count);
-    }
-}
-
 fn validate_input(input: VanityRunInput) -> Result<ValidatedInput, VanityValidationKind> {
-    let input = SensitiveInput { input };
-    let mnemonic = SecretText::new(input.input.mnemonic.trim().nfkd().collect());
+    let mnemonic: String = input.mnemonic.trim().nfkd().collect();
     let normalized_mnemonic_byte_length = byte_length(mnemonic.len());
     if mnemonic.is_empty() {
         return Err(VanityValidationKind::MissingMnemonic);
@@ -684,19 +605,17 @@ fn validate_input(input: VanityRunInput) -> Result<ValidatedInput, VanityValidat
     if mnemonic.len() > MAX_MNEMONIC_BYTES {
         return Err(VanityValidationKind::MnemonicTooLong);
     }
-    if unsafe { entropylab_wasm::el_bip39_validate(mnemonic.as_str().as_ptr(), mnemonic.len()) }
-        != 1
-    {
+    if unsafe { entropylab_wasm::el_bip39_validate(mnemonic.as_ptr(), mnemonic.len()) } != 1 {
         return Err(VanityValidationKind::InvalidMnemonic);
     }
 
-    let starting_passphrase = SecretText::new(input.input.starting_passphrase.nfkd().collect());
+    let starting_passphrase: String = input.starting_passphrase.nfkd().collect();
     let normalized_starting_passphrase_byte_length = byte_length(starting_passphrase.len());
     if starting_passphrase.len() > MAX_PASSPHRASE_BYTES {
         return Err(VanityValidationKind::PassphraseTooLong);
     }
 
-    let account_path = parse_path(&input.input.account_path).map_err(path_validation_kind)?;
+    let account_path = parse_path(&input.account_path).map_err(path_validation_kind)?;
     if account_path.len() > MAX_PATH_COMPONENTS {
         return Err(VanityValidationKind::PathTooLong);
     }
@@ -707,7 +626,7 @@ fn validate_input(input: VanityRunInput) -> Result<ValidatedInput, VanityValidat
         return Err(VanityValidationKind::NonMainnetCoinType);
     }
 
-    let path = if input.input.script == VanityScript::SilentPayments {
+    let path = if input.script == VanityScript::SilentPayments {
         vec![
             PathComponent {
                 index: 352,
@@ -723,18 +642,18 @@ fn validate_input(input: VanityRunInput) -> Result<ValidatedInput, VanityValidat
             },
         ]
     } else {
-        let branch_index = parse_index(&input.input.branch_index)
-            .ok_or(VanityValidationKind::InvalidBranchIndex)?;
-        let address_index = parse_index(&input.input.address_index)
-            .ok_or(VanityValidationKind::InvalidAddressIndex)?;
+        let branch_index =
+            parse_index(&input.branch_index).ok_or(VanityValidationKind::InvalidBranchIndex)?;
+        let address_index =
+            parse_index(&input.address_index).ok_or(VanityValidationKind::InvalidAddressIndex)?;
         let mut path = account_path;
         path.push(PathComponent {
             index: branch_index,
-            hardened: input.input.branch_hardened,
+            hardened: input.branch_hardened,
         });
         path.push(PathComponent {
             index: address_index,
-            hardened: input.input.address_hardened,
+            hardened: input.address_hardened,
         });
         if path.len() > MAX_PATH_COMPONENTS {
             return Err(VanityValidationKind::PathTooLong);
@@ -742,26 +661,26 @@ fn validate_input(input: VanityRunInput) -> Result<ValidatedInput, VanityValidat
         path
     };
 
-    let prefix = normalize_prefix(&input.input.prefix, input.input.script);
-    validate_prefix(&prefix, input.input.script)?;
+    let prefix = normalize_prefix(&input.prefix, input.script);
+    validate_prefix(&prefix, input.script)?;
 
-    let passphrase_length = if input.input.method == VanityMethod::Passphrase {
-        parse_passphrase_length(&input.input.passphrase_length)
+    let passphrase_length = if input.method == VanityMethod::Passphrase {
+        parse_passphrase_length(&input.passphrase_length)
             .ok_or(VanityValidationKind::InvalidPassphraseLength)?
     } else {
         0
     };
-    let start = parse_counter(&input.input.start);
-    let count = parse_counter(&input.input.count);
+    let start = parse_counter(&input.start);
+    let count = parse_counter(&input.count);
     let (start, count, counter_limit) =
-        validate_counter_range(input.input.method, passphrase_length, start, count)?;
+        validate_counter_range(input.method, passphrase_length, start, count)?;
     let account_hardened = path[2].hardened;
     let coin_type = path[1].index;
 
     let config = VanityRunConfig {
-        method: input.input.method,
-        script: input.input.script,
-        expected_candidates: expected_candidates(&prefix, input.input.script),
+        method: input.method,
+        script: input.script,
+        expected_candidates: expected_candidates(&prefix, input.script),
         prefix,
         account_hardened,
         path,
@@ -1245,13 +1164,10 @@ fn expected_candidates(prefix: &str, script: VanityScript) -> String {
     value.to_string()
 }
 
-fn seed_from_normalized(
-    mnemonic: &str,
-    passphrase: &str,
-) -> Result<SecretSeed, EntropyStudioError> {
+fn seed_from_normalized(mnemonic: &str, passphrase: &str) -> Result<[u8; 64], EntropyStudioError> {
     let mut salt = String::from("mnemonic");
     salt.push_str(passphrase);
-    let mut seed = SecretSeed([0u8; 64]);
+    let mut seed = [0u8; 64];
     let status = unsafe {
         entropylab_wasm::el_pbkdf2_hmac_sha512(
             mnemonic.as_ptr(),
@@ -1259,21 +1175,20 @@ fn seed_from_normalized(
             salt.as_ptr(),
             salt.len(),
             2048,
-            seed.0.as_mut_ptr(),
-            seed.0.len(),
+            seed.as_mut_ptr(),
+            seed.len(),
         )
     };
-    wipe_string(&mut salt);
     if status != 64 {
         return Err(EntropyStudioError::InvalidMasterKey);
     }
     Ok(seed)
 }
 
-fn master_node(seed: &[u8]) -> Result<SecretNode, EntropyStudioError> {
-    let mut node = SecretNode([0u8; 78]);
+fn master_node(seed: &[u8]) -> Result<VanityNode, EntropyStudioError> {
+    let mut node = [0u8; 78];
     let status =
-        unsafe { entropylab_wasm::el_hd_master(seed.as_ptr(), seed.len(), node.0.as_mut_ptr()) };
+        unsafe { entropylab_wasm::el_hd_master(seed.as_ptr(), seed.len(), node.as_mut_ptr()) };
     if status != 78 {
         return Err(EntropyStudioError::InvalidMasterKey);
     }
@@ -1285,16 +1200,12 @@ fn master_node(seed: &[u8]) -> Result<SecretNode, EntropyStudioError> {
 /// specific candidate, and upstream skips that (astronomically rare) candidate
 /// rather than silently changing its counter semantics.
 fn derive_child_strict(
-    parent: SecretNode,
+    parent: VanityNode,
     component: PathComponent,
-) -> Result<Option<SecretNode>, EntropyStudioError> {
-    let mut child = SecretNode([0u8; 78]);
+) -> Result<Option<VanityNode>, EntropyStudioError> {
+    let mut child = [0u8; 78];
     let status = unsafe {
-        entropylab_wasm::el_hd_ckd_priv(
-            parent.0.as_ptr(),
-            component.encoded(),
-            child.0.as_mut_ptr(),
-        )
+        entropylab_wasm::el_hd_ckd_priv(parent.as_ptr(), component.encoded(), child.as_mut_ptr())
     };
     match status {
         78 => Ok(Some(child)),
@@ -1304,9 +1215,9 @@ fn derive_child_strict(
 }
 
 fn derive_path_strict(
-    mut node: SecretNode,
+    mut node: VanityNode,
     path: &[PathComponent],
-) -> Result<Option<SecretNode>, EntropyStudioError> {
+) -> Result<Option<VanityNode>, EntropyStudioError> {
     for component in path {
         let Some(child) = derive_child_strict(node, *component)? else {
             return Ok(None);
@@ -1316,26 +1227,21 @@ fn derive_path_strict(
     Ok(Some(node))
 }
 
-fn node_fingerprint(node: &SecretNode) -> Result<String, EntropyStudioError> {
+fn node_fingerprint(node: &VanityNode) -> Result<String, EntropyStudioError> {
     let mut public_key = [0u8; 65];
     let mut hash = [0u8; 20];
     let public_key_status = unsafe {
-        entropylab_wasm::secp_pubkey_create(node.0[46..].as_ptr(), public_key.as_mut_ptr(), 1)
+        entropylab_wasm::secp_pubkey_create(node[46..].as_ptr(), public_key.as_mut_ptr(), 1)
     };
     if public_key_status != 33 {
-        wipe_bytes(&mut public_key);
-        wipe_bytes(&mut hash);
         return Err(EntropyStudioError::InvalidMasterKey);
     }
     let hash_status =
         unsafe { entropylab_wasm::el_hash160(public_key.as_ptr(), 33, hash.as_mut_ptr()) };
-    wipe_bytes(&mut public_key);
     if hash_status != 20 {
-        wipe_bytes(&mut hash);
         return Err(EntropyStudioError::InvalidMasterKey);
     }
     let fingerprint = hash[..4].iter().map(|byte| format!("{byte:02x}")).collect();
-    wipe_bytes(&mut hash);
     Ok(fingerprint)
 }
 
@@ -1362,8 +1268,8 @@ fn grind_upstream_chunk(
             let call = call_upstream_grinder(
                 config,
                 0,
-                mnemonic.as_str().as_bytes(),
-                starting_passphrase.as_str().as_bytes(),
+                mnemonic.as_bytes(),
+                starting_passphrase.as_bytes(),
                 &path,
                 u32::MAX,
                 start,
@@ -1378,7 +1284,7 @@ fn grind_upstream_chunk(
         }
         RunSecrets::Derivation { parent } => {
             if let Some(parent) = parent.as_ref() {
-                let mut parent_material = upstream_parent_material(parent);
+                let parent_material = upstream_parent_material(parent);
                 let call = call_upstream_grinder(
                     config,
                     1,
@@ -1390,7 +1296,6 @@ fn grind_upstream_chunk(
                     count,
                     &mut output,
                 );
-                wipe_bytes(&mut parent_material);
                 call.and_then(|(processed, matches)| {
                     let matches = derivation_matches(config, source_fingerprint, &output, matches)?;
                     Ok((processed, matches))
@@ -1401,9 +1306,6 @@ fn grind_upstream_chunk(
         }
         RunSecrets::Cleared => Err(EntropyStudioError::VanityRunCleared),
     };
-    let mut path = path;
-    wipe_bytes(&mut path);
-    wipe_bytes(&mut output);
     result
 }
 
@@ -1481,20 +1383,20 @@ fn upstream_script_code(script: VanityScript) -> u32 {
     }
 }
 
-fn upstream_parent_material(parent: &SecretNode) -> [u8; 64] {
+fn upstream_parent_material(parent: &VanityNode) -> [u8; 64] {
     let mut material = [0u8; 64];
     // The upstream grinder's node ABI is private key followed by chain code;
     // EntropyLab's shared primitive serializes xprv as chain code at 13..45
     // and private key at 46..78.
-    material[..32].copy_from_slice(&parent.0[46..78]);
-    material[32..].copy_from_slice(&parent.0[13..45]);
+    material[..32].copy_from_slice(&parent[46..78]);
+    material[32..].copy_from_slice(&parent[13..45]);
     material
 }
 
 fn passphrase_matches(
     config: &VanityRunConfig,
-    mnemonic: &SecretText,
-    starting_passphrase: &SecretText,
+    mnemonic: &str,
+    starting_passphrase: &str,
     output: &[u8],
     matches: usize,
 ) -> Result<Vec<VanityMatch>, EntropyStudioError> {
@@ -1513,7 +1415,7 @@ fn passphrase_matches(
         result.push(VanityMatch {
             counter,
             account_index: None,
-            candidate_passphrase: candidate_passphrase.into_inner(),
+            candidate_passphrase,
             path: format_path(&config.path),
             address,
             master_fingerprint: Some(fingerprint),
@@ -1560,23 +1462,22 @@ fn upstream_counter(output: &[u8], offset: usize) -> Result<u64, EntropyStudioEr
 }
 
 fn joined_passphrase(
-    starting_passphrase: &SecretText,
+    starting_passphrase: &str,
     suffix: &[u8],
-) -> Result<SecretText, EntropyStudioError> {
+) -> Result<String, EntropyStudioError> {
     let suffix = std::str::from_utf8(suffix).map_err(|_| EntropyStudioError::InvalidMasterKey)?;
     let mut passphrase = String::with_capacity(starting_passphrase.len() + suffix.len());
-    passphrase.push_str(starting_passphrase.as_str());
+    passphrase.push_str(starting_passphrase);
     passphrase.push_str(suffix);
-    Ok(SecretText::new(passphrase))
+    Ok(passphrase)
 }
 
 fn fingerprint_for_passphrase(
-    mnemonic: &SecretText,
-    passphrase: &SecretText,
+    mnemonic: &str,
+    passphrase: &str,
 ) -> Result<String, EntropyStudioError> {
-    let seed = seed_from_normalized(mnemonic.as_str(), passphrase.as_str())?;
-    let root = master_node(seed.as_bytes())?;
-    drop(seed);
+    let seed = seed_from_normalized(mnemonic, passphrase)?;
+    let root = master_node(&seed)?;
     node_fingerprint(&root)
 }
 
