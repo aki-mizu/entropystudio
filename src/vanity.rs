@@ -24,10 +24,12 @@ const MAX_MNEMONIC_BYTES: usize = 1024;
 const MAX_PATH_COMPONENTS: usize = 16;
 const PASSPHRASE_CHUNK_SIZE: u64 = 8;
 const DERIVATION_CHUNK_SIZE: u64 = 256;
-const VANITY_ALPHABET: &[u8; 62] =
-    b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const BASE58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const BECH32_ALPHABET: &str = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+const UPSTREAM_GRIND_HEADER_BYTES: usize = 12;
+const UPSTREAM_GRIND_RECORD_BYTES: usize = 106;
+const UPSTREAM_GRIND_SUFFIX_BYTES: usize = 32;
+const UPSTREAM_GRIND_PAYLOAD_BYTES: usize = 66;
 
 /// Which wallet dial the vanity counter turns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -602,28 +604,18 @@ impl VanityRunState {
             VanityMethod::Derivation => DERIVATION_CHUNK_SIZE,
         }
         .min(remaining);
-        let mut matches = Vec::new();
-        let mut processed = 0u64;
-
-        while processed < budget {
-            if stop_requested.load(Ordering::Acquire) {
-                self.stopped = true;
-                break;
-            }
-            let counter = self.cursor;
-            if let Some(candidate) = self.candidate(counter)? {
-                if candidate.address.starts_with(&self.config.prefix) {
-                    matches.push(candidate.into_match(
-                        counter,
-                        self.config.method,
-                        &self.source_fingerprint,
-                    ));
-                }
-            }
-            self.cursor += 1;
-            self.total_processed += 1;
-            processed += 1;
-        }
+        // Reuse upstream's Rust grinder for the whole bounded range.  The
+        // Studio layer owns only the typed session and FFI adaptation around
+        // that canonical candidate engine.
+        let (processed, matches) = grind_upstream_chunk(
+            &self.config,
+            &mut self.secrets,
+            &self.source_fingerprint,
+            self.cursor,
+            budget,
+        )?;
+        self.cursor += processed;
+        self.total_processed += processed;
 
         if self.cursor == self.config.end() || self.stopped {
             self.complete = true;
@@ -662,29 +654,6 @@ impl VanityRunState {
             matches,
             complete: self.complete,
             stopped: self.stopped,
-        }
-    }
-
-    fn candidate(&mut self, counter: u64) -> Result<Option<Candidate>, EntropyStudioError> {
-        match &mut self.secrets {
-            RunSecrets::Passphrase {
-                mnemonic,
-                starting_passphrase,
-            } => candidate_from_passphrase(
-                mnemonic,
-                starting_passphrase,
-                &self.config.path,
-                self.config.script,
-                self.config.passphrase_length,
-                counter,
-            ),
-            RunSecrets::Derivation { parent } => {
-                let Some(parent) = parent.as_ref() else {
-                    return Err(EntropyStudioError::VanityRunCleared);
-                };
-                candidate_from_derivation(parent, &self.config.path, self.config.script, counter)
-            }
-            RunSecrets::Cleared => Err(EntropyStudioError::VanityRunCleared),
         }
     }
 }
@@ -1488,193 +1457,328 @@ fn node_fingerprint(node: &SecretNode) -> Result<String, EntropyStudioError> {
     Ok(fingerprint)
 }
 
-struct Candidate {
-    address: String,
-    candidate_passphrase: String,
-    path: String,
-    master_fingerprint: Option<String>,
+/// Invokes EntropyLab's canonical Rust/WASM grinder for one Studio-sized
+/// chunk. Its compact records deliberately contain only the counter,
+/// passphrase suffix and public address payload; Studio adapts them to the
+/// typed UniFFI result without reimplementing candidate derivation.
+fn grind_upstream_chunk(
+    config: &VanityRunConfig,
+    secrets: &mut RunSecrets,
+    source_fingerprint: &str,
+    start: u64,
+    count: u64,
+) -> Result<(u64, Vec<VanityMatch>), EntropyStudioError> {
+    let path = upstream_path(config);
+    let record_capacity = usize::try_from(count).expect("Vanity chunk size fits usize");
+    let mut output =
+        vec![0u8; UPSTREAM_GRIND_HEADER_BYTES + UPSTREAM_GRIND_RECORD_BYTES * record_capacity];
+    let result = match secrets {
+        RunSecrets::Passphrase {
+            mnemonic,
+            starting_passphrase,
+        } => {
+            let call = call_upstream_grinder(
+                config,
+                0,
+                mnemonic.as_str().as_bytes(),
+                starting_passphrase.as_str().as_bytes(),
+                &path,
+                u32::MAX,
+                start,
+                count,
+                &mut output,
+            );
+            call.and_then(|(processed, matches)| {
+                let matches =
+                    passphrase_matches(config, mnemonic, starting_passphrase, &output, matches)?;
+                Ok((processed, matches))
+            })
+        }
+        RunSecrets::Derivation { parent } => {
+            if let Some(parent) = parent.as_ref() {
+                let mut parent_material = upstream_parent_material(parent);
+                let call = call_upstream_grinder(
+                    config,
+                    1,
+                    &parent_material,
+                    &[],
+                    &path,
+                    0,
+                    start,
+                    count,
+                    &mut output,
+                );
+                wipe_bytes(&mut parent_material);
+                call.and_then(|(processed, matches)| {
+                    let matches = derivation_matches(config, source_fingerprint, &output, matches)?;
+                    Ok((processed, matches))
+                })
+            } else {
+                Err(EntropyStudioError::VanityRunCleared)
+            }
+        }
+        RunSecrets::Cleared => Err(EntropyStudioError::VanityRunCleared),
+    };
+    let mut path = path;
+    wipe_bytes(&mut path);
+    wipe_bytes(&mut output);
+    result
 }
 
-impl Drop for Candidate {
-    fn drop(&mut self) {
-        // The address/path are public output, but the passphrase and its
-        // resulting master fingerprint belong to the private candidate.
-        wipe_string(&mut self.candidate_passphrase);
-        if let Some(fingerprint) = &mut self.master_fingerprint {
-            wipe_string(fingerprint);
-        }
+fn upstream_path(config: &VanityRunConfig) -> Vec<u8> {
+    let components = match config.method {
+        VanityMethod::Passphrase => &config.path[..],
+        VanityMethod::Derivation => &config.path[2..],
+    };
+    let mut bytes = Vec::with_capacity(components.len() * std::mem::size_of::<u32>());
+    for component in components {
+        bytes.extend_from_slice(&component.encoded().to_le_bytes());
+    }
+    bytes
+}
+
+#[allow(clippy::too_many_arguments)]
+fn call_upstream_grinder(
+    config: &VanityRunConfig,
+    mode: u32,
+    key: &[u8],
+    salt: &[u8],
+    path: &[u8],
+    counter_slot: u32,
+    start: u64,
+    count: u64,
+    output: &mut [u8],
+) -> Result<(u64, usize), EntropyStudioError> {
+    let status = unsafe {
+        vanity_wasm::vanity_grind(
+            mode,
+            key.as_ptr(),
+            key.len(),
+            salt.as_ptr(),
+            salt.len(),
+            path.as_ptr(),
+            path.len() / std::mem::size_of::<u32>(),
+            counter_slot,
+            config.prefix.as_ptr(),
+            config.prefix.len(),
+            config.passphrase_length as usize,
+            start,
+            count,
+            output.as_mut_ptr(),
+            output.len(),
+            upstream_script_code(config.script),
+        )
+    };
+    if status != 0 {
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    let processed = u64::from_le_bytes(
+        output[..8]
+            .try_into()
+            .expect("upstream grinder output has its fixed header"),
+    );
+    let matches = u32::from_le_bytes(
+        output[8..UPSTREAM_GRIND_HEADER_BYTES]
+            .try_into()
+            .expect("upstream grinder output has its fixed header"),
+    ) as usize;
+    let capacity = (output.len() - UPSTREAM_GRIND_HEADER_BYTES) / UPSTREAM_GRIND_RECORD_BYTES;
+    if processed > count || matches > capacity {
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    Ok((processed, matches))
+}
+
+fn upstream_script_code(script: VanityScript) -> u32 {
+    match script {
+        VanityScript::P2pkh => 0,
+        VanityScript::P2shP2wpkh => 1,
+        VanityScript::P2wpkh => 2,
+        VanityScript::P2tr => 3,
+        VanityScript::SilentPayments => 4,
     }
 }
 
-impl Candidate {
-    fn into_match(
-        mut self,
-        counter: u64,
-        method: VanityMethod,
-        source_fingerprint: &str,
-    ) -> VanityMatch {
-        VanityMatch {
-            counter,
-            account_index: (method == VanityMethod::Derivation).then_some(counter as u32),
-            candidate_passphrase: std::mem::take(&mut self.candidate_passphrase),
-            path: std::mem::take(&mut self.path),
-            address: std::mem::take(&mut self.address),
-            master_fingerprint: match method {
-                VanityMethod::Passphrase => std::mem::take(&mut self.master_fingerprint),
-                VanityMethod::Derivation => Some(source_fingerprint.to_owned()),
-            },
-        }
-    }
+fn upstream_parent_material(parent: &SecretNode) -> [u8; 64] {
+    let mut material = [0u8; 64];
+    // The upstream grinder's node ABI is private key followed by chain code;
+    // EntropyLab's shared primitive serializes xprv as chain code at 13..45
+    // and private key at 46..78.
+    material[..32].copy_from_slice(&parent.0[46..78]);
+    material[32..].copy_from_slice(&parent.0[13..45]);
+    material
 }
 
-fn candidate_from_passphrase(
+fn passphrase_matches(
+    config: &VanityRunConfig,
     mnemonic: &SecretText,
     starting_passphrase: &SecretText,
-    path: &[PathComponent],
-    script: VanityScript,
-    passphrase_length: u8,
-    counter: u64,
-) -> Result<Option<Candidate>, EntropyStudioError> {
-    let odometer = SecretText::new(odometer(counter, passphrase_length));
-    let mut candidate_passphrase =
-        String::with_capacity(starting_passphrase.len() + odometer.len());
-    candidate_passphrase.push_str(starting_passphrase.as_str());
-    candidate_passphrase.push_str(odometer.as_str());
-    let candidate_passphrase = SecretText::new(candidate_passphrase);
-    let seed = seed_from_normalized(mnemonic.as_str(), candidate_passphrase.as_str())?;
+    output: &[u8],
+    matches: usize,
+) -> Result<Vec<VanityMatch>, EntropyStudioError> {
+    let mut result = Vec::with_capacity(matches);
+    for index in 0..matches {
+        let offset = UPSTREAM_GRIND_HEADER_BYTES + index * UPSTREAM_GRIND_RECORD_BYTES;
+        let counter = upstream_counter(output, offset)?;
+        let suffix = &output[offset + 8..offset + 8 + config.passphrase_length as usize];
+        let candidate_passphrase = joined_passphrase(starting_passphrase, suffix)?;
+        let fingerprint = fingerprint_for_passphrase(mnemonic, &candidate_passphrase)?;
+        let address = address_from_upstream_payload(
+            config.script,
+            &output[offset + 8 + UPSTREAM_GRIND_SUFFIX_BYTES
+                ..offset + 8 + UPSTREAM_GRIND_SUFFIX_BYTES + UPSTREAM_GRIND_PAYLOAD_BYTES],
+        )?;
+        result.push(VanityMatch {
+            counter,
+            account_index: None,
+            candidate_passphrase: candidate_passphrase.into_inner(),
+            path: format_path(&config.path),
+            address,
+            master_fingerprint: Some(fingerprint),
+        });
+    }
+    Ok(result)
+}
+
+fn derivation_matches(
+    config: &VanityRunConfig,
+    source_fingerprint: &str,
+    output: &[u8],
+    matches: usize,
+) -> Result<Vec<VanityMatch>, EntropyStudioError> {
+    let mut result = Vec::with_capacity(matches);
+    for index in 0..matches {
+        let offset = UPSTREAM_GRIND_HEADER_BYTES + index * UPSTREAM_GRIND_RECORD_BYTES;
+        let counter = upstream_counter(output, offset)?;
+        let address = address_from_upstream_payload(
+            config.script,
+            &output[offset + 8 + UPSTREAM_GRIND_SUFFIX_BYTES
+                ..offset + 8 + UPSTREAM_GRIND_SUFFIX_BYTES + UPSTREAM_GRIND_PAYLOAD_BYTES],
+        )?;
+        let mut path = config.path.clone();
+        path[2].index = counter as u32;
+        result.push(VanityMatch {
+            counter,
+            account_index: Some(counter as u32),
+            candidate_passphrase: String::new(),
+            path: format_path(&path),
+            address,
+            master_fingerprint: Some(source_fingerprint.to_owned()),
+        });
+    }
+    Ok(result)
+}
+
+fn upstream_counter(output: &[u8], offset: usize) -> Result<u64, EntropyStudioError> {
+    output
+        .get(offset..offset + 8)
+        .and_then(|bytes| bytes.try_into().ok())
+        .map(u64::from_le_bytes)
+        .ok_or(EntropyStudioError::InvalidMasterKey)
+}
+
+fn joined_passphrase(
+    starting_passphrase: &SecretText,
+    suffix: &[u8],
+) -> Result<SecretText, EntropyStudioError> {
+    let suffix = std::str::from_utf8(suffix).map_err(|_| EntropyStudioError::InvalidMasterKey)?;
+    let mut passphrase = String::with_capacity(starting_passphrase.len() + suffix.len());
+    passphrase.push_str(starting_passphrase.as_str());
+    passphrase.push_str(suffix);
+    Ok(SecretText::new(passphrase))
+}
+
+fn fingerprint_for_passphrase(
+    mnemonic: &SecretText,
+    passphrase: &SecretText,
+) -> Result<String, EntropyStudioError> {
+    let seed = seed_from_normalized(mnemonic.as_str(), passphrase.as_str())?;
     let root = master_node(seed.as_bytes())?;
     drop(seed);
-    let fingerprint = node_fingerprint(&root)?;
-    let child = derive_path_strict(root, path)?;
-    let Some(node) = child else {
-        return Ok(None);
-    };
-    let address = address_from_node(node, script)?;
-    Ok(Some(Candidate {
-        address,
-        candidate_passphrase: candidate_passphrase.into_inner(),
-        path: format_path(path),
-        master_fingerprint: Some(fingerprint),
-    }))
+    node_fingerprint(&root)
 }
 
-fn candidate_from_derivation(
-    parent: &SecretNode,
-    full_path: &[PathComponent],
+fn address_from_upstream_payload(
     script: VanityScript,
-    counter: u64,
-) -> Result<Option<Candidate>, EntropyStudioError> {
-    debug_assert!(full_path.len() >= 3);
-    let mut candidate_tail = full_path[2..].to_vec();
-    candidate_tail[0].index = counter as u32;
-    let Some(node) = derive_path_from_borrowed_strict(parent, &candidate_tail)? else {
-        return Ok(None);
-    };
-    let address = address_from_node(node, script)?;
-    let mut concrete_path = full_path.to_vec();
-    concrete_path[2].index = counter as u32;
-    Ok(Some(Candidate {
-        address,
-        // A derivation match changes only the account component; returning
-        // the source passphrase would retain an unnecessary secret copy.
-        candidate_passphrase: String::new(),
-        path: format_path(&concrete_path),
-        master_fingerprint: None,
-    }))
-}
-
-/// Derives a candidate tail from a borrowed fixed parent.  Copying its wire
-/// serialization is unavoidable at the FFI boundary; the temporary is wiped
-/// when it retires and the session's original node stays intact.
-fn derive_path_from_borrowed_strict(
-    parent: &SecretNode,
-    path: &[PathComponent],
-) -> Result<Option<SecretNode>, EntropyStudioError> {
-    let mut copy = SecretNode([0u8; 78]);
-    copy.0.copy_from_slice(&parent.0);
-    derive_path_strict(copy, path)
-}
-
-fn odometer(counter: u64, length: u8) -> String {
-    let mut digits = vec![b'a'; length as usize];
-    let mut value = counter;
-    for digit in digits.iter_mut().rev() {
-        *digit = VANITY_ALPHABET[(value % 62) as usize];
-        value /= 62;
-    }
-    // The alphabet is ASCII, so this conversion cannot fail.
-    String::from_utf8(digits).expect("the Vanity alphabet is UTF-8")
-}
-
-fn address_from_node(node: SecretNode, script: VanityScript) -> Result<String, EntropyStudioError> {
+    payload: &[u8],
+) -> Result<String, EntropyStudioError> {
     match script {
-        VanityScript::SilentPayments => silent_payment_address(node),
-        VanityScript::P2pkh
-        | VanityScript::P2shP2wpkh
-        | VanityScript::P2wpkh
-        | VanityScript::P2tr => standard_address(node, script),
+        VanityScript::P2pkh => address_from_script(&p2pkh_script(payload)?),
+        VanityScript::P2shP2wpkh => address_from_script(&p2sh_p2wpkh_script(payload)?),
+        VanityScript::P2wpkh => address_from_script(&p2wpkh_script(payload)?),
+        VanityScript::P2tr => address_from_script(&p2tr_script(payload)?),
+        VanityScript::SilentPayments => silent_payment_address_from_payload(payload),
     }
 }
 
-fn standard_address(node: SecretNode, script: VanityScript) -> Result<String, EntropyStudioError> {
-    let mut public_key = [0u8; 65];
-    let mut script_bytes = [0u8; 64];
+fn p2pkh_script(payload: &[u8]) -> Result<[u8; 25], EntropyStudioError> {
+    let hash = payload
+        .get(..20)
+        .ok_or(EntropyStudioError::InvalidMasterKey)?;
+    let mut script = [0u8; 25];
+    script[..3].copy_from_slice(&[0x76, 0xa9, 0x14]);
+    script[3..23].copy_from_slice(hash);
+    script[23..].copy_from_slice(&[0x88, 0xac]);
+    Ok(script)
+}
+
+fn p2sh_p2wpkh_script(payload: &[u8]) -> Result<[u8; 23], EntropyStudioError> {
+    let pubkey_hash = payload
+        .get(..20)
+        .ok_or(EntropyStudioError::InvalidMasterKey)?;
+    let mut redeem = [0u8; 22];
+    redeem[..2].copy_from_slice(&[0, 20]);
+    redeem[2..].copy_from_slice(pubkey_hash);
+    let mut script_hash = [0u8; 20];
+    let status = unsafe {
+        entropylab_wasm::el_hash160(redeem.as_ptr(), redeem.len(), script_hash.as_mut_ptr())
+    };
+    wipe_bytes(&mut redeem);
+    if status != 20 {
+        wipe_bytes(&mut script_hash);
+        return Err(EntropyStudioError::InvalidMasterKey);
+    }
+    let mut script = [0u8; 23];
+    script[..2].copy_from_slice(&[0xa9, 0x14]);
+    script[2..22].copy_from_slice(&script_hash);
+    script[22] = 0x87;
+    wipe_bytes(&mut script_hash);
+    Ok(script)
+}
+
+fn p2wpkh_script(payload: &[u8]) -> Result<[u8; 22], EntropyStudioError> {
+    let hash = payload
+        .get(..20)
+        .ok_or(EntropyStudioError::InvalidMasterKey)?;
+    let mut script = [0u8; 22];
+    script[..2].copy_from_slice(&[0, 20]);
+    script[2..].copy_from_slice(hash);
+    Ok(script)
+}
+
+fn p2tr_script(payload: &[u8]) -> Result<[u8; 34], EntropyStudioError> {
+    let key = payload
+        .get(..32)
+        .ok_or(EntropyStudioError::InvalidMasterKey)?;
+    let mut script = [0u8; 34];
+    script[..2].copy_from_slice(&[0x51, 0x20]);
+    script[2..].copy_from_slice(key);
+    Ok(script)
+}
+
+fn address_from_script(script: &[u8]) -> Result<String, EntropyStudioError> {
     let mut address = [0u8; 128];
-    let public_key_status = unsafe {
-        entropylab_wasm::secp_pubkey_create(node.0[46..].as_ptr(), public_key.as_mut_ptr(), 1)
-    };
-    if public_key_status != 33 {
-        wipe_bytes(&mut public_key);
-        wipe_bytes(&mut script_bytes);
-        wipe_bytes(&mut address);
-        return Err(EntropyStudioError::InvalidMasterKey);
-    }
-    let script_length = unsafe {
-        match script {
-            VanityScript::P2pkh => entropylab_wasm::el_spk_p2pkh(
-                public_key.as_ptr(),
-                33,
-                script_bytes.as_mut_ptr(),
-                script_bytes.len(),
-            ),
-            VanityScript::P2shP2wpkh => entropylab_wasm::el_spk_p2sh_p2wpkh(
-                public_key.as_ptr(),
-                33,
-                script_bytes.as_mut_ptr(),
-                script_bytes.len(),
-            ),
-            VanityScript::P2wpkh => entropylab_wasm::el_spk_p2wpkh(
-                public_key.as_ptr(),
-                33,
-                script_bytes.as_mut_ptr(),
-                script_bytes.len(),
-            ),
-            VanityScript::P2tr => entropylab_wasm::el_spk_p2tr_key(
-                public_key[1..].as_ptr(),
-                script_bytes.as_mut_ptr(),
-                script_bytes.len(),
-            ),
-            VanityScript::SilentPayments => unreachable!("Silent Payments are handled separately"),
-        }
-    };
-    wipe_bytes(&mut public_key);
-    if script_length <= 0 {
-        wipe_bytes(&mut script_bytes);
-        wipe_bytes(&mut address);
-        return Err(EntropyStudioError::InvalidMasterKey);
-    }
-    let address_length = unsafe {
+    let length = unsafe {
         entropylab_wasm::el_addr_from_script(
-            script_bytes.as_ptr(),
-            script_length as usize,
+            script.as_ptr(),
+            script.len(),
             0,
             address.as_mut_ptr(),
             address.len(),
         )
     };
-    wipe_bytes(&mut script_bytes);
-    let result = if address_length > 0 && (address_length as usize) <= address.len() {
-        std::str::from_utf8(&address[..address_length as usize])
+    let result = if length > 0 && (length as usize) <= address.len() {
+        std::str::from_utf8(&address[..length as usize])
             .map(str::to_owned)
             .map_err(|_| EntropyStudioError::InvalidMasterKey)
     } else {
@@ -1684,59 +1788,14 @@ fn standard_address(node: SecretNode, script: VanityScript) -> Result<String, En
     result
 }
 
-fn silent_payment_address(account: SecretNode) -> Result<String, EntropyStudioError> {
-    let scan_path = [
-        PathComponent {
-            index: 1,
-            hardened: true,
-        },
-        PathComponent {
-            index: 0,
-            hardened: false,
-        },
-    ];
-    let spend_path = [
-        PathComponent {
-            index: 0,
-            hardened: true,
-        },
-        PathComponent {
-            index: 0,
-            hardened: false,
-        },
-    ];
-    let mut copy = SecretNode([0u8; 78]);
-    copy.0.copy_from_slice(&account.0);
-    let scan = derive_path_strict(copy, &scan_path)?;
-    let spend = derive_path_strict(account, &spend_path)?;
-    let (Some(scan), Some(spend)) = (scan, spend) else {
-        return Ok(String::new());
-    };
-    let mut scan_public = [0u8; 65];
-    let mut spend_public = [0u8; 65];
-    let mut payload = [0u8; 66];
+fn silent_payment_address_from_payload(payload: &[u8]) -> Result<String, EntropyStudioError> {
+    let payload = payload
+        .get(..UPSTREAM_GRIND_PAYLOAD_BYTES)
+        .ok_or(EntropyStudioError::InvalidMasterKey)?;
     let mut words = [0u8; 107];
     let mut encoded = [0u8; 128];
-    let scan_status = unsafe {
-        entropylab_wasm::secp_pubkey_create(scan.0[46..].as_ptr(), scan_public.as_mut_ptr(), 1)
-    };
-    let spend_status = unsafe {
-        entropylab_wasm::secp_pubkey_create(spend.0[46..].as_ptr(), spend_public.as_mut_ptr(), 1)
-    };
-    if scan_status != 33 || spend_status != 33 {
-        wipe_bytes(&mut scan_public);
-        wipe_bytes(&mut spend_public);
-        wipe_bytes(&mut payload);
-        wipe_bytes(&mut words);
-        wipe_bytes(&mut encoded);
-        return Err(EntropyStudioError::InvalidMasterKey);
-    }
-    payload[..33].copy_from_slice(&scan_public[..33]);
-    payload[33..].copy_from_slice(&spend_public[..33]);
-    wipe_bytes(&mut scan_public);
-    wipe_bytes(&mut spend_public);
-    let word_count = bytes_to_bech32_words(&payload, &mut words);
-    let address_length = unsafe {
+    let word_count = bytes_to_bech32_words(payload, &mut words);
+    let length = unsafe {
         entropylab_wasm::el_bech32m_encode(
             b"sp".as_ptr(),
             2,
@@ -1746,10 +1805,9 @@ fn silent_payment_address(account: SecretNode) -> Result<String, EntropyStudioEr
             encoded.len(),
         )
     };
-    wipe_bytes(&mut payload);
     wipe_bytes(&mut words);
-    let result = if address_length > 0 && (address_length as usize) <= encoded.len() {
-        std::str::from_utf8(&encoded[..address_length as usize])
+    let result = if length > 0 && (length as usize) <= encoded.len() {
+        std::str::from_utf8(&encoded[..length as usize])
             .map(str::to_owned)
             .map_err(|_| EntropyStudioError::InvalidMasterKey)
     } else {

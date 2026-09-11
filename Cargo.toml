@@ -13,6 +13,7 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 base64 = "=0.22.1"
 bc-lifehash = "0.1.0"
 entropylab-wasm = { path = "entropylab/entropylab-wasm" }
+vanity-wasm = { path = "entropylab/vanity-wasm" }
 hex = "=0.4.3"
 miniscript = { version = "=13.1.0", default-features = false, features = ["std"] }
 png = "=0.17.16"
