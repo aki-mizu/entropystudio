@@ -178,7 +178,7 @@ pub struct VanityInputState {
 
 /// One found candidate.  `candidate_passphrase` is sensitive for a
 /// passphrase grind and is returned only for a matching address.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct VanityMatch {
     pub counter: u64,
     pub account_index: Option<u32>,
@@ -189,84 +189,6 @@ pub struct VanityMatch {
     /// derivation match retains the selected source fingerprint.
     pub master_fingerprint: Option<String>,
 }
-
-// UniFFI's derived record writer moves each field out of its record.  That is
-// incompatible with `VanityMatch::Drop`, which needs to retain ownership long
-// enough to overwrite the passphrase after serializing it.  This wire-only
-// record preserves the public record metadata and decoding shape; the custom
-// writer below keeps sensitive owned strings available to `Drop`.
-#[derive(Debug, uniffi::Record)]
-#[uniffi(name = "VanityMatch")]
-struct VanityMatchWire {
-    counter: u64,
-    account_index: Option<u32>,
-    candidate_passphrase: String,
-    path: String,
-    address: String,
-    master_fingerprint: Option<String>,
-}
-
-impl Drop for VanityMatch {
-    fn drop(&mut self) {
-        // A matching passphrase must cross the FFI boundary so the user can
-        // copy or apply it, but its Rust-owned allocation should still be
-        // overwritten as soon as the record retires.  Keep this in step with
-        // Candidate's cleanup for a match moved out of that temporary.
-        wipe_string(&mut self.candidate_passphrase);
-        if let Some(fingerprint) = &mut self.master_fingerprint {
-            wipe_string(fingerprint);
-        }
-    }
-}
-
-fn write_match_string(value: &str, buf: &mut Vec<u8>) {
-    // This is the stable UniFFI String serialization: a big-endian i32 byte
-    // length followed by UTF-8 bytes.  Borrowing lets VanityMatch::Drop wipe
-    // the source allocation after the record has been written.
-    let length = i32::try_from(value.len()).expect("vanity match strings fit in i32");
-    buf.extend_from_slice(&length.to_be_bytes());
-    buf.extend_from_slice(value.as_bytes());
-}
-
-unsafe impl uniffi::FfiConverter<crate::UniFfiTag> for VanityMatch {
-    uniffi::ffi_converter_rust_buffer_lift_and_lower!(crate::UniFfiTag);
-
-    fn write(mut object: Self, buf: &mut Vec<u8>) {
-        <u64 as uniffi::Lower<crate::UniFfiTag>>::write(object.counter, buf);
-        <Option<u32> as uniffi::Lower<crate::UniFfiTag>>::write(object.account_index, buf);
-        write_match_string(&object.candidate_passphrase, buf);
-        <String as uniffi::Lower<crate::UniFfiTag>>::write(std::mem::take(&mut object.path), buf);
-        <String as uniffi::Lower<crate::UniFfiTag>>::write(
-            std::mem::take(&mut object.address),
-            buf,
-        );
-        match object.master_fingerprint.as_deref() {
-            None => buf.push(0),
-            Some(fingerprint) => {
-                buf.push(1);
-                write_match_string(fingerprint, buf);
-            }
-        }
-        // `object` retires here, wiping the two sensitive fields above.
-    }
-
-    fn try_read(buf: &mut &[u8]) -> uniffi::Result<Self> {
-        let wire = <VanityMatchWire as uniffi::Lift<crate::UniFfiTag>>::try_read(buf)?;
-        Ok(Self {
-            counter: wire.counter,
-            account_index: wire.account_index,
-            candidate_passphrase: wire.candidate_passphrase,
-            path: wire.path,
-            address: wire.address,
-            master_fingerprint: wire.master_fingerprint,
-        })
-    }
-
-    const TYPE_ID_META: uniffi::MetadataBuffer =
-        <VanityMatchWire as uniffi::TypeId<crate::UniFfiTag>>::TYPE_ID_META;
-}
-
-uniffi::derive_ffi_traits!(local VanityMatch);
 
 /// The result of one bounded native work step.
 #[derive(Debug, Clone, uniffi::Record)]
