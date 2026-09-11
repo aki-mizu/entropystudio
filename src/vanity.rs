@@ -28,7 +28,9 @@ const MAX_PASSPHRASE_LENGTH: u8 = 32;
 const MAX_PASSPHRASE_BYTES: usize = 256;
 const MAX_MNEMONIC_BYTES: usize = 1024;
 const MAX_PATH_COMPONENTS: usize = 16;
-const PASSPHRASE_CHUNK_SIZE: u64 = 8;
+// This matches upstream's public passphrase timing sample. It amortizes the
+// React Native bridge yield while keeping one-worker stop latency short.
+const PASSPHRASE_CHUNK_SIZE: u64 = 24;
 const DERIVATION_CHUNK_SIZE: u64 = 256;
 const MAX_WORKERS: u8 = 64;
 const BASE58_ALPHABET: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -1316,6 +1318,10 @@ fn grind_upstream_ranges(
     start: u64,
     count: u64,
 ) -> Result<(u64, Vec<VanityMatch>), EntropyStudioError> {
+    if config.workers == 1 {
+        return grind_upstream_chunk(config, secrets, source_fingerprint, start, count);
+    }
+
     let range_count = u64::from(config.workers).min(count) as usize;
     let base = count / range_count as u64;
     let extra = count % range_count as u64;
